@@ -1,5 +1,7 @@
 include README.md
 include LICENSE
 
+recursive-include sbibm/tasks/ *
+
 global-exclude *.pyc
 global-exclude __pycache__
