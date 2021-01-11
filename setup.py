@@ -19,11 +19,11 @@ AUTHOR = "Jan-Matthis Lueckmann"
 REQUIRES_PYTHON = ">=3.7.0"
 
 REQUIRED = [
+    "autograd",
     "elfi>=0.7.6",
     "deneb",
     "diffeqtorch",
     "joblib",
-    "kgof@git+https://github.com/wittawatj/kernel-gof#egg=kgof",
     "numpy",
     "matplotlib",
     "pandas>=1.0.0",

@@ -2,11 +2,11 @@ import logging
 import math
 from typing import Callable, Optional
 
-import kgof
 import numpy as np
 import torch
-from kgof.goftest import KernelSteinTest, bootstrapper_rademacher
-from kgof.util import meddistance
+from sbibm.third_party.kgof.kernel import KGauss
+from sbibm.third_party.kgof.goftest import KernelSteinTest, bootstrapper_rademacher
+from sbibm.third_party.kgof.util import meddistance
 
 from sbibm.tasks.task import Task
 from sbibm.utils.torch import get_default_device
@@ -93,7 +93,7 @@ def ksd_gaussian_kernel(
     else:
         sig2 = float(sig2)
 
-    kernel = kgof.kernel.KGauss(sig2)
+    kernel = KGauss(sig2)
 
     kstein = KernelSteinTest(
         density,
