@@ -17,11 +17,20 @@ def get_float_from_csv(
         return np.loadtxt(fh).astype(dtype)
 
 
-def get_results(dataset: str = "main_paper.csv"):
-    """Get results
+def get_results(
+    dataset: str = "main_paper.csv", subfolder: str = "benchmarking_sbi/results/"
+) -> pd.DataFrame:
+    """Get results from https://github.com/sbi-benchmark/results/
+
+    Args:
+        dataset: Filename for dataset
+        subfolder: Subfolder in repo
+
+    Returns:
+        Dataframe
     """
     df = pd.read_csv(
-        f"https://raw.githubusercontent.com/sbi-benchmark/benchmarking_sbi/main/results/{dataset}.csv"
+        f"https://raw.githubusercontent.com/sbi-benchmark/results/main/{subfolder}{dataset}"
     )
     return df
 
