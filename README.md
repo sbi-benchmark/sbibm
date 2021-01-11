@@ -5,7 +5,7 @@ version](https://badge.fury.io/py/sbibm.svg)](https://badge.fury.io/py/sbibm) [!
 
 This repository contains a simulation-based inference benchmark framework, `sbibm`, which we describe in the [associated manuscript "Benchmarking Simulation-based Inference"](https://github.com/mackelab/sbibm#Citation). The benchmark framework includes tasks, reference posteriors, metrics, plotting, and integrations with SBI toolboxes. The framework is designed to be highly extensible and easily used in new research projects: For each benchmark task, prior, simulator, and reference posteriors are exposed, so that `sbibm` can be used easily in research code, as we demonstrate below. 
 
-In order to emphasize that `sbibm` can be used independently of any particular analysis pipeline, we split the code for reproducing the experiments of the manuscript into a seperate repository hosted at [github.com/sbi-benchmark/benchmarking_sbi](https://github.com/sbi-benchmark/benchmarking_sbi). Besides the pipeline to reproduce the manuscripts' experiments, full results including dataframes for quick comparisons are hosted in that repository.
+In order to emphasize that `sbibm` can be used independently of any particular analysis pipeline, we split the code for reproducing the experiments of the manuscript into a seperate repository hosted at [github.com/sbi-benchmark/results/](https://github.com/sbi-benchmark/results/tree/main/benchmarking_sbi). Besides the pipeline to reproduce the manuscripts' experiments, full results including dataframes for quick comparisons are hosted in that repository.
 
 If you have questions or comments, please do not hesitate [to contact us](mailto:mail@jan-matthis.de) or [open an issue](https://github.com/sbi-benchmark/sbibm/issues). We would be very glad [about contributions](CONTRIBUTE.md), e.g., new tasks, novel metrics, or wrappers for other SBI toolboxes.
 
@@ -92,7 +92,7 @@ For more info, see `help(c2st)`.
 
 ## Experiments
 
-As mentioned above, we host the code for reproducing the experiments of the manuscript in a seperate repository at [github.com/sbi-benchmark/benchmarking_sbi](https://github.com/sbi-benchmark/benchmarking_sbi). Besides the pipeline to reproduce the manuscripts' experiments, full results including dataframes for quick comparisons are provided.
+As mentioned above, we host the code for reproducing the experiments of the manuscript in a seperate repository at [github.com/sbi-benchmark/results](https://github.com/sbi-benchmark/results/tree/main/benchmarking_sbi). Besides the pipeline to reproduce the manuscripts' experiments, full results including dataframes for quick comparisons are provided.
 
 
 
