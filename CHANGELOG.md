@@ -1,3 +1,8 @@
+# v1.0.2
+
+- Fixed PyPI packaging issues
+
+
 # v1.0.1
 
 - Implemented `sbibm.get_results` for convenient fetching of benchmarking results
