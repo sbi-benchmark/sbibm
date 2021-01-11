@@ -1,4 +1,5 @@
-[![Contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/sbi-benchmark/sbibm/blob/master/CONTRIBUTING.md) [![Black](https://img.shields.io/badge/code%20style-black-000000.svg?style=flat)](https://github.com/psf/black)
+[![PyPI
+version](https://badge.fury.io/py/sbibm.svg)](https://badge.fury.io/py/sbibm) [![Contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/sbi-benchmark/sbibm/blob/master/CONTRIBUTING.md) [![Black](https://img.shields.io/badge/code%20style-black-000000.svg?style=flat)](https://github.com/psf/black)
 
 # Simulation-Based Inference Benchmark
 
