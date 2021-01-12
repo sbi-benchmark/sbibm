@@ -1,13 +1,11 @@
 # Contributing
 
-We invite contributions of new algorithms, tasks, and metrics. If you would like to contribute, you can start by opening an issue, reaching out if already code written, or get in touch with us.
+We invite contributions of new algorithms, tasks, and metrics. Please do not hestitate to get in touch [via email](mailto:mail@jan-matthis.de,jakob.macke@uni-tuebingen.de) or by opening an issue on the repository. 
 
 
 ## Tasks
 
-Adding new tasks is straightforward. It is easiest to model them after existing tasks.
-
-First, take a close look at the base class for tasks in `sbibm/tasks/task.py`: you will find a `_setup` method: This method samples from the prior, generates observations, and finally calls `_sample_reference_posterior`, to generate samples from the reference posterior. All of these results are stored in csv files, and the generation of reference posterior samples happens in parallel.
+Adding new tasks is straightforward. It is easiest to model them after existing tasks. First, take a close look at the base class for tasks in `sbibm/tasks/task.py`: you will find a `_setup` method: This method samples from the prior, generates observations, and finally calls `_sample_reference_posterior`, to generate samples from the reference posterior. All of these results are stored in csv files, and the generation of reference posterior samples happens in parallel.
 
 For some tasks, e.g., the `gaussian_linear`, a closed form solution for the posterior is available, which is used in `_sample_reference_posterior`, while other tasks utilize MCMC. 
 
