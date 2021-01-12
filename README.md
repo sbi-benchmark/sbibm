@@ -3,11 +3,11 @@ version](https://badge.fury.io/py/sbibm.svg)](https://badge.fury.io/py/sbibm) [!
 
 # Simulation-Based Inference Benchmark
 
-This repository contains a simulation-based inference benchmark framework, `sbibm`, which we describe in the [associated manuscript "Benchmarking Simulation-based Inference"](https://github.com/mackelab/sbibm#Citation). The benchmark framework includes tasks, reference posteriors, metrics, plotting, and integrations with SBI toolboxes. The framework is designed to be highly extensible and easily used in new research projects: For each benchmark task, prior, simulator, and reference posteriors are exposed, so that `sbibm` can be used easily in research code, as we demonstrate below. 
+This repository contains a simulation-based inference benchmark framework, `sbibm`, which we describe in the [associated manuscript "Benchmarking Simulation-based Inference"](https://github.com/mackelab/sbibm#Citation). The benchmark framework includes tasks, reference posteriors, metrics, plotting, and integrations with SBI toolboxes. The framework is designed to be highly extensible and easily used in new research projects as we show below.
 
 In order to emphasize that `sbibm` can be used independently of any particular analysis pipeline, we split the code for reproducing the experiments of the manuscript into a seperate repository hosted at [github.com/sbi-benchmark/results/](https://github.com/sbi-benchmark/results/tree/main/benchmarking_sbi). Besides the pipeline to reproduce the manuscripts' experiments, full results including dataframes for quick comparisons are hosted in that repository.
 
-If you have questions or comments, please do not hesitate [to contact us](mailto:mail@jan-matthis.de) or [open an issue](https://github.com/sbi-benchmark/sbibm/issues). We would be very glad [about contributions](CONTRIBUTE.md), e.g., new tasks, novel metrics, or wrappers for other SBI toolboxes.
+If you have questions or comments, please do not hesitate [to contact us](mailto:mail@jan-matthis.de) or [open an issue](https://github.com/sbi-benchmark/sbibm/issues). We [invite contributions](CONTRIBUTE.md), e.g., of new tasks, novel metrics, or wrappers for other SBI toolboxes.
 
 
 ## Installation
@@ -22,7 +22,7 @@ ODE based models (currently SIR and Lotka-Volterra models) use [Julia](https://j
 
 ## Tasks
 
-You can then see the list of available tasks by calling `sbibm.get_available_tasks()`. If we wanted to use, say, the `slcp` task, we can load it using `sbibm.get_task`, as in:
+You can then see the list of available tasks by calling `sbibm.get_available_tasks()`. If we wanted to use, say, the `two_moons` task, we can load it using `sbibm.get_task`, as in:
 
 ```python
 import sbibm
@@ -80,10 +80,10 @@ For example, in order to compute C2ST:
 ```python
 import torch
 from sbibm.metrics.c2st import c2st
-from sbibm.algorithms.mcabc import run as run_rej_abc
+from sbibm.algorithms import rej_abc
 
 reference_samples = task.get_reference_posterior_samples(num_observation=1)
-algorithm_samples = run_rej_abc(task=task, num_samples=10_000, num_simulation=100_000, num_observation=1)
+algorithm_samples, _, _ = rej_abc(task=task, num_samples=10_000, num_simulations=100_000, num_observation=1)
 c2st_accuracy = c2st(reference_samples, algorithm_samples)
 ```
 
@@ -94,6 +94,17 @@ For more info, see `help(c2st)`.
 
 As mentioned above, we host the code for reproducing the experiments of the manuscript in a seperate repository at [github.com/sbi-benchmark/results](https://github.com/sbi-benchmark/results/tree/main/benchmarking_sbi). Besides the pipeline to reproduce the manuscripts' experiments, full results including dataframes for quick comparisons are provided.
 
+
+## Citation
+
+```bibtex
+@article{lueckmann2020benchmarking,
+  author  = {Lueckmann, Jan-Matthis and Boelts, Jan and Greenberg, David S. and Gon{\c{c}}alves, Pedro J. and Macke, Jakob H.},
+  title   = {Benchmarking simulation-based inference},
+  year    = {2020},
+  journal = {arXiv preprint},
+}
+```
 
 
 ## License
