@@ -7,7 +7,7 @@ This repository contains a simulation-based inference benchmark framework, `sbib
 
 In order to emphasize that `sbibm` can be used independently of any particular analysis pipeline, we split the code for reproducing the experiments of the manuscript into a seperate repository hosted at [github.com/sbi-benchmark/results/](https://github.com/sbi-benchmark/results/tree/main/benchmarking_sbi). Besides the pipeline to reproduce the manuscripts' experiments, full results including dataframes for quick comparisons are hosted in that repository.
 
-If you have questions or comments, please do not hesitate [to contact us](mailto:mail@jan-matthis.de) or [open an issue](https://github.com/sbi-benchmark/sbibm/issues). We [invite contributions](CONTRIBUTE.md), e.g., of new tasks, novel metrics, or wrappers for other SBI toolboxes.
+If you have questions or comments, please do not hesitate [to contact us](mailto:mail@jan-matthis.de) or [open an issue](https://github.com/sbi-benchmark/sbibm/issues). We [invite contributions](CONTRIBUTING.md), e.g., of new tasks, novel metrics, or wrappers for other SBI toolboxes.
 
 
 ## Installation
