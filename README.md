@@ -101,8 +101,7 @@ from sbibm.visualisation import fig_metric
 
 results_df = sbibm.get_results(dataset="main_paper.csv")
 results_subset = results_df.query("task == 'two_moons'")
-fig = fig_metric(results_subset, metric="C2ST")
-# Note: Use fig.show() or fig.save() to show or save the figure
+fig = fig_metric(results_subset, metric="C2ST")  # Use fig.show() or fig.save() to show or save the figure
 ```
 
 It can also be used to plot posteriors, e.g., to compare the results of an inference algorithm against reference samples:
