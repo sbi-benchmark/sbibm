@@ -3,7 +3,7 @@ version](https://badge.fury.io/py/sbibm.svg)](https://badge.fury.io/py/sbibm) [!
 
 # Simulation-Based Inference Benchmark
 
-This repository contains a simulation-based inference benchmark framework, `sbibm`, which we describe in the [associated manuscript "Benchmarking Simulation-based Inference"](https://github.com/mackelab/sbibm#Citation). The benchmark framework includes tasks, reference posteriors, metrics, plotting, and integrations with SBI toolboxes. The framework is designed to be highly extensible and easily used in new research projects as we show below.
+This repository contains a simulation-based inference benchmark framework, `sbibm`, which we describe in the [associated manuscript "Benchmarking Simulation-based Inference"](https://arxiv.org/abs/2101.04653). The benchmark framework includes tasks, reference posteriors, metrics, plotting, and integrations with SBI toolboxes. The framework is designed to be highly extensible and easily used in new research projects as we show below.
 
 In order to emphasize that `sbibm` can be used independently of any particular analysis pipeline, we split the code for reproducing the experiments of the manuscript into a seperate repository hosted at [github.com/sbi-benchmark/results/](https://github.com/sbi-benchmark/results/tree/main/benchmarking_sbi). Besides the pipeline to reproduce the manuscripts' experiments, full results including dataframes for quick comparisons are hosted in that repository.
 
@@ -97,12 +97,17 @@ As mentioned above, we host the code for reproducing the experiments of the manu
 
 ## Citation
 
+The manuscript is available [on arXiv](https://arxiv.org/abs/2101.04653) as a preprint:
+
 ```bibtex
-@article{lueckmann2020benchmarking,
-  author  = {Lueckmann, Jan-Matthis and Boelts, Jan and Greenberg, David S. and Gon{\c{c}}alves, Pedro J. and Macke, Jakob H.},
-  title   = {Benchmarking simulation-based inference},
-  year    = {2020},
-  journal = {arXiv preprint},
+@misc{lueckmann2020benchmarking,
+  title         = {Benchmarking simulation-based inference},
+  author        = {Lueckmann, Jan-Matthis and Boelts, Jan and Greenberg, David S. 
+                   and Gon{\c{c}}alves, Pedro J. and Macke, Jakob H.},
+  year          = {2021},
+  eprint        = {2101.04653},
+  archivePrefix = {arXiv},
+  primaryClass  = {stat.ML}
 }
 ```
 
