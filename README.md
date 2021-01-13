@@ -1,5 +1,5 @@
 [![PyPI
-version](https://badge.fury.io/py/sbibm.svg)](https://badge.fury.io/py/sbibm) [![Contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/sbi-benchmark/sbibm/blob/master/CONTRIBUTING.md) [![Black](https://img.shields.io/badge/code%20style-black-000000.svg?style=flat)](https://github.com/psf/black)
+version](https://img.shields.io/pypi/v/sbibm)](https://pypi.org/project/sbibm/) ![Python versions](https://img.shields.io/pypi/pyversions/sbibm) [![Contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/sbi-benchmark/sbibm/blob/master/CONTRIBUTING.md) [![Black](https://img.shields.io/badge/code%20style-black-000000.svg?style=flat)](https://github.com/psf/black)
 
 # Simulation-Based Inference Benchmark
 
@@ -92,9 +92,30 @@ c2st_accuracy = c2st(reference_samples, algorithm_samples)
 For more info, see `help(c2st)`.
 
 
-## Experiments
+## Figures
 
-As mentioned above, we host the code for reproducing the experiments of the manuscript in a seperate repository at [github.com/sbi-benchmark/results](https://github.com/sbi-benchmark/results/tree/main/benchmarking_sbi). Besides the pipeline to reproduce the manuscripts' experiments, full results including dataframes for quick comparisons are provided.
+`sbibm` includes code for plotting results, for instance, to plot metrics on a specific task:
+
+```python
+from sbibm.visualisation import fig_metric
+
+results_df = sbibm.get_results(dataset="main_paper.csv")
+results_subset = results_df.query("task == 'two_moons'")
+fig = fig_metric(results_subset, metric="C2ST")
+# Note: Use fig.show() or fig.save() to show or save the figure
+```
+
+It can also be used to plot posteriors, e.g., to compare the results of an inference algorithm against reference samples:
+
+```python
+from sbibm.visualisation import fig_posterior
+fig = fig_posterior(task_name="two_moons", observation=1, samples=[algorithm_samples])
+```
+
+
+## Results and Experiments
+
+We host results and the code for reproducing the experiments of the manuscript in a seperate repository at [github.com/sbi-benchmark/results](https://github.com/sbi-benchmark/results/tree/main/benchmarking_sbi): This includes the pipeline to reproduce the manuscripts' experiments as well as dataframes for new comparisons.
 
 
 ## Citation
