@@ -3,15 +3,15 @@ varied. What varies will depend on the problem."""
 
 __author__ = 'wittawat'
 
-import kgof
-import kgof.data as data
-import kgof.glo as glo
-import kgof.density as density
-import kgof.goftest as gof
-import kgof.intertst as tgof
-import kgof.mmd as mgof
-import kgof.util as util 
-import kgof.kernel as kernel 
+import sbibm.third_party.kgof as kgof
+import sbibm.third_party.kgof.data as data
+import sbibm.third_party.kgof.glo as glo
+import sbibm.third_party.kgof.density as density
+import sbibm.third_party.kgof.goftest as gof
+import sbibm.third_party.kgof.intertst as tgof
+import sbibm.third_party.kgof.mmd as mgof
+import sbibm.third_party.kgof.util as util 
+import sbibm.third_party.kgof.kernel as kernel 
 
 # need independent_jobs package 
 # https://github.com/karlnapf/independent-jobs
@@ -487,29 +487,29 @@ class Ex2Job(IndependentJob):
 
 # This import is needed so that pickle knows about the class Ex2Job.
 # pickle is used when collecting the results from the submitted jobs.
-from kgof.ex.ex2_prob_params import Ex2Job
-from kgof.ex.ex2_prob_params import job_fssdJ1q_med
-from kgof.ex.ex2_prob_params import job_fssdJ5q_med
-from kgof.ex.ex2_prob_params import job_fssdJ1q_opt
-from kgof.ex.ex2_prob_params import job_fssdJ5q_opt
-from kgof.ex.ex2_prob_params import job_fssdJ10q_opt
-from kgof.ex.ex2_prob_params import job_fssdJ5p_opt
-from kgof.ex.ex2_prob_params import job_fssdJ10p_opt
-from kgof.ex.ex2_prob_params import job_fssdJ1q_imq_optv
-from kgof.ex.ex2_prob_params import job_fssdJ5q_imq_optv
-from kgof.ex.ex2_prob_params import job_fssdJ5q_imqb1_optv
-from kgof.ex.ex2_prob_params import job_fssdJ5q_imqb2_optv
-from kgof.ex.ex2_prob_params import job_fssdJ5q_imqb3_optv
-from kgof.ex.ex2_prob_params import job_fssdJ1q_imq_opt
-from kgof.ex.ex2_prob_params import job_fssdJ5q_imq_opt
-from kgof.ex.ex2_prob_params import job_fssdJ1q_imq_optbv
-from kgof.ex.ex2_prob_params import job_fssdJ5q_imq_optbv
-from kgof.ex.ex2_prob_params import job_me_opt
-from kgof.ex.ex2_prob_params import job_kstein_med
-from kgof.ex.ex2_prob_params import job_kstein_imq
-from kgof.ex.ex2_prob_params import job_lin_kstein_med
-from kgof.ex.ex2_prob_params import job_mmd_med
-from kgof.ex.ex2_prob_params import job_mmd_opt
+from sbibm.third_party.kgof.ex.ex2_prob_params import Ex2Job
+from sbibm.third_party.kgof.ex.ex2_prob_params import job_fssdJ1q_med
+from sbibm.third_party.kgof.ex.ex2_prob_params import job_fssdJ5q_med
+from sbibm.third_party.kgof.ex.ex2_prob_params import job_fssdJ1q_opt
+from sbibm.third_party.kgof.ex.ex2_prob_params import job_fssdJ5q_opt
+from sbibm.third_party.kgof.ex.ex2_prob_params import job_fssdJ10q_opt
+from sbibm.third_party.kgof.ex.ex2_prob_params import job_fssdJ5p_opt
+from sbibm.third_party.kgof.ex.ex2_prob_params import job_fssdJ10p_opt
+from sbibm.third_party.kgof.ex.ex2_prob_params import job_fssdJ1q_imq_optv
+from sbibm.third_party.kgof.ex.ex2_prob_params import job_fssdJ5q_imq_optv
+from sbibm.third_party.kgof.ex.ex2_prob_params import job_fssdJ5q_imqb1_optv
+from sbibm.third_party.kgof.ex.ex2_prob_params import job_fssdJ5q_imqb2_optv
+from sbibm.third_party.kgof.ex.ex2_prob_params import job_fssdJ5q_imqb3_optv
+from sbibm.third_party.kgof.ex.ex2_prob_params import job_fssdJ1q_imq_opt
+from sbibm.third_party.kgof.ex.ex2_prob_params import job_fssdJ5q_imq_opt
+from sbibm.third_party.kgof.ex.ex2_prob_params import job_fssdJ1q_imq_optbv
+from sbibm.third_party.kgof.ex.ex2_prob_params import job_fssdJ5q_imq_optbv
+from sbibm.third_party.kgof.ex.ex2_prob_params import job_me_opt
+from sbibm.third_party.kgof.ex.ex2_prob_params import job_kstein_med
+from sbibm.third_party.kgof.ex.ex2_prob_params import job_kstein_imq
+from sbibm.third_party.kgof.ex.ex2_prob_params import job_lin_kstein_med
+from sbibm.third_party.kgof.ex.ex2_prob_params import job_mmd_med
+from sbibm.third_party.kgof.ex.ex2_prob_params import job_mmd_opt
 
 #--- experimental setting -----
 ex = 2
@@ -669,7 +669,7 @@ def run_problem(prob_label):
     # ///////  submit jobs //////////
     # create folder name string
     #result_folder = glo.result_folder()
-    from kgof.config import expr_configs
+    from sbibm.third_party.kgof.config import expr_configs
     tmp_dir = expr_configs['scratch_path']
     foldername = os.path.join(tmp_dir, 'kgof_slurm', 'e%d'%ex)
     logger.info("Setting engine folder to %s" % foldername)

@@ -19,10 +19,10 @@ import autograd.numpy as np
 # Require freqopttest https://github.com/wittawatj/interpretable-test
 import freqopttest.tst as tst
 import freqopttest.data as fdata
-import kgof.data as data
-import kgof.goftest as gof
-import kgof.util as util
-import kgof.kernel as kernel
+import sbibm.third_party.kgof.data as data
+import sbibm.third_party.kgof.goftest as gof
+import sbibm.third_party.kgof.util as util
+import sbibm.third_party.kgof.kernel as kernel
 import logging
 import matplotlib.pyplot as plt
 

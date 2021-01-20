@@ -14,9 +14,9 @@ __author__ = 'wittawat'
 from abc import ABCMeta, abstractmethod
 import autograd
 import autograd.numpy as np
-import kgof.data as data
-import kgof.util as util
-import kgof.kernel as kernel
+import sbibm.third_party.kgof.data as data
+import sbibm.third_party.kgof.util as util
+import sbibm.third_party.kgof.kernel as kernel
 import logging
 import matplotlib.pyplot as plt
 

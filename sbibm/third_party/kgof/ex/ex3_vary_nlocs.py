@@ -4,13 +4,13 @@ increases.
 """
 __author__ = 'wittawat'
 
-import kgof
-import kgof.data as data
-import kgof.glo as glo
-import kgof.density as density
-import kgof.goftest as gof
-import kgof.util as util 
-import kgof.kernel as kernel 
+import sbibm.third_party.kgof as kgof
+import sbibm.third_party.kgof.data as data
+import sbibm.third_party.kgof.glo as glo
+import sbibm.third_party.kgof.density as density
+import sbibm.third_party.kgof.goftest as gof
+import sbibm.third_party.kgof.util as util 
+import sbibm.third_party.kgof.kernel as kernel 
 
 # need independent_jobs package 
 # https://github.com/karlnapf/independent-jobs
@@ -175,10 +175,10 @@ class Ex3Job(IndependentJob):
 
 # This import is needed so that pickle knows about the class Ex3Job.
 # pickle is used when collecting the results from the submitted jobs.
-from kgof.ex.ex3_vary_nlocs import Ex3Job
-from kgof.ex.ex3_vary_nlocs import job_fssdq_med
-from kgof.ex.ex3_vary_nlocs import job_fssdq_opt
-from kgof.ex.ex3_vary_nlocs import job_fssdp_opt
+from sbibm.third_party.kgof.ex.ex3_vary_nlocs import Ex3Job
+from sbibm.third_party.kgof.ex.ex3_vary_nlocs import job_fssdq_med
+from sbibm.third_party.kgof.ex.ex3_vary_nlocs import job_fssdq_opt
+from sbibm.third_party.kgof.ex.ex3_vary_nlocs import job_fssdp_opt
 
 #--- experimental setting -----
 ex = 3
@@ -319,7 +319,7 @@ def run_problem(prob_label):
     # ///////  submit jobs //////////
     # create folder name string
     #result_folder = glo.result_folder()
-    from kgof.config import expr_configs
+    from sbibm.third_party.kgof.config import expr_configs
     tmp_dir = expr_configs['scratch_path']
     foldername = os.path.join(tmp_dir, 'kgof_slurm', 'e%d'%ex)
     logger.info("Setting engine folder to %s" % foldername)

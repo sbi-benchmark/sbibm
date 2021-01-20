@@ -4,7 +4,7 @@ from future import standard_library
 standard_library.install_aliases()
 __author__ = 'wittawat'
 
-import kgof
+import sbibm.third_party.kgof as kgof
 import os
 import pickle
 
@@ -16,7 +16,7 @@ def get_root():
 def result_folder():
     """Return the full path to the result/ folder containing experimental result 
     files"""
-    import kgof.config as config
+    import sbibm.third_party.kgof.config as config
     results_path = config.expr_configs['expr_results_path']
     return results_path
     #return os.path.join(get_root(), 'result')
@@ -25,7 +25,7 @@ def data_folder():
     """
     Return the full path to the data folder 
     """
-    import kgof.config as config
+    import sbibm.third_party.kgof.config as config
     data_path = config.expr_configs['data_path']
     return data_path
     #return os.path.join(get_root(), 'data')
