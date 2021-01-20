@@ -1,3 +1,8 @@
+# v1.0.4
+
+- Fixed imports of `kgof` (thanks to @bkmi, #1)
+
+
 # v1.0.3
 
 - Updating README following publication of preprint: https://arxiv.org/abs/2101.04653
