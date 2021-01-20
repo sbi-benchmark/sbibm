@@ -4,7 +4,7 @@ from builtins import range
 from builtins import object
 __author__ = 'wittawat'
 
-import kgof.glo as glo
+import sbibm.third_party.kgof.glo as glo
 import matplotlib
 import matplotlib.pyplot as plt
 import autograd.numpy as np

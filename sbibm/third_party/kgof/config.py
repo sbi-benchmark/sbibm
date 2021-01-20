@@ -4,7 +4,7 @@ This file defines global configuration of the project.
 Casual usage of the package should not need to change this. 
 """
 
-import kgof.glo as glo
+import sbibm.third_party.kgof.glo as glo
 import os
 
 expr_configs = {

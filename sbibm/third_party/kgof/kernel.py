@@ -12,8 +12,8 @@ from abc import ABCMeta, abstractmethod
 import autograd
 import autograd.numpy as np
 #import numpy as np
-import kgof.config as config
-import kgof.util as util
+import sbibm.third_party.kgof.config as config
+import sbibm.third_party.kgof.util as util
 
 class Kernel(with_metaclass(ABCMeta, object)):
     """Abstract class for kernels. Inputs to all methods are numpy arrays."""
