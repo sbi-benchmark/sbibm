@@ -158,7 +158,7 @@ We host results and the code for reproducing the experiments of the manuscript i
 The manuscript is available [on arXiv](https://arxiv.org/abs/2101.04653) as a preprint:
 
 ```bibtex
-@misc{lueckmann2020benchmarking,
+@misc{lueckmann2021benchmarking,
   title         = {Benchmarking simulation-based inference},
   author        = {Lueckmann, Jan-Matthis and Boelts, Jan and Greenberg, David S. 
                    and Gon{\c{c}}alves, Pedro J. and Macke, Jakob H.},
