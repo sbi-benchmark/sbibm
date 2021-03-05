@@ -35,8 +35,7 @@ def run(
 
     We are also not doing SASS for now, and LRA after sampling.
 
-    Choose one of `num_top_samples`, `quantile`, `eps`. We are actually not using eps for now, as I don't know how to
-    combine that with the required simulation budget.
+    Choose one of `num_top_samples`, `quantile`, `eps`.
 
     Args:
         task: Task instance
@@ -61,13 +60,12 @@ def run(
     """
     if sass:
         raise NotImplementedError("SASS not yet implemented")
-    if eps is not None:
-        raise NotImplementedError
 
     assert not (num_observation is None and observation is None)
     assert not (num_observation is not None and observation is not None)
 
-    assert not (num_top_samples is None and quantile is None and eps is None)
+    if (eps is not None) + (num_top_samples is not None) + (quantile is not None) != 1:
+        raise RuntimeError("Exactly one of `num_top_samples`, `quantile`, `eps` needs to be specified.")
 
     log = sbibm.get_logger(__name__)
     log.info(f"Running REJ-ABC")
@@ -75,7 +73,7 @@ def run(
     if observation is None:
         observation = task.get_observation(num_observation)
 
-    if num_top_samples is not None and quantile is None:
+    if num_top_samples is not None:
         if sass:
             quantile = num_top_samples / (
                     num_simulations - int(sass_fraction * num_simulations)
@@ -102,7 +100,10 @@ def run(
     # print("obs", [np.array(observation)])
     journal_standard_ABC = sampler.sample([[np.array(observation)]], n_samples=num_simulations,
                                           n_samples_per_param=1, epsilon=10 ** 50)  # set epsilon to very large number
-    journal_standard_ABC_reduced = journal_cleanup_rejABC(journal_standard_ABC, percentile=quantile * 100)
+    if eps is None:  # then we use quantile to select the posterior samples from the generated ones
+        journal_standard_ABC_reduced = journal_cleanup_rejABC(journal_standard_ABC, percentile=quantile * 100)
+    else:
+        journal_standard_ABC_reduced = journal_cleanup_rejABC(journal_standard_ABC, threshold=eps)
 
     assert journal_standard_ABC.number_of_simulations[-1] == num_simulations
 

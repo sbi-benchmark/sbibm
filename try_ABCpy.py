@@ -13,10 +13,12 @@ from sbibm.algorithms.abcpy.rejection_abc import run as rej_abc  # See help(rej_
 
 num_simulations = 10000
 num_samples = 10000
-posterior_samples, _, _ = rej_abc(task=task, num_samples=num_samples, num_observation=1,
-                                  num_simulations=num_simulations, quantile=0.03, kde_bandwidth="cv")
+# posterior_samples, _, _ = rej_abc(task=task, num_samples=num_samples, num_observation=1, kde_bandwidth="cv",
+#                                   num_simulations=num_simulations, quantile=0.03, num_top_samples=None)
 # posterior_samples, _, _ = rej_abc(task=task, num_samples=num_samples, num_observation=1,
 #                                   num_simulations=num_simulations, num_top_samples=300, kde_bandwidth="cv")
+posterior_samples, _, _ = rej_abc(task=task, num_samples=num_samples, num_observation=1, kde_bandwidth="cv",
+                                  num_simulations=num_simulations, eps=0.15, num_top_samples=None)
 
 print("Posterior samples shape", posterior_samples.shape)
 

@@ -80,14 +80,23 @@ def get_distance(distance: str, statistics: Statistics) -> Callable:
     return distance_calc
 
 
-def journal_cleanup_rejABC(journal, percentile):
+def journal_cleanup_rejABC(journal, percentile=None, threshold=None):
     """This function takes a Journal file (typically produced by an Rejection ABC run with very large epsilon value)
-    and the keeps only the samples which achieve performance less than some percentile of the achieved distances. It is
+    and the keeps only the samples which achieve performance less than either some percentile of the achieved distances,
+     or either some specified threshold. It is
     a very simple way to obtain a Rejection ABC which works on a percentile of the obtained distances. """
 
-    distance_cutoff = np.percentile(journal.distances[-1], percentile)
+    if (threshold is None) == (percentile is None):
+        raise RuntimeError("Exactly one of percentile or epsilon needs to be specified.")
+
+    if percentile is not None:
+        distance_cutoff = np.percentile(journal.distances[-1], percentile)
+    else:
+        distance_cutoff = threshold
     picked_simulations = journal.distances[-1] < distance_cutoff
     new_distances = journal.distances[-1][picked_simulations]
+    if len(picked_simulations) == 0:
+        raise RuntimeError("The specified value of threshold is too low, no simulations are selected.")
 
     new_journal = Journal(journal._type)
     new_journal.configuration["n_samples"] = journal.configuration["n_samples"]
