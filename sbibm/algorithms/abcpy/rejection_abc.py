@@ -17,6 +17,7 @@ def run(
         task: Task,
         num_samples: int,
         num_simulations: int,
+        num_simulations_per_param: Optional[int] = 1,
         num_observation: Optional[int] = None,
         observation: Optional[torch.Tensor] = None,
         num_top_samples: Optional[int] = 100,
@@ -31,9 +32,7 @@ def run(
 ) -> Tuple[torch.Tensor, int, Optional[torch.Tensor]]:
     """Runs REJ-ABC from `ABCpy`
 
-    For now, we do not include generating more than one simulation for parameter value; can do that in the future.
-
-    We are also not doing SASS for now, and LRA after sampling.
+    We do not implement SASS for now, and LRA after sampling.
 
     Choose one of `num_top_samples`, `quantile`, `eps`.
 
@@ -41,6 +40,9 @@ def run(
         task: Task instance
         num_samples: Number of samples to generate from posterior
         num_simulations: Simulation budget
+        num_simulations_per_param: The number of the total simulations budget to produce for each parameter value;
+            used to better estimate the ABC distance from the observation for each parameter value. Useful to
+            investigate whether splitting the budget to do multi-simulations per parameter is helpful or not.
         num_observation: Observation number to load, alternative to `observation`
         observation: Observation, alternative to `num_observation`
         num_top_samples: If given, will use `top=True` with num_top_samples
@@ -92,20 +94,26 @@ def run(
 
     # define prior and model from the task simulator:
     parameters = ABCpyPrior(task)
-    model = ABCpySimulator([parameters], task, num_simulations=num_simulations)
+    model = ABCpySimulator([parameters], task, max_calls=num_simulations)
 
     # inference; not sure how to use random seed
     sampler = RejectionABC(root_models=[model], distances=[distance_calc], backend=backend, seed=None)
     # print("obs", [observation])
     # print("obs", [np.array(observation)])
-    journal_standard_ABC = sampler.sample([[np.array(observation)]], n_samples=num_simulations,
-                                          n_samples_per_param=1, epsilon=10 ** 50)  # set epsilon to very large number
+    journal_standard_ABC = sampler.sample([[np.array(observation)]],
+                                          n_samples=num_simulations // num_simulations_per_param,
+                                          n_samples_per_param=num_simulations_per_param,
+                                          epsilon=10 ** 50)  # set epsilon to very large number
     if eps is None:  # then we use quantile to select the posterior samples from the generated ones
         journal_standard_ABC_reduced = journal_cleanup_rejABC(journal_standard_ABC, percentile=quantile * 100)
     else:
         journal_standard_ABC_reduced = journal_cleanup_rejABC(journal_standard_ABC, threshold=eps)
 
-    assert journal_standard_ABC.number_of_simulations[-1] == num_simulations
+    actual_n_simulations = journal_standard_ABC.number_of_simulations[-1] * journal_standard_ABC.configuration[
+        "n_samples_per_param"]
+    # this takes into account the fact that num_simulations can be not divisible by num_simulations_per_param
+    expected_n_simulations = (num_simulations // num_simulations_per_param) * num_simulations_per_param
+    assert actual_n_simulations == expected_n_simulations
 
     if save_distances:
         distances = torch.tensor(journal_standard_ABC_reduced.distances[-1])

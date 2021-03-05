@@ -33,8 +33,8 @@ class ABCpyPrior(ProbabilisticModel, Continuous):
 
 
 class ABCpySimulator(ProbabilisticModel, Continuous):
-    def __init__(self, parameters, task, num_simulations, name='ABCpy_simulator'):
-        self.simulator = task.get_simulator(max_calls=num_simulations)
+    def __init__(self, parameters, task, max_calls, name='ABCpy_simulator'):
+        self.simulator = task.get_simulator(max_calls=max_calls)
         self.output_dim = task.dim_data
         self.name = task.name if task.name is not None else name
 
