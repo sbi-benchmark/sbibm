@@ -1,4 +1,5 @@
 import sbibm
+
 task_name = "gaussian_linear"
 task_name = "two_moons"
 
@@ -9,9 +10,13 @@ observation = task.get_observation(num_observation=1)  # 10 per task
 
 # Alternatively, we can import existing algorithms, e.g:
 from sbibm.algorithms.abcpy.rejection_abc import run as rej_abc  # See help(rej_abc) for keywords
+
+num_simulations = 10000
 num_samples = 10000
-posterior_samples, _, _ = rej_abc(task=task, num_samples=num_samples, num_observation=1, num_simulations=num_samples, quantile=0.03)
-# posterior_samples, _, _ = rej_abc(task=task, num_samples=num_samples, num_observation=1, num_simulations=num_samples, num_top_samples=100)
+posterior_samples, _, _ = rej_abc(task=task, num_samples=num_samples, num_observation=1,
+                                  num_simulations=num_simulations, quantile=0.03, kde_bandwidth="cv")
+# posterior_samples, _, _ = rej_abc(task=task, num_samples=num_samples, num_observation=1,
+#                                   num_simulations=num_simulations, num_top_samples=300, kde_bandwidth="cv")
 
 print("Posterior samples shape", posterior_samples.shape)
 
@@ -22,6 +27,7 @@ print("Posterior samples shape", posterior_samples.shape)
 
 # Visualise both posteriors:
 from sbibm.visualisation import fig_posterior
+
 fig = fig_posterior(task_name=task_name, observation=1, samples_tensor=posterior_samples, num_samples=100, prior=False)
 fig.show()
 # Note: Use fig.show() or fig.save() to show or save the figure

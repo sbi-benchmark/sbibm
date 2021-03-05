@@ -9,6 +9,8 @@ import sbibm
 from sbibm.algorithms.abcpy.abcpy_utils import ABCpyPrior, get_distance, ABCpySimulator, journal_cleanup_rejABC
 from sbibm.tasks.task import Task
 from sbibm.utils.io import save_tensor_to_csv
+from sbibm.utils.kde import get_kde
+from sbibm.utils.torch import sample
 
 
 def run(
@@ -25,16 +27,11 @@ def run(
         sass: bool = False,
         sass_fraction: float = 0.5,
         sass_feature_expansion_degree: int = 3,
+        kde_bandwidth: Optional[str] = None,
 ) -> Tuple[torch.Tensor, int, Optional[torch.Tensor]]:
     """Runs REJ-ABC from `ABCpy`
 
     For now, we do not include generating more than one simulation for parameter value; can do that in the future.
-
-    Moreover, we are not using a KDE on the ABC posterior samples in order to obtain a density estimate, as done in the
-    pyABC wrap; for this reason we are assuming here that num_samples is the same as num_simulations.
-
-    I believe however we are not returning the expected number of samples, as that would be num_samples, but instead we
-    take the given quantile of num_simulations.
 
     We are also not doing SASS for now, and LRA after sampling.
 
@@ -57,6 +54,8 @@ def run(
         sass_fraction: Fraction of simulation budget to use for sass.
         sass_feature_expansion_degree: Degree of polynomial expansion of the summary
             statistics.
+        kde_bandwidth: If not None, will resample using KDE when necessary, set
+            e.g. to "cv" for cross-validated bandwidth selection
     Returns:
         Samples from posterior, number of simulator calls, log probability of true params if computable
     """
@@ -64,8 +63,6 @@ def run(
         raise NotImplementedError("SASS not yet implemented")
     if eps is not None:
         raise NotImplementedError
-
-    assert num_simulations == num_samples
 
     assert not (num_observation is None and observation is None)
     assert not (num_observation is not None and observation is not None)
@@ -115,10 +112,21 @@ def run(
 
     samples = torch.tensor(journal_standard_ABC_reduced.get_accepted_parameters()).squeeze()  # that should work
 
-    if num_observation is not None:
-        # true_parameters = task.get_true_parameters(num_observation=num_observation)
-        # log_prob_true_parameters = posterior.log_prob(true_parameters)
-        # we can't compute posterior probability with ABCpy
-        return samples, journal_standard_ABC.number_of_simulations[-1], None
+    if kde_bandwidth is not None:
+        # fit KDE on data to obtain samples
+        log.info(
+            f"KDE on {samples.shape[0]} samples with bandwidth option {kde_bandwidth}"
+        )
+        kde = get_kde(
+            samples,
+            bandwidth=kde_bandwidth,
+        )
+        samples = kde.sample(num_samples)
     else:
-        return samples, journal_standard_ABC.number_of_simulations[-1], None
+        # otherwise sample with replacement until you get the num_samples you want
+        log.info(f"Sampling {num_samples} samples from trace")
+        samples = sample(samples, num_samples=num_samples, replace=True)
+
+    # The latter is None as we cannot compute posterior probabilities with ABCpy (it would be the posterior probability
+    # of the true parameter space in case that was available)
+    return samples, journal_standard_ABC.number_of_simulations[-1], None
