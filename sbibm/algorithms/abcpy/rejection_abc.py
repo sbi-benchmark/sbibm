@@ -29,6 +29,7 @@ def run(
         sass_fraction: float = 0.5,
         sass_feature_expansion_degree: int = 3,
         kde_bandwidth: Optional[str] = None,
+        seed: Optional[int] = None,
 ) -> Tuple[torch.Tensor, int, Optional[torch.Tensor]]:
     """Runs REJ-ABC from `ABCpy`
 
@@ -50,11 +51,12 @@ def run(
         eps: Epsilon threshold to use
         distance: Distance to use; can be "l2" (Euclidean Distance), "log_reg" (LogReg) or "pen_log_reg" (PenLogReg)
         save_distances: If True, stores distances of samples to disk
-        sass: If True, summary statistics are learned as in
-            Fearnhead & Prangle 2012.
-        sass_fraction: Fraction of simulation budget to use for sass.
-        sass_feature_expansion_degree: Degree of polynomial expansion of the summary
-            statistics.
+        sass: If True, summary statistics are learned as in Fearnhead & Prangle 2012.
+            Not yet implemented, left for compatibility with other algorithms.
+        sass_fraction: Fraction of simulation budget to use for sass. Unused for now, left for compatibility
+        with other algorithms.
+        sass_feature_expansion_degree: Degree of polynomial expansion of the summary statistics. Unused for now, only
+            left for compatibility with other algorithms.
         kde_bandwidth: If not None, will resample using KDE when necessary, set
             e.g. to "cv" for cross-validated bandwidth selection
     Returns:
@@ -96,10 +98,8 @@ def run(
     parameters = ABCpyPrior(task)
     model = ABCpySimulator([parameters], task, max_calls=num_simulations)
 
-    # inference; not sure how to use random seed
-    sampler = RejectionABC(root_models=[model], distances=[distance_calc], backend=backend, seed=None)
-    # print("obs", [observation])
-    # print("obs", [np.array(observation)])
+    # inference
+    sampler = RejectionABC(root_models=[model], distances=[distance_calc], backend=backend, seed=seed)
     journal_standard_ABC = sampler.sample([[np.array(observation)]],
                                           n_samples=num_simulations // num_simulations_per_param,
                                           n_samples_per_param=num_simulations_per_param,
@@ -117,7 +117,7 @@ def run(
 
     if save_distances:
         distances = torch.tensor(journal_standard_ABC_reduced.distances[-1])
-        save_tensor_to_csv("/home/lorenzo/Scrivania/OxWaSP/ABC-project/Code/sbibm/distances.csv", distances)
+        save_tensor_to_csv("distances.csv", distances)
 
     samples = torch.tensor(journal_standard_ABC_reduced.get_accepted_parameters()).squeeze()  # that should work
 

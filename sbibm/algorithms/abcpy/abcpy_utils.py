@@ -19,7 +19,6 @@ class ABCpyPrior(ProbabilisticModel, Continuous):
 
     def forward_simulate(self, abcpy_input_values, num_forward_simulations, rng=np.random.RandomState()):
         result = np.array(self.prior_forward(num_forward_simulations))
-        # print(num_forward_simulations, result.shape)
         return [np.array([x]).reshape(-1, ) for x in result]
 
     def get_output_dimension(self):
