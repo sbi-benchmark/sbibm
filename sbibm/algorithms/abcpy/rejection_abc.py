@@ -35,7 +35,6 @@ def run(
     sass_fraction: float = 0.5,
     sass_feature_expansion_degree: int = 3,
     kde_bandwidth: Optional[str] = None,
-    seed: Optional[int] = None,
 ) -> Tuple[torch.Tensor, int, Optional[torch.Tensor]]:
     """Runs REJ-ABC from `ABCpy`
 
@@ -110,7 +109,7 @@ def run(
 
     # inference
     sampler = RejectionABC(
-        root_models=[model], distances=[distance_calc], backend=backend, seed=seed
+        root_models=[model], distances=[distance_calc], backend=backend
     )
     journal_standard_ABC = sampler.sample(
         [[np.array(observation)]],
@@ -164,4 +163,4 @@ def run(
 
     # The latter is None as we cannot compute posterior probabilities with ABCpy (it would be the posterior probability
     # of the true parameter space in case that was available)
-    return samples, journal_standard_ABC.number_of_simulations[-1], None
+    return samples, actual_n_simulations, None

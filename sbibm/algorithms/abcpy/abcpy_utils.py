@@ -119,20 +119,18 @@ def journal_cleanup_rejABC(journal, percentile=None, threshold=None):
         raise RuntimeError(
             "The specified value of threshold is too low, no simulations are selected."
         )
-
+    n_reduced_samples = np.sum(picked_simulations)
     new_journal = Journal(journal._type)
-    new_journal.configuration["n_samples"] = journal.configuration["n_samples"]
+    new_journal.configuration["n_samples"] = n_reduced_samples
     new_journal.configuration["n_samples_per_param"] = journal.configuration[
         "n_samples_per_param"
     ]
-    new_journal.configuration["epsilon"] = journal.configuration["epsilon"]
-
-    n_reduced_samples = np.sum(picked_simulations)
+    new_journal.configuration["epsilon"] = distance_cutoff
 
     new_accepted_parameters = []
     param_names = journal.get_parameters().keys()
     new_names_and_parameters = {name: [] for name in param_names}
-    for i in range(len(picked_simulations)):
+    for i in np.where(picked_simulations)[0]:
         if picked_simulations[i]:
             new_accepted_parameters.append(journal.get_accepted_parameters()[i])
             for name in param_names:
