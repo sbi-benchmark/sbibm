@@ -1,6 +1,7 @@
 from typing import Callable
-import torch
+
 import numpy as np
+import torch
 from abcpy.continuousmodels import Continuous, InputConnector
 from abcpy.distances import Euclidean, LogReg, PenLogReg
 from abcpy.output import Journal
@@ -9,7 +10,7 @@ from abcpy.statistics import Statistics
 
 
 class ABCpyPrior(ProbabilisticModel, Continuous):
-    def __init__(self, task, name='ABCpy_prior'):
+    def __init__(self, task, name="ABCpy_prior"):
         self.prior_forward = task.get_prior()
         self.dim_parameters = task.dim_parameters
         self.name = task.name if task.name is not None else name
@@ -17,9 +18,16 @@ class ABCpyPrior(ProbabilisticModel, Continuous):
         input_parameters = InputConnector.from_list([])
         super(ABCpyPrior, self).__init__(input_parameters, self.name + "_prior")
 
-    def forward_simulate(self, abcpy_input_values, num_forward_simulations, rng=np.random.RandomState()):
+    def forward_simulate(
+        self, abcpy_input_values, num_forward_simulations, rng=np.random.RandomState()
+    ):
         result = np.array(self.prior_forward(num_forward_simulations))
-        return [np.array([x]).reshape(-1, ) for x in result]
+        return [
+            np.array([x]).reshape(
+                -1,
+            )
+            for x in result
+        ]
 
     def get_output_dimension(self):
         return self.dim_parameters
@@ -32,7 +40,7 @@ class ABCpyPrior(ProbabilisticModel, Continuous):
 
 
 class ABCpySimulator(ProbabilisticModel, Continuous):
-    def __init__(self, parameters, task, max_calls, name='ABCpy_simulator'):
+    def __init__(self, parameters, task, max_calls, name="ABCpy_simulator"):
         self.simulator = task.get_simulator(max_calls=max_calls)
         self.output_dim = task.dim_data
         self.name = task.name if task.name is not None else name
@@ -40,12 +48,21 @@ class ABCpySimulator(ProbabilisticModel, Continuous):
         input_parameters = InputConnector.from_list(parameters)
         super(ABCpySimulator, self).__init__(input_parameters, self.name)
 
-    def forward_simulate(self, abcpy_input_values, num_forward_simulations, rng=np.random.RandomState()):
+    def forward_simulate(
+        self, abcpy_input_values, num_forward_simulations, rng=np.random.RandomState()
+    ):
         tensor_param = torch.tensor(abcpy_input_values)
-        tensor_res = [self.simulator(tensor_param) for k in range(num_forward_simulations)]
+        tensor_res = [
+            self.simulator(tensor_param) for k in range(num_forward_simulations)
+        ]
         # print(tensor_res)
         # print([np.array(x).reshape(-1, ) for x in tensor_res])
-        return [np.array(x).reshape(-1, ) for x in tensor_res]
+        return [
+            np.array(x).reshape(
+                -1,
+            )
+            for x in tensor_res
+        ]
 
     def get_output_dimension(self):
         return self.output_dim
@@ -70,8 +87,10 @@ def get_distance(distance: str, statistics: Statistics) -> Callable:
         distance_calc = PenLogReg(statistics)
 
     elif distance == "Wasserstein":
-        raise NotImplementedError("Wasserstein distace not yet implemented as we are considering only one single "
-                                  "simulation for parameter value")
+        raise NotImplementedError(
+            "Wasserstein distace not yet implemented as we are considering only one single "
+            "simulation for parameter value"
+        )
 
     else:
         raise NotImplementedError(f"Distance '{distance}' not implemented.")
@@ -83,10 +102,12 @@ def journal_cleanup_rejABC(journal, percentile=None, threshold=None):
     """This function takes a Journal file (typically produced by an Rejection ABC run with very large epsilon value)
     and the keeps only the samples which achieve performance less than either some percentile of the achieved distances,
      or either some specified threshold. It is
-    a very simple way to obtain a Rejection ABC which works on a percentile of the obtained distances. """
+    a very simple way to obtain a Rejection ABC which works on a percentile of the obtained distances."""
 
     if (threshold is None) == (percentile is None):
-        raise RuntimeError("Exactly one of percentile or epsilon needs to be specified.")
+        raise RuntimeError(
+            "Exactly one of percentile or epsilon needs to be specified."
+        )
 
     if percentile is not None:
         distance_cutoff = np.percentile(journal.distances[-1], percentile)
@@ -95,11 +116,15 @@ def journal_cleanup_rejABC(journal, percentile=None, threshold=None):
     picked_simulations = journal.distances[-1] < distance_cutoff
     new_distances = journal.distances[-1][picked_simulations]
     if len(picked_simulations) == 0:
-        raise RuntimeError("The specified value of threshold is too low, no simulations are selected.")
+        raise RuntimeError(
+            "The specified value of threshold is too low, no simulations are selected."
+        )
 
     new_journal = Journal(journal._type)
     new_journal.configuration["n_samples"] = journal.configuration["n_samples"]
-    new_journal.configuration["n_samples_per_param"] = journal.configuration["n_samples_per_param"]
+    new_journal.configuration["n_samples_per_param"] = journal.configuration[
+        "n_samples_per_param"
+    ]
     new_journal.configuration["epsilon"] = journal.configuration["epsilon"]
 
     n_reduced_samples = np.sum(picked_simulations)
