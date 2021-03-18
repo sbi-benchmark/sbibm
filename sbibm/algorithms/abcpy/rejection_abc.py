@@ -38,7 +38,7 @@ def run(
 ) -> Tuple[torch.Tensor, int, Optional[torch.Tensor]]:
     """Runs REJ-ABC from `ABCpy`
 
-    We do not implement SASS for now, and LRA after sampling.
+    ABCpy does not implement LRA post processing. SASS is supported in ABCpy but not yet implemented here.
 
     Choose one of `num_top_samples`, `quantile`, `eps`.
 
