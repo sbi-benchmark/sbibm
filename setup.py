@@ -29,7 +29,7 @@ REQUIRED = [
     "pandas>=1.0.0",
     "pyabc>=0.10.8",
     "pyabcranger>=0.0.48",
-    "sbi==0.14.2",
+    "sbi>=0.14.2",
     "pyro-ppl",
     "scikit-learn",
     "torch>=1.5.1",
@@ -133,5 +133,7 @@ setup(
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
     ],
-    cmdclass={"upload": UploadCommand,},
+    cmdclass={
+        "upload": UploadCommand,
+    },
 )

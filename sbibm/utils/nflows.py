@@ -17,7 +17,7 @@ from torch.utils import data
 from torch.utils.data.sampler import SubsetRandomSampler
 from tqdm import tqdm  # noqa
 
-from sbibm.utils.torch import get_default_device
+from sbibm.utils.torch import get_default_device, get_log_abs_det_jacobian
 
 
 def get_flow(
@@ -96,7 +96,7 @@ def get_flow(
             ]
         )
 
-        transform = transforms.CompositeTransform([standardizing_transform, transform,])
+        transform = transforms.CompositeTransform([standardizing_transform, transform])
 
         distribution = distributions_.StandardNormal((features,))
         neural_net = flows.Flow(transform, distribution, embedding)
@@ -246,7 +246,7 @@ def train_flow(
         sampler=SubsetRandomSampler(val_indices),
     )
 
-    optimizer = optim.Adam(list(flow.parameters()), lr=learning_rate,)
+    optimizer = optim.Adam(list(flow.parameters()), lr=learning_rate)
     # Keep track of best_validation log_prob seen so far.
     best_validation_log_prob = -1e100
     # Keep track of number of epochs since last improvement.
@@ -329,11 +329,8 @@ class FlowWrapper:
     def log_prob(self, parameters_constrained):
         parameters_unconstrained = self.transform(parameters_constrained)
         log_probs = self.flow.log_prob(parameters_unconstrained)
-        log_probs += torch.sum(
-            self.transform.log_abs_det_jacobian(
-                parameters_constrained, parameters_unconstrained
-            ),
-            axis=1,
+        log_probs += get_log_abs_det_jacobian(
+            self.transform, parameters_constrained, parameters_unconstrained
         )
         return log_probs
 

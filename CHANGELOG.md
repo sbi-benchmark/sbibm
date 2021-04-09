@@ -1,3 +1,9 @@
+# v1.0.5
+
+- Fixed PyTorch >= 1.8 compatibility and added KDE warnings (#8, #10)
+- Updated citation to AISTATS 2021
+
+
 # v1.0.4
 
 - Fixed imports of `kgof` (thanks to @bkmi, #1)

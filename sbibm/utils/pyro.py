@@ -19,6 +19,8 @@ from pyro.util import check_site_shape, ignore_jit_warnings
 from torch.autograd import grad
 from torch.distributions import biject_to
 
+from sbibm.utils.torch import get_log_abs_det_jacobian
+
 
 def get_log_prob_fn(
     model,
@@ -161,9 +163,9 @@ def get_log_prob_grad_fn(
     """
     Given a Python callable with Pyro primitives, generates the following model-specific
     functions:
-    - a log prob grad function whose input are parameters and whose 
+    - a log prob grad function whose input are parameters and whose
       output is the grd of log prob of the model wrt parameters
-    - transforms to transform latent sites of `model` to 
+    - transforms to transform latent sites of `model` to
       unconstrained space
 
     Args:
@@ -207,8 +209,8 @@ class _LPMaker:
         )
         log_joint = self.trace_prob_evaluator.log_prob(model_trace)
         for name, t in self.transforms.items():
-            log_joint = log_joint - torch.sum(
-                t.log_abs_det_jacobian(params_constrained[name], params[name])
+            log_joint -= get_log_abs_det_jacobian(
+                t, params_constrained[name], params[name]
             )
         return log_joint
 
@@ -252,7 +254,7 @@ def make_log_prob_grad_fn(log_prob_fn):
     Args:
         log_prob_fn: python callable that takes in a dictionary of parameters
         and returns the log prob.
-    
+
     Returns:
         `log_prob_grad_fn`
 
