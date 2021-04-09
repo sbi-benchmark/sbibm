@@ -3,7 +3,7 @@ version](https://img.shields.io/pypi/v/sbibm)](https://pypi.org/project/sbibm/) 
 
 # Simulation-Based Inference Benchmark
 
-This repository contains a simulation-based inference benchmark framework, `sbibm`, which we describe in the [associated manuscript "Benchmarking Simulation-based Inference"](https://arxiv.org/abs/2101.04653). A short summary of the paper and interactive results can be found on the project website: https://sbi-benchmark.github.io
+This repository contains a simulation-based inference benchmark framework, `sbibm`, which we describe in the [associated manuscript "Benchmarking Simulation-based Inference"](http://proceedings.mlr.press/v130/lueckmann21a.html). A short summary of the paper and interactive results can be found on the project website: https://sbi-benchmark.github.io
 
 The benchmark framework includes tasks, reference posteriors, metrics, plotting, and integrations with SBI toolboxes. The framework is designed to be highly extensible and easily used in new research projects as we show below.
 
@@ -155,18 +155,21 @@ We host results and the code for reproducing the experiments of the manuscript i
 
 ## Citation
 
-The manuscript is available [on arXiv](https://arxiv.org/abs/2101.04653) as a preprint:
+The manuscript is [available through PMLR](http://proceedings.mlr.press/v130/lueckmann21a.html):
 
 ```bibtex
-@misc{lueckmann2021benchmarking,
-  title         = {Benchmarking simulation-based inference},
-  author        = {Lueckmann, Jan-Matthis and Boelts, Jan and Greenberg, David S. 
-                   and Gon{\c{c}}alves, Pedro J. and Macke, Jakob H.},
-  year          = {2021},
-  eprint        = {2101.04653},
-  archivePrefix = {arXiv},
-  primaryClass  = {stat.ML}
-}
+ @InProceedings{lueckmann2021benchmarking, 
+  title     = {Benchmarking Simulation-Based Inference},
+  author    = {Lueckmann, Jan-Matthis and Boelts, Jan and Greenberg, David and Goncalves, Pedro and Macke, Jakob}, 
+  booktitle = {Proceedings of The 24th International Conference on Artificial Intelligence and Statistics}, 
+  pages     = {343--351}, 
+  year      = {2021}, 
+  editor    = {Banerjee, Arindam and Fukumizu, Kenji}, 
+  volume    = {130}, 
+  series    = {Proceedings of Machine Learning Research}, 
+  month     = {13--15 Apr}, 
+  publisher = {PMLR}
+}  
 ```
 
 
