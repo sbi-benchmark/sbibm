@@ -78,8 +78,10 @@ def run(
     simulator = task.get_simulator(max_calls=num_simulations)
 
     transforms = task._get_transforms(automatic_transforms_enabled)["parameters"]
-    prior = wrap_prior_dist(prior, transforms)
-    simulator = wrap_simulator_fn(simulator, transforms)
+
+    if automatic_transforms_enabled:
+        prior = wrap_prior_dist(prior, transforms)
+        simulator = wrap_simulator_fn(simulator, transforms)
 
     density_estimator_fun = posterior_nn(
         model=neural_net.lower(),

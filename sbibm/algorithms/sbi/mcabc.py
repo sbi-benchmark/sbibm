@@ -105,7 +105,9 @@ def run(
         samples = posterior._samples
 
         log.info(
-            f"KDE on {samples.shape[0]} samples with bandwidth option {kde_bandwidth}"
+            f"""KDE on {samples.shape[0]} samples with bandwidth option {kde_bandwidth}.
+            Beware that KDE can give unreliable results when used with too few samples
+            and in high dimensions."""
         )
         kde = get_kde(samples, bandwidth=kde_bandwidth)
 

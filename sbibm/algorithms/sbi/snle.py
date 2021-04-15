@@ -87,8 +87,9 @@ def run(
     simulator = task.get_simulator(max_calls=num_simulations)
 
     transforms = task._get_transforms(automatic_transforms_enabled)["parameters"]
-    prior = wrap_prior_dist(prior, transforms)
-    simulator = wrap_simulator_fn(simulator, transforms)
+    if automatic_transforms_enabled:
+        prior = wrap_prior_dist(prior, transforms)
+        simulator = wrap_simulator_fn(simulator, transforms)
 
     density_estimator_fun = likelihood_nn(
         model=neural_net.lower(),
@@ -97,7 +98,8 @@ def run(
         z_score_theta=z_score_theta,
     )
     inference_method = inference.SNLE_A(
-        density_estimator=density_estimator_fun, prior=prior,
+        density_estimator=density_estimator_fun,
+        prior=prior,
     )
 
     posteriors = []
