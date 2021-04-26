@@ -13,6 +13,11 @@ def get_task(task_name: str, *args: Any, **kwargs: Any) -> Task:
     Returns:
         Task instance
     """
+    if task_name == "ddm":
+        from sbibm.tasks.ddm.task import DDM
+
+        return DDM(*args, **kwargs)
+
     if task_name == "lotka_volterra":
         from sbibm.tasks.lotka_volterra.task import LotkaVolterra
 
