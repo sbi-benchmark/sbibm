@@ -79,23 +79,16 @@ class DDM(Task):
         """
 
         def simulator(parameters):
-            num_samples = parameters.shape[0]
-            result = torch.zeros(num_samples, 2, self.num_trials)
-
-            for idx in range(num_samples):
-                rts, choices = self.ddm.simulate(
-                    float(parameters[idx, 0]), float(parameters[idx, 1])
-                )
-                result[
-                    idx,
-                    0,
-                ] = torch.tensor(rts)
-                result[
-                    idx,
-                    1,
-                ] = torch.tensor(choices)
-
-            return result.reshape(num_samples, 2 * self.num_trials)
+            rts, choices = self.ddm.simulate(
+                parameters[:, 0].numpy(), parameters[:, 1].numpy()
+            )
+            return torch.cat(
+                (
+                    torch.tensor(rts, dtype=torch.float32),
+                    torch.tensor(choices, dtype=torch.float32),
+                ),
+                dim=1,
+            )
 
         return Simulator(task=self, simulator=simulator, max_calls=max_calls)
 
@@ -103,20 +96,39 @@ class DDM(Task):
         """Return likelihood given parameters and data.
 
         Takes product of likelihoods across iid trials.
+
+        Batch dimension is only across parameters, the data is fixed.
         """
         num_samples = parameters.shape[0]
-        assert num_samples == data.shape[0]
+        num_trials = int(data.shape[1] / 2)
 
         likelihoods = torch.zeros(num_samples)
         for idx in range(num_samples):
             likelihoods[idx] = self.ddm.likelihood(
                 float(parameters[idx, 0]),
                 float(parameters[idx, 1]),
-                data[idx, : self.num_trials].numpy(),
-                data[idx, self.num_trials :].numpy(),
+                data[0, :num_trials].numpy(),
+                data[0, num_trials:].numpy(),
             )
 
         return likelihoods
+
+    def get_potential_function(self, data) -> Callable:
+        """Return potential function for fixed data.
+
+        Potential: $-[\log r(x_o, \theta) + \log p(\theta)]$
+
+        The data can consists of multiple iid trials.
+        Then the overall likelihood is defined as the product over iid likelihood.
+        """
+
+        def potential(parameters):
+            log_likelihoods = self.get_likelihood(parameters, data).log()
+            prior_lobprobs = self.get_prior_dist().log_prob(parameters)
+
+            return -(log_likelihoods + prior_lobprobs)
+
+        return potential
 
     def _sample_reference_posterior(
         self,
@@ -144,12 +156,17 @@ class DDM(Task):
         else:
             initial_params = None
 
+        num_chains = 1
+        num_warmup = 10_000
+
         proposal_samples = run_mcmc(
             task=self,
             kernel="Slice",
+            # TODO: change function to take potential function for pyro.
+            potential_function=self.get_potential_function(observation),
             jit_compile=False,
-            num_warmup=10_000,
-            num_chains=1,
+            num_warmup=num_warmup,
+            num_chains=num_chains,
             num_observation=num_observation,
             observation=observation,
             num_samples=num_samples,
@@ -200,17 +217,20 @@ class DDMJulia:
 
         self.simulate = self.jl.eval(
             f"""
-                function f(v, a; dt={self.dt}, num_trials={self.num_trials})
-                    rt = fill(NaN, num_trials)
-                    c = fill(NaN, num_trials)
+                function f(vs, as; dt={self.dt}, num_trials={self.num_trials})
+                    num_parameters = size(vs)[1]
+                    rt = fill(NaN, (num_parameters, num_trials))
+                    c = fill(NaN, (num_parameters, num_trials))
+                                        
+                    for i=1:num_parameters
+                        drift = ConstDrift(vs[i], dt)
+                        bound = ConstSymBounds(as[i], dt)
+                        s = sampler(drift, bound)
                     
-                    drift = ConstDrift(v, dt)
-                    bound = ConstSymBounds(a, dt)
-                    s = sampler(drift, bound)
-                    
-                    for i=1:num_trials
-                        rt[i], ci = rand(s)
-                        c[i] = ci ? 1.0 : 0.0
+                        for j=1:num_trials
+                            rt[i, j], ci = rand(s)
+                            c[i, j] = ci ? 1.0 : 0.0
+                        end
                     end
                     return rt, c
                 end
