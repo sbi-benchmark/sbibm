@@ -8,6 +8,7 @@ import pyro
 import torch
 from julia import Julia
 from pyro import distributions as pdist
+from utils import DDMJulia
 
 import sbibm  # noqa -- needed for setting sysimage path
 from sbibm.tasks.simulator import Simulator
@@ -106,7 +107,8 @@ class DDM(Task):
         for idx in range(num_samples):
             likelihoods[idx] = self.ddm.likelihood(
                 float(parameters[idx, 0]),
-                float(parameters[idx, 1]),
+                # Take abs because bound is symmetric.
+                abs(float(parameters[idx, 1])),
                 data[0, :num_trials].numpy(),
                 data[0, num_trials:].numpy(),
             )
@@ -121,10 +123,10 @@ class DDM(Task):
         The data can consists of multiple iid trials.
         Then the overall likelihood is defined as the product over iid likelihood.
         """
-
+        # TODO: take into account inverse transform on parameters?
         def potential(parameters):
-            log_likelihoods = self.get_likelihood(parameters, data).log()
-            prior_lobprobs = self.get_prior_dist().log_prob(parameters)
+            prior_lobprobs = self.get_prior_dist().log_prob(parameters["parameters"])
+            log_likelihoods = self.get_likelihood(parameters["parameters"], data).log()
 
             return -(log_likelihoods + prior_lobprobs)
 
@@ -161,9 +163,11 @@ class DDM(Task):
 
         proposal_samples = run_mcmc(
             task=self,
+            # Pass observation to fix data for potential function.
+            potential_fn=self.get_potential_function(
+                self.get_observation(num_observation)
+            ),
             kernel="Slice",
-            # TODO: change function to take potential function for pyro.
-            potential_function=self.get_potential_function(observation),
             jit_compile=False,
             num_warmup=num_warmup,
             num_chains=num_chains,
@@ -200,57 +204,3 @@ class DDM(Task):
 if __name__ == "__main__":
     task = DDM()
     task._setup(n_jobs=-1)
-
-
-class DDMJulia:
-    def __init__(self, dt: float = 0.001, num_trials: int = 1) -> None:
-
-        self.dt = dt
-        self.num_trials = num_trials
-
-        self.jl = Julia(
-            compiled_modules=False,
-            sysimage="/home/janfb/qode/ddm/diffmodels_image.so",
-            runtime="julia",
-        )
-        self.jl.eval("using DiffModels")
-
-        self.simulate = self.jl.eval(
-            f"""
-                function f(vs, as; dt={self.dt}, num_trials={self.num_trials})
-                    num_parameters = size(vs)[1]
-                    rt = fill(NaN, (num_parameters, num_trials))
-                    c = fill(NaN, (num_parameters, num_trials))
-                                        
-                    for i=1:num_parameters
-                        drift = ConstDrift(vs[i], dt)
-                        bound = ConstSymBounds(as[i], dt)
-                        s = sampler(drift, bound)
-                    
-                        for j=1:num_trials
-                            rt[i, j], ci = rand(s)
-                            c[i, j] = ci ? 1.0 : 0.0
-                        end
-                    end
-                    return rt, c
-                end
-            """
-        )
-        self.likelihood = self.jl.eval(
-            f"""
-                function f(v, a, rts, cs; dt={self.dt})
-                    drift = ConstDrift(v, dt)
-                    bound = ConstSymBounds(a, dt)
-                    
-                    loglsum = 0
-                    for (rt, c) in zip(rts, cs)
-                        if c > 0
-                            loglsum += log(pdfu(drift, bound, rt))
-                        else
-                            loglsum += log(pdfu(drift, bound, rt))
-                        end
-                    end
-                    return exp(loglsum)
-                end
-            """
-        )
