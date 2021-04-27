@@ -1,6 +1,6 @@
 import time
 import warnings
-from typing import Any, Dict, Optional
+from typing import Any, Callable, Dict, Optional
 
 import torch
 from pyro.infer.mcmc import HMC, NUTS
@@ -27,6 +27,7 @@ def run(
     observation: Optional[torch.Tensor] = None,
     num_chains: int = 10,
     num_warmup: int = 10000,
+    potential_fn: Optional[Callable] = None,
     kernel: str = "slice",
     kernel_parameters: Optional[Dict[str, Any]] = None,
     thinning: int = 1,
@@ -43,7 +44,7 @@ def run(
     Produces `num_samples` while accounting for warmup (burn-in) and thinning.
 
     Note that the actual number of simulations is not controlled for with MCMC since
-    algorithms are only used as a reference method in the benchmark. 
+    algorithms are only used as a reference method in the benchmark.
 
     MCMC is run on the potential function, which returns the unnormalized
     negative log posterior probability. Note that this requires a tractable likelihood.
@@ -57,6 +58,8 @@ def run(
         num_chains: Number of chains
         num_warmup: Warmup steps, during which parameters of the sampler are adapted.
             Warmup samples are not returned by the algorithm.
+        potential_fn: Callable potential function taking a dict as argument and
+            returning the potential given fixed observed data.
         kernel: HMC, NUTS, or Slice
         kernel_parameters: Parameters passed to kernel
         thinning: Amount of thinning to apply, in order to avoid drawing
@@ -110,14 +113,21 @@ def run(
             parameters=",".join([f"{k}={v}" for k, v in kernel_parameters.items()]),
         )
     )
+    # Pass either model or potential_fn, not both.
+    if potential_fn is None:
+        kernel_parameters["model"] = conditioned_model
+    else:
+        kernel_parameters["potential_fn"] = potential_fn
+        log.info("Using explicit potential function instead implicit one through Pyro.")
+
     if kernel.lower() == "nuts":
-        mcmc_kernel = NUTS(model=conditioned_model, **kernel_parameters)
+        mcmc_kernel = NUTS(**kernel_parameters)
 
     elif kernel.lower() == "hmc":
-        mcmc_kernel = HMC(model=conditioned_model, **kernel_parameters)
+        mcmc_kernel = HMC(**kernel_parameters)
 
     elif kernel.lower() == "slice":
-        mcmc_kernel = Slice(model=conditioned_model, **kernel_parameters)
+        mcmc_kernel = Slice(**kernel_parameters)
 
     else:
         raise NotImplementedError
