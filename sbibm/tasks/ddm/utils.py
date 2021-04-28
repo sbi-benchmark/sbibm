@@ -68,21 +68,27 @@ class DDMJulia:
                 end
             """
         )
-        self.likelihood = self.jl.eval(
+        self.log_likelihood = self.jl.eval(
             f"""
-                function f(v, a, rts, cs; dt={self.dt})
-                    drift = ConstDrift(v, dt)
-                    bound = ConstSymBounds(a, dt)
-                    
-                    loglsum = 0
-                    for (rt, c) in zip(rts, cs)
-                        if c > 0
-                            loglsum += log(pdfu(drift, bound, rt))
-                        else
-                            loglsum += log(pdfu(drift, bound, rt))
+                function f(vs, as, rts, cs; dt={self.dt})
+                    batch_size = size(vs)[1]
+                    num_trials = size(rts)[1]
+
+                    logprob = zeros(batch_size)
+
+                    for i=1:batch_size
+                        drift = ConstDrift(vs[i], dt)
+                        bound = ConstSymBounds(as[i], dt)
+
+                        for j=1:num_trials
+                            if cs[j] == 1.0
+                                logprob[i] += log(pdfu(drift, bound, rts[j]))
+                            else
+                                logprob[i] += log(pdfl(drift, bound, rts[j]))
+                            end
                         end
                     end
-                    return exp(loglsum)
+                    return logprob
                 end
             """
         )
