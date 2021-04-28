@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import gc
 from pathlib import Path
-from typing import Callable, List, Optional
+from typing import Any, Callable, Dict, List, Optional
+import pandas as pd
 
 import pyro
 import torch
@@ -40,13 +41,13 @@ class DDM(Task):
             num_reference_posterior_samples=10000,
             num_simulations=[100, 1000, 10000, 100000, 1000000],
             path=Path(__file__).parent.absolute(),
-            observation_seeds=torch.arange(10),
+            observation_seeds=[2, 3, 42],
         )
 
         # Prior
         self.prior_params = {
-            "low": torch.tensor([-2, 0.5]),
-            "high": torch.tensor([2, 2]),
+            "low": torch.tensor([-2.0, 0.5]),
+            "high": torch.tensor([2.0, 2.0]),
         }
         self.prior_dist = pdist.Uniform(**self.prior_params).to_event(1)
 
@@ -93,29 +94,33 @@ class DDM(Task):
 
         return Simulator(task=self, simulator=simulator, max_calls=max_calls)
 
-    def get_likelihood(self, parameters, data):
+    def get_log_likelihood(self, parameters, data):
         """Return likelihood given parameters and data.
 
         Takes product of likelihoods across iid trials.
 
         Batch dimension is only across parameters, the data is fixed.
         """
-        num_samples = parameters.shape[0]
         num_trials = int(data.shape[1] / 2)
+        parameters = parameters.numpy()
+        data = data.numpy()
 
-        likelihoods = torch.zeros(num_samples)
-        for idx in range(num_samples):
-            likelihoods[idx] = self.ddm.likelihood(
-                float(parameters[idx, 0]),
-                # Take abs because bound is symmetric.
-                abs(float(parameters[idx, 1])),
-                data[0, :num_trials].numpy(),
-                data[0, num_trials:].numpy(),
-            )
+        log_likelihoods = self.ddm.log_likelihood(
+            parameters[:, 0],
+            parameters[:, 1],
+            # Pass rts and choices separately.
+            data[0, :num_trials],
+            data[0, num_trials:],
+        )
 
-        return likelihoods
+        return torch.tensor(log_likelihoods)
 
-    def get_potential_function(self, data) -> Callable:
+    def get_potential_fn(
+        self,
+        num_observation: int,
+        observation: torch.Tensor,
+        automatic_transforms_enabled: bool,
+    ) -> Callable:
         """Return potential function for fixed data.
 
         Potential: $-[\log r(x_o, \theta) + \log p(\theta)]$
@@ -123,14 +128,56 @@ class DDM(Task):
         The data can consists of multiple iid trials.
         Then the overall likelihood is defined as the product over iid likelihood.
         """
-        # TODO: take into account inverse transform on parameters?
-        def potential(parameters):
-            prior_lobprobs = self.get_prior_dist().log_prob(parameters["parameters"])
-            log_likelihoods = self.get_likelihood(parameters["parameters"], data).log()
+        log_prob_fun = self._get_log_prob_fn(
+            num_observation,
+            observation,
+            posterior=True,
+            automatic_transforms_enabled=automatic_transforms_enabled,
+        )
 
-            return -(log_likelihoods + prior_lobprobs)
+        def potential_fn(parameters: Dict) -> torch.Tensor:
+            return -log_prob_fun(parameters["parameters"])
 
-        return potential
+        return potential_fn
+
+    def _get_log_prob_fn(
+        self,
+        num_observation: Optional[int],
+        observation: Optional[torch.Tensor],
+        implementation: str,
+        posterior: bool,
+        **kwargs: Any,
+    ) -> Callable:
+
+        transforms = self._get_transforms(
+            num_observation=num_observation,
+            observation=observation,
+            automatic_transforms_enabled=kwargs["automatic_transforms_enabled"],
+        )["parameters"]
+        if observation is None:
+            observation = self.get_observation(num_observation)
+
+        def log_prob_fn(parameters: torch.Tensor) -> torch.Tensor:
+
+            parameters_constrained = transforms.inv(parameters)
+
+            # Get likelihoods from DiffModels.jl
+            log_likelihood = self.get_log_likelihood(
+                parameters_constrained, observation
+            )
+            # Correct for change of variables.
+            # Take negative sum to multiply with inverse abs det jacobian in log space.
+            log_likelihood -= torch.sum(
+                transforms.log_abs_det_jacobian(parameters_constrained, parameters)
+            )
+            if posterior:
+                return log_likelihood + self.get_prior_dist().log_prob(
+                    parameters_constrained
+                )
+            else:
+                return log_likelihood
+
+        return log_prob_fn
 
     def _sample_reference_posterior(
         self,
@@ -150,6 +197,7 @@ class DDM(Task):
             Samples from reference posterior
         """
         from sbibm.algorithms.pyro.mcmc import run as run_mcmc
+        from sbibm.algorithms.pytorch.baseline_grid import run as run_grid
         from sbibm.algorithms.pytorch.baseline_rejection import run as run_rejection
         from sbibm.algorithms.pytorch.utils.proposal import get_proposal
 
@@ -158,49 +206,61 @@ class DDM(Task):
         else:
             initial_params = None
 
-        num_chains = 1
-        num_warmup = 10_000
-
-        proposal_samples = run_mcmc(
+        samples = run_grid(
             task=self,
-            # Pass observation to fix data for potential function.
-            potential_fn=self.get_potential_function(
-                self.get_observation(num_observation)
-            ),
-            kernel="Slice",
-            jit_compile=False,
-            num_warmup=num_warmup,
-            num_chains=num_chains,
+            num_samples=1_000,
             num_observation=num_observation,
             observation=observation,
-            num_samples=num_samples,
-            initial_params=initial_params,
-            automatic_transforms_enabled=True,
+            resolution=25000,
+            batch_size=100000,
+            **dict(automatic_transforms_enabled=False),
         )
 
-        proposal_dist = get_proposal(
-            task=self,
-            samples=proposal_samples,
-            prior_weight=0.1,
-            bounded=True,
-            density_estimator="flow",
-            flow_model="nsf",
-        )
+        # num_chains = 1
+        # num_warmup = 10_000
+        # automatic_transforms_enabled = False
 
-        samples = run_rejection(
-            task=self,
-            num_observation=num_observation,
-            observation=observation,
-            num_samples=num_samples,
-            batch_size=10_000,
-            num_batches_without_new_max=1_000,
-            multiplier_M=1.2,
-            proposal_dist=proposal_dist,
-        )
+        # proposal_samples = run_mcmc(
+        #     task=self,
+        #     potential_fn=self.get_potential_fn(
+        #         num_observation,
+        #         observation,
+        #         automatic_transforms_enabled=automatic_transforms_enabled,
+        #     ),
+        #     kernel="Slice",
+        #     jit_compile=False,
+        #     num_warmup=num_warmup,
+        #     num_chains=num_chains,
+        #     num_observation=num_observation,
+        #     observation=observation,
+        #     num_samples=num_samples,
+        #     initial_params=initial_params,
+        #     automatic_transforms_enabled=automatic_transforms_enabled,
+        # )
+
+        # proposal_dist = get_proposal(
+        #     task=self,
+        #     samples=proposal_samples,
+        #     prior_weight=0.1,
+        #     bounded=True,
+        #     density_estimator="flow",
+        #     flow_model="nsf",
+        # )
+
+        # samples = run_rejection(
+        #     task=self,
+        #     num_observation=num_observation,
+        #     observation=observation,
+        #     num_samples=num_samples,
+        #     batch_size=10_000,
+        #     num_batches_without_new_max=1_000,
+        #     multiplier_M=1.2,
+        #     proposal_dist=proposal_dist,
+        # )
 
         return samples
 
 
 if __name__ == "__main__":
-    task = DDM()
+    task = DDM(num_trials=10)
     task._setup(n_jobs=-1)
