@@ -130,10 +130,8 @@ def test_transforms():
 
     # through change of variables, we can recover the original log prob
     # ladj(x,y) -> log |dy/dx| -> ladj(untransformed, transformed)
-    log_prob_3 = log_prob_2 + torch.sum(
-        transforms.log_abs_det_jacobian(
-            parameters_constrained, parameters_unconstrained
-        )
+    log_prob_3 = log_prob_2 + transforms.log_abs_det_jacobian(
+        parameters_constrained, parameters_unconstrained
     )
 
     assert torch.allclose(log_prob_1, log_prob_3)
