@@ -41,7 +41,7 @@ class DDM(Task):
             num_reference_posterior_samples=10000,
             num_simulations=[100, 1000, 10000, 100000, 1000000],
             path=Path(__file__).parent.absolute(),
-            observation_seeds=[2, 3, 42],
+            observation_seeds=[42],
         )
 
         # Prior
@@ -132,7 +132,8 @@ class DDM(Task):
             num_observation,
             observation,
             posterior=True,
-            automatic_transforms_enabled=automatic_transforms_enabled,
+            implementation="experimental",
+            **dict(automatic_transforms_enabled=automatic_transforms_enabled),
         )
 
         def potential_fn(parameters: Dict) -> torch.Tensor:
@@ -159,17 +160,22 @@ class DDM(Task):
 
         def log_prob_fn(parameters: torch.Tensor) -> torch.Tensor:
 
+            # We need to calculate likelihoods in constrained space.
             parameters_constrained = transforms.inv(parameters)
 
-            # Get likelihoods from DiffModels.jl
-            log_likelihood = self.get_log_likelihood(
+            # Get likelihoods from DiffModels.jl in constrained space.
+            log_likelihood_constrained = self.get_log_likelihood(
                 parameters_constrained, observation
             )
-            # Correct for change of variables.
-            # Take negative sum to multiply with inverse abs det jacobian in log space.
-            log_likelihood -= torch.sum(
-                transforms.log_abs_det_jacobian(parameters_constrained, parameters)
+            # But we need log probs in unconstrained space. Get log abs det jac
+            log_abs_det = transforms.log_abs_det_jacobian(
+                parameters_constrained, parameters
             )
+            assert log_abs_det.numel() == parameters.shape[0]
+            # Likelihood in unconstrained space is:
+            # prob_constrained * 1/abs_det
+            # log_prob_constrained - log_abs_det(T,)
+            log_likelihood = log_likelihood_constrained - log_abs_det
             if posterior:
                 return log_likelihood + self.get_prior_dist().log_prob(
                     parameters_constrained
@@ -206,61 +212,62 @@ class DDM(Task):
         else:
             initial_params = None
 
-        samples = run_grid(
+        # samples = run_grid(
+        #     task=self,
+        #     num_samples=self.num_reference_posterior_samples,
+        #     num_observation=num_observation,
+        #     observation=observation,
+        #     resolution=25000,
+        #     batch_size=100000,
+        #     **dict(automatic_transforms_enabled=False),
+        # )
+
+        num_chains = 1
+        num_warmup = 10_000
+        automatic_transforms_enabled = True
+
+        proposal_samples = run_mcmc(
             task=self,
-            num_samples=1_000,
+            potential_fn=self.get_potential_fn(
+                num_observation,
+                observation,
+                automatic_transforms_enabled=automatic_transforms_enabled,
+            ),
+            kernel="Slice",
+            jit_compile=False,
+            num_warmup=num_warmup,
+            num_chains=num_chains,
             num_observation=num_observation,
             observation=observation,
-            resolution=25000,
-            batch_size=100000,
-            **dict(automatic_transforms_enabled=False),
+            num_samples=num_samples,
+            initial_params=initial_params,
+            automatic_transforms_enabled=automatic_transforms_enabled,
         )
 
-        # num_chains = 1
-        # num_warmup = 10_000
-        # automatic_transforms_enabled = False
+        proposal_dist = get_proposal(
+            task=self,
+            samples=proposal_samples,
+            prior_weight=0.1,
+            bounded=True,
+            density_estimator="flow",
+            flow_model="nsf",
+        )
 
-        # proposal_samples = run_mcmc(
-        #     task=self,
-        #     potential_fn=self.get_potential_fn(
-        #         num_observation,
-        #         observation,
-        #         automatic_transforms_enabled=automatic_transforms_enabled,
-        #     ),
-        #     kernel="Slice",
-        #     jit_compile=False,
-        #     num_warmup=num_warmup,
-        #     num_chains=num_chains,
-        #     num_observation=num_observation,
-        #     observation=observation,
-        #     num_samples=num_samples,
-        #     initial_params=initial_params,
-        #     automatic_transforms_enabled=automatic_transforms_enabled,
-        # )
-
-        # proposal_dist = get_proposal(
-        #     task=self,
-        #     samples=proposal_samples,
-        #     prior_weight=0.1,
-        #     bounded=True,
-        #     density_estimator="flow",
-        #     flow_model="nsf",
-        # )
-
-        # samples = run_rejection(
-        #     task=self,
-        #     num_observation=num_observation,
-        #     observation=observation,
-        #     num_samples=num_samples,
-        #     batch_size=10_000,
-        #     num_batches_without_new_max=1_000,
-        #     multiplier_M=1.2,
-        #     proposal_dist=proposal_dist,
-        # )
+        samples = run_rejection(
+            task=self,
+            num_observation=num_observation,
+            observation=observation,
+            num_samples=num_samples,
+            batch_size=100_00,
+            num_batches_without_new_max=1_000,
+            multiplier_M=1.2,
+            proposal_dist=proposal_dist,
+            **dict(automatic_transforms_enabled=automatic_transforms_enabled),
+        )
 
         return samples
 
 
 if __name__ == "__main__":
-    task = DDM(num_trials=10)
-    task._setup(n_jobs=-1)
+    task = DDM(num_trials=1024)
+    task._setup(n_jobs=1)
