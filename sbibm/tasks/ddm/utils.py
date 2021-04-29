@@ -27,7 +27,9 @@ def find_sysimage():
 
 
 class DDMJulia:
-    def __init__(self, dt: float = 0.001, num_trials: int = 1) -> None:
+    def __init__(
+        self, dt: float = 0.001, num_trials: int = 1, dim_parameters: int = 2
+    ) -> None:
         """Wrapping DDM simulation and likelihood computation from Julia.
 
         Based on Julia package DiffModels.jl
@@ -47,48 +49,104 @@ class DDMJulia:
         )
         self.jl.eval("using DiffModels")
 
-        self.simulate = self.jl.eval(
-            f"""
-                function f(vs, as; dt={self.dt}, num_trials={self.num_trials})
-                    num_parameters = size(vs)[1]
-                    rt = fill(NaN, (num_parameters, num_trials))
-                    c = fill(NaN, (num_parameters, num_trials))
-                                        
-                    for i=1:num_parameters
-                        drift = ConstDrift(vs[i], dt)
-                        bound = ConstSymBounds(as[i], dt)
-                        s = sampler(drift, bound)
-                    
-                        for j=1:num_trials
-                            rt[i, j], ci = rand(s)
-                            c[i, j] = ci ? 1.0 : 0.0
-                        end
-                    end
-                    return rt, c
-                end
-            """
-        )
-        self.log_likelihood = self.jl.eval(
-            f"""
-                function f(vs, as, rts, cs; dt={self.dt})
-                    batch_size = size(vs)[1]
-                    num_trials = size(rts)[1]
-
-                    logprob = zeros(batch_size)
-
-                    for i=1:batch_size
-                        drift = ConstDrift(vs[i], dt)
-                        bound = ConstSymBounds(as[i], dt)
-
-                        for j=1:num_trials
-                            if cs[j] == 1.0
-                                logprob[i] += log(pdfu(drift, bound, rts[j]))
-                            else
-                                logprob[i] += log(pdfl(drift, bound, rts[j]))
+        # forward model and likelihood for two-param case, symmetric bounds.
+        if dim_parameters == 2:
+            self.simulate = self.jl.eval(
+                f"""
+                    function simulate(vs, as; dt={self.dt}, num_trials={self.num_trials})
+                        num_parameters = size(vs)[1]
+                        rt = fill(NaN, (num_parameters, num_trials))
+                        c = fill(NaN, (num_parameters, num_trials))
+                                            
+                        for i=1:num_parameters
+                            drift = ConstDrift(vs[i], dt)
+                            # Pass 0.5a to get bound from boundary separation.
+                            bound = ConstSymBounds(0.5 * as[i], dt)
+                            s = sampler(drift, bound)
+                        
+                            for j=1:num_trials
+                                rt[i, j], cj = rand(s)
+                                c[i, j] = cj ? 1.0 : 0.0
                             end
                         end
+                        return rt, c
                     end
-                    return logprob
-                end
-            """
-        )
+                """
+            )
+            self.log_likelihood = self.jl.eval(
+                f"""
+                    function log_likelihood(vs, as, rts, cs; dt={self.dt})
+                        batch_size = size(vs)[1]
+                        num_trials = size(rts)[1]
+
+                        logprob = zeros(batch_size)
+
+                        for i=1:batch_size
+                            drift = ConstDrift(vs[i], dt)
+                            # Pass 0.5a to get bound from boundary separation.
+                            bound = ConstSymBounds(0.5 * as[i], dt)
+
+                            for j=1:num_trials
+                                if cs[j] == 1.0
+                                    logprob[i] += log(pdfu(drift, bound, rts[j]))
+                                else
+                                    logprob[i] += log(pdfl(drift, bound, rts[j]))
+                                end
+                            end
+                        end
+                        return logprob
+                    end
+                """
+            )
+            # forward model and likelihood for four-param case via asymmetric bounds
+            # as in LAN paper, "simpleDDM".
+        else:
+            self.simulate_simpleDDM = self.jl.eval(
+                f"""
+                    function simulate_simpleDDM(v, bl, bu, ndt; dt={self.dt}, num_trials={self.num_trials})
+                        num_parameters = size(v)[1]
+                        rt = fill(NaN, (num_parameters, num_trials))
+                        c = fill(NaN, (num_parameters, num_trials))
+
+                        for i=1:num_parameters
+                            drift = ConstDrift(v[i], dt)
+                            bound = ConstAsymBounds(bu[i], bl[i], dt)
+                            s = sampler(drift, bound)
+
+                            for j=1:num_trials
+                                # Simulate DDM.
+                                rtj, cj = rand(s)
+                                # Add non-decision time to rt like in LAN paper.
+                                rt[i, j] = rtj + ndt[i]
+                                c[i, j] = cj ? 1.0 : 0.0
+                            end
+
+                        end
+                        return rt, c
+                    end
+                """
+            )
+            self.log_likelihood_simpleDDM = self.jl.eval(
+                f"""
+                    function log_likelihood_simpleDDM(v, bl, bu, rts, cs; dt={self.dt})
+                        batch_size = size(v)[1]
+                        num_trials = size(rts)[1]
+
+                        logprob = zeros(batch_size)
+
+                        for i=1:batch_size
+                            drift = ConstDrift(v[i], dt)
+                            bound = ConstAsymBounds(bu[i], bl[i], dt)
+
+                            for j=1:num_trials
+                                if cs[j] == 1.0
+                                    logprob[i] += log(pdfu(drift, bound, rts[j]))
+                                else
+                                    logprob[i] += log(pdfl(drift, bound, rts[j]))
+                                end
+                            end
+                        end
+                        return logprob
+                    end
+                """
+            )
