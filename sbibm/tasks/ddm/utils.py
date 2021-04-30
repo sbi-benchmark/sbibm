@@ -103,7 +103,7 @@ class DDMJulia:
         else:
             self.simulate_simpleDDM = self.jl.eval(
                 f"""
-                    function simulate_simpleDDM(v, bl, bu, ndt; dt={self.dt}, num_trials={self.num_trials})
+                    function simulate_simpleDDM(v, bl, bu; dt={self.dt}, num_trials={self.num_trials})
                         num_parameters = size(v)[1]
                         rt = fill(NaN, (num_parameters, num_trials))
                         c = fill(NaN, (num_parameters, num_trials))
@@ -115,9 +115,7 @@ class DDMJulia:
 
                             for j=1:num_trials
                                 # Simulate DDM.
-                                rtj, cj = rand(s)
-                                # Add non-decision time to rt like in LAN paper.
-                                rt[i, j] = rtj + ndt[i]
+                                rt[i, j], cj = rand(s)
                                 c[i, j] = cj ? 1.0 : 0.0
                             end
 

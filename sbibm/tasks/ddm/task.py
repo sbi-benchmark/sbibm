@@ -22,7 +22,7 @@ class DDM(Task):
         self,
         dt: float = 0.001,
         num_trials: int = 1,
-        dim_parameters=2,
+        dim_parameters: int = 2,
     ):
         """Drift-diffusion model.
 
@@ -34,7 +34,7 @@ class DDM(Task):
         """
         self.dt = dt
         self.num_trials = num_trials
-        assert dim_parameters in [2, 4], "dim_parameters must be 2 or 4."
+        assert dim_parameters in [2, 3], "dim_parameters must be 2 or 3."
 
         super().__init__(
             dim_parameters=dim_parameters,
@@ -46,15 +46,15 @@ class DDM(Task):
             num_reference_posterior_samples=10000,
             num_simulations=[100, 1000, 10000, 100000, 1000000],
             path=Path(__file__).parent.absolute(),
-            observation_seeds=[42],
+            observation_seeds=[2, 3, 4, 5, 42],
         )
 
         # Prior
         self.prior_params = {
-            "low": torch.tensor([-2.0, 0.5, 0.3, 0.2][:dim_parameters]),
-            "high": torch.tensor([2.0, 2.0, 0.7, 1.8][:dim_parameters]),
+            "low": torch.tensor([-2.0, 0.5, 0.3][:dim_parameters]),
+            "high": torch.tensor([2.0, 2.0, 0.7][:dim_parameters]),
         }
-        self.prior_labels = ["v", "a", "w", "tau"][:dim_parameters]
+        self.prior_labels = ["v", "a", "w"][:dim_parameters]
 
         self.prior_dist = pdist.Uniform(**self.prior_params).to_event(1)
 
@@ -93,12 +93,12 @@ class DDM(Task):
         if self.dim_parameters == 2:
 
             def simulator(parameters):
-                v = parameters[:, 0].numpy()
-                a = parameters[:, 1].numpy()
+                v, a = parameters.numpy().T
                 rts, choices = self.ddm.simulate(
                     v,
                     a,
                 )
+                # concatenate rts and choices into single column.
                 return torch.cat(
                     (
                         torch.tensor(rts, dtype=torch.float32),
@@ -107,20 +107,17 @@ class DDM(Task):
                     dim=1,
                 )
 
-        elif self.dim_parameters == 4:
+        elif self.dim_parameters == 3:
 
             def simulator(parameters):
+                v, a, w = parameters.numpy().T
                 # using boundary separation a and offset w
                 # pass negative lower bound as required by DiffModels.
-                drift = parameters[:, 0].numpy()
-                # bl = - w*a
-                bl = -parameters[:, 2].numpy() * parameters[:, 1].numpy()
-                # bu = (1 - w) * a
-                bu = (1 - parameters[:, 2].numpy()) * parameters[:, 1].numpy()
+                bl = -w * a
+                bu = (1 - w) * a
 
-                rts, choices = self.ddm.simulate_simpleDDM(
-                    drift, bl, bu, parameters[:, 3].numpy()
-                )
+                rts, choices = self.ddm.simulate_simpleDDM(v, bl, bu)
+                # concatenate rts and choices into single column.
                 return torch.cat(
                     (
                         torch.tensor(rts, dtype=torch.float32),
@@ -144,30 +141,30 @@ class DDM(Task):
         num_trials = int(data.shape[1] / 2)
         parameters = parameters.numpy()
         data = data.numpy()
+        rts = data[0, :num_trials]
+        choices = data[0, num_trials:]
 
         if self.dim_parameters == 2:
             log_likelihoods = self.ddm.log_likelihood(
                 parameters[:, 0],  # v
                 parameters[:, 1],  # boundary separation a
                 # Pass rts and choices separately.
-                data[0, :num_trials],
-                data[0, num_trials:],
+                rts,
+                choices,
             )
-        elif self.dim_parameters == 4:
+        elif self.dim_parameters == 3:
             # using boundary separation a and offset w
             # pass negative lower bound as required by DiffModels.
-            drift = parameters[:, 0]
-            # bl = - w*a
-            bl = -parameters[:, 2] * parameters[:, 1]
-            # bu = (1 - w) * a
-            bu = (1 - parameters[:, 2]) * parameters[:, 1]
+            v, a, w = parameters.T
+            bl = -w * a
+            bu = (1 - w) * a
             log_likelihoods = self.ddm.log_likelihood_simpleDDM(
-                drift,  # v
-                bl,  # a
-                bu,  # w
+                v,
+                bl,
+                bu,
                 # Pass rts and choices separately.
-                data[0, :num_trials],
-                data[0, num_trials:],
+                rts,
+                choices,
             )
         else:
             raise NotImplementedError()
@@ -230,13 +227,13 @@ class DDM(Task):
             log_abs_det = transforms.log_abs_det_jacobian(
                 parameters_constrained, parameters
             )
+            # Without transforms, logabsdet returns second dimension.
             if log_abs_det.ndim > 1:
-                log_abs_det = log_abs_det.sum(-1)
-
-            if not log_abs_det.numel() == parameters.shape[0]:
                 import pdb
 
                 pdb.set_trace()
+                log_abs_det = log_abs_det.sum(-1)
+
             # Likelihood in unconstrained space is:
             # prob_constrained * 1/abs_det
             # log_prob_constrained - log_abs_det(T,)
@@ -305,14 +302,14 @@ class DDM(Task):
             num_observation=num_observation,
             observation=observation,
             num_samples=num_samples,
-            initial_params=initial_params,
+            initial_params=initial_params.repeat(num_chains, 1),
             automatic_transforms_enabled=automatic_transforms_enabled,
         )
 
         proposal_dist = get_proposal(
             task=self,
             samples=proposal_samples,
-            prior_weight=0.1,
+            prior_weight=0.2,
             bounded=True,
             density_estimator="flow",
             flow_model="nsf",
@@ -323,8 +320,8 @@ class DDM(Task):
             num_observation=num_observation,
             observation=observation,
             num_samples=num_samples,
-            batch_size=100_00,
-            num_batches_without_new_max=1_000,
+            batch_size=10000,
+            num_batches_without_new_max=1000,
             multiplier_M=1.2,
             proposal_dist=proposal_dist,
             **dict(automatic_transforms_enabled=automatic_transforms_enabled),
@@ -334,5 +331,5 @@ class DDM(Task):
 
 
 if __name__ == "__main__":
-    task = DDM(num_trials=1024, dim_parameters=4)
-    task._setup(n_jobs=1)
+    task = DDM(num_trials=128, dim_parameters=2)
+    task._setup(n_jobs=5)
