@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import gc
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 import pandas as pd
@@ -9,7 +8,7 @@ import pyro
 import torch
 from julia import Julia
 from pyro import distributions as pdist
-from utils import DDMJulia
+from .utils import DDMJulia
 
 import sbibm  # noqa -- needed for setting sysimage path
 from sbibm.tasks.simulator import Simulator
@@ -46,7 +45,28 @@ class DDM(Task):
             num_reference_posterior_samples=10000,
             num_simulations=[100, 1000, 10000, 100000, 1000000],
             path=Path(__file__).parent.absolute(),
-            observation_seeds=[2, 3, 4, 5, 42],
+            observation_seeds=[
+                1,
+                1,
+                1,
+                1,
+                2,
+                2,
+                2,
+                2,
+                3,
+                3,
+                3,
+                3,
+                4,
+                4,
+                4,
+                4,
+                5,
+                5,
+                5,
+                5,
+            ],
         )
 
         # Prior
@@ -77,6 +97,7 @@ class DDM(Task):
     def get_simulator(
         self,
         max_calls: Optional[int] = None,
+        seed: int = -1,
     ) -> Simulator:
         """Get function returning samples from simulator given parameters
 
@@ -94,10 +115,7 @@ class DDM(Task):
 
             def simulator(parameters):
                 v, a = parameters.numpy().T
-                rts, choices = self.ddm.simulate(
-                    v,
-                    a,
-                )
+                rts, choices = self.ddm.simulate(v, a, seed=seed)
                 # concatenate rts and choices into single column.
                 return torch.cat(
                     (
@@ -116,7 +134,7 @@ class DDM(Task):
                 bl = -w * a
                 bu = (1 - w) * a
 
-                rts, choices = self.ddm.simulate_simpleDDM(v, bl, bu)
+                rts, choices = self.ddm.simulate_simpleDDM(v, bl, bu, seed=seed)
                 # concatenate rts and choices into single column.
                 return torch.cat(
                     (
@@ -229,14 +247,11 @@ class DDM(Task):
             )
             # Without transforms, logabsdet returns second dimension.
             if log_abs_det.ndim > 1:
-                import pdb
-
-                pdb.set_trace()
                 log_abs_det = log_abs_det.sum(-1)
 
             # Likelihood in unconstrained space is:
-            # prob_constrained * 1/abs_det
-            # log_prob_constrained - log_abs_det(T,)
+            # prob_constrained * 1/abs_det_jacobian
+            # log_prob_constrained - log_abs_det
             log_likelihood = log_likelihood_constrained - log_abs_det
             if posterior:
                 return log_likelihood + self.get_prior_dist().log_prob(
@@ -274,62 +289,98 @@ class DDM(Task):
         else:
             initial_params = None
 
-        # samples = run_grid(
-        #     task=self,
-        #     num_samples=self.num_reference_posterior_samples,
-        #     num_observation=num_observation,
-        #     observation=observation,
-        #     resolution=10000,
-        #     batch_size=100000,
-        #     **dict(automatic_transforms_enabled=False),
-        # )
+        if num_observation in [1, 5, 9, 13, 17]:
+            samples = run_grid(
+                task=self,
+                num_samples=self.num_reference_posterior_samples,
+                num_observation=num_observation,
+                observation=observation,
+                resolution=20000,
+                batch_size=10000,
+                **dict(automatic_transforms_enabled=False),
+            )
+        elif num_observation in [2, 6, 10, 14, 18]:
+            samples = run_rejection(
+                task=self,
+                num_observation=num_observation,
+                observation=observation,
+                num_samples=num_samples,
+                batch_size=10000,
+                num_batches_without_new_max=1000,
+                multiplier_M=1.2,
+                proposal_dist=self.prior_dist,
+                **dict(automatic_transforms_enabled=False),
+            )
+        elif num_observation in [3, 7, 11, 15, 19]:
+            num_chains = 5
+            num_warmup = 10_000
+            automatic_transforms_enabled = True
 
-        num_chains = 1
-        num_warmup = 10_000
-        automatic_transforms_enabled = True
-
-        proposal_samples = run_mcmc(
-            task=self,
-            potential_fn=self.get_potential_fn(
-                num_observation,
-                observation,
+            samples = run_mcmc(
+                task=self,
+                potential_fn=self.get_potential_fn(
+                    num_observation,
+                    observation,
+                    automatic_transforms_enabled=automatic_transforms_enabled,
+                ),
+                kernel="Slice",
+                jit_compile=False,
+                num_warmup=num_warmup,
+                num_chains=num_chains,
+                num_observation=num_observation,
+                observation=observation,
+                num_samples=num_samples,
+                initial_params=initial_params.repeat(num_chains, 1),
                 automatic_transforms_enabled=automatic_transforms_enabled,
-            ),
-            kernel="Slice",
-            jit_compile=False,
-            num_warmup=num_warmup,
-            num_chains=num_chains,
-            num_observation=num_observation,
-            observation=observation,
-            num_samples=num_samples,
-            initial_params=initial_params.repeat(num_chains, 1),
-            automatic_transforms_enabled=automatic_transforms_enabled,
-        )
+            )
+        else:
+            # raise NotImplementedError()
+            num_chains = 5
+            num_warmup = 10_000
+            automatic_transforms_enabled = True
 
-        proposal_dist = get_proposal(
-            task=self,
-            samples=proposal_samples,
-            prior_weight=0.2,
-            bounded=True,
-            density_estimator="flow",
-            flow_model="nsf",
-        )
+            proposal_samples = run_mcmc(
+                task=self,
+                potential_fn=self.get_potential_fn(
+                    num_observation,
+                    observation,
+                    automatic_transforms_enabled=automatic_transforms_enabled,
+                ),
+                kernel="Slice",
+                jit_compile=False,
+                num_warmup=num_warmup,
+                num_chains=num_chains,
+                num_observation=num_observation,
+                observation=observation,
+                num_samples=num_samples,
+                initial_params=initial_params.repeat(num_chains, 1),
+                automatic_transforms_enabled=automatic_transforms_enabled,
+            )
 
-        samples = run_rejection(
-            task=self,
-            num_observation=num_observation,
-            observation=observation,
-            num_samples=num_samples,
-            batch_size=10000,
-            num_batches_without_new_max=1000,
-            multiplier_M=1.2,
-            proposal_dist=proposal_dist,
-            **dict(automatic_transforms_enabled=automatic_transforms_enabled),
-        )
+            proposal_dist = get_proposal(
+                task=self,
+                samples=proposal_samples,
+                prior_weight=0.1,
+                bounded=True,
+                density_estimator="flow",
+                flow_model="nsf",
+            )
+
+            samples = run_rejection(
+                task=self,
+                num_observation=num_observation,
+                observation=observation,
+                num_samples=num_samples,
+                batch_size=10000,
+                num_batches_without_new_max=1000,
+                multiplier_M=1.2,
+                proposal_dist=proposal_dist,
+                **dict(automatic_transforms_enabled=False),
+            )
 
         return samples
 
 
 if __name__ == "__main__":
     task = DDM(num_trials=128, dim_parameters=2)
-    task._setup(n_jobs=5)
+    task._setup(n_jobs=20)
