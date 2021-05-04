@@ -28,7 +28,11 @@ def find_sysimage():
 
 class DDMJulia:
     def __init__(
-        self, dt: float = 0.001, num_trials: int = 1, dim_parameters: int = 2
+        self,
+        dt: float = 0.001,
+        num_trials: int = 1,
+        dim_parameters: int = 2,
+        seed: int = -1,
     ) -> None:
         """Wrapping DDM simulation and likelihood computation from Julia.
 
@@ -41,6 +45,7 @@ class DDMJulia:
 
         self.dt = dt
         self.num_trials = num_trials
+        self.seed = seed
 
         self.jl = Julia(
             compiled_modules=False,
@@ -48,16 +53,21 @@ class DDMJulia:
             runtime="julia",
         )
         self.jl.eval("using DiffModels")
+        self.jl.eval("using Random")
 
         # forward model and likelihood for two-param case, symmetric bounds.
         if dim_parameters == 2:
             self.simulate = self.jl.eval(
                 f"""
-                    function simulate(vs, as; dt={self.dt}, num_trials={self.num_trials})
+                    function simulate(vs, as; dt={self.dt}, num_trials={self.num_trials}, seed={self.seed})
                         num_parameters = size(vs)[1]
                         rt = fill(NaN, (num_parameters, num_trials))
                         c = fill(NaN, (num_parameters, num_trials))
-                                            
+
+                        # seeding
+                        if seed > 0
+                            Random.seed!(seed)
+                        end
                         for i=1:num_parameters
                             drift = ConstDrift(vs[i], dt)
                             # Pass 0.5a to get bound from boundary separation.
@@ -103,10 +113,14 @@ class DDMJulia:
         else:
             self.simulate_simpleDDM = self.jl.eval(
                 f"""
-                    function simulate_simpleDDM(v, bl, bu; dt={self.dt}, num_trials={self.num_trials})
+                    function simulate_simpleDDM(v, bl, bu; dt={self.dt}, num_trials={self.num_trials}, seed={self.seed})
                         num_parameters = size(v)[1]
                         rt = fill(NaN, (num_parameters, num_trials))
                         c = fill(NaN, (num_parameters, num_trials))
+                        # seeding
+                        if seed > 0
+                            Random.seed!(seed)
+                        end
 
                         for i=1:num_parameters
                             drift = ConstDrift(v[i], dt)
