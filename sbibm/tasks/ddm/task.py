@@ -6,7 +6,6 @@ import pandas as pd
 
 import pyro
 import torch
-from julia import Julia
 from pyro import distributions as pdist
 from .utils import DDMJulia
 
@@ -292,7 +291,7 @@ class DDM(Task):
         if num_observation in [1, 5, 9, 13, 17]:
             samples = run_grid(
                 task=self,
-                num_samples=self.num_reference_posterior_samples,
+                num_samples=num_samples,
                 num_observation=num_observation,
                 observation=observation,
                 resolution=20000,
@@ -334,7 +333,6 @@ class DDM(Task):
                 automatic_transforms_enabled=automatic_transforms_enabled,
             )
         else:
-            # raise NotImplementedError()
             num_chains = 5
             num_warmup = 10_000
             automatic_transforms_enabled = True
