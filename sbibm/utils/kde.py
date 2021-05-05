@@ -27,7 +27,7 @@ def get_kde(
         X: Samples
         bandwidth: Bandwidth method
         transform: Optional transform
-        sample_weight: Sample weights attached to the data 
+        sample_weight: Sample weights attached to the data
         verbose: Verbosity level
 
     References:
@@ -131,10 +131,7 @@ class KDEWrapper:
         log_probs = torch.from_numpy(
             self.kde.score_samples(parameters_unconstrained.numpy()).astype(np.float32)
         )
-        log_probs += torch.sum(
-            self.transform.log_abs_det_jacobian(
-                parameters_constrained, parameters_unconstrained
-            ),
-            axis=1,
+        log_probs += self.transform.log_abs_det_jacobian(
+            parameters_constrained, parameters_unconstrained
         )
         return log_probs

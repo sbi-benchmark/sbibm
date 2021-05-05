@@ -62,6 +62,7 @@ def run(
         observation=observation,
         implementation="experimental",
         posterior=True,
+        **kwargs,
     )
 
     log.info("Finding M")

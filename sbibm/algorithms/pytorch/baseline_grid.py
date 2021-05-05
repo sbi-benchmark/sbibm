@@ -93,6 +93,7 @@ def run(
         observation=observation,
         implementation="experimental",
         posterior=True,
+        **kwargs,
     )
 
     total_evaluations = grid_flat.shape[0]
@@ -103,7 +104,7 @@ def run(
 
     log_probs = torch.empty([resolution for _ in range(dim_parameters)])
     for i in tqdm(range(num_batches)):
-        ix_from = i * num_batches
+        ix_from = i * batch_size
         ix_to = ix_from + batch_size
         if ix_to > total_evaluations:
             ix_to = total_evaluations
@@ -118,8 +119,7 @@ def run(
     indices = torch.arange(0, len(probs))
     idxs = choice(indices, num_samples, True, probs)
     samples = grid_flat[idxs, :]
-
-    num_unique_samples = len(torch.unique(samples))
+    num_unique_samples = len(torch.unique(samples, dim=0))
     log.info(f"Unique samples: {num_unique_samples}")
 
     toc = time.time()
