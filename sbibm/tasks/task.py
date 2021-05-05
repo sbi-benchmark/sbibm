@@ -437,7 +437,7 @@ class Task:
             true_parameters = prior(num_samples=1)
             self._save_true_parameters(num_observation, true_parameters)
 
-            simulator = self.get_simulator(seed=observation_seed)
+            simulator = self.get_simulator()
             observation = simulator(true_parameters)
             self._save_observation(num_observation, observation)
 

@@ -4,10 +4,11 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 import pandas as pd
 
+import numpy as np
 import pyro
 import torch
 from pyro import distributions as pdist
-from .utils import DDMJulia
+from utils import DDMJulia
 
 import sbibm  # noqa -- needed for setting sysimage path
 from sbibm.tasks.simulator import Simulator
@@ -44,29 +45,17 @@ class DDM(Task):
             num_reference_posterior_samples=10000,
             num_simulations=[100, 1000, 10000, 100000, 1000000],
             path=Path(__file__).parent.absolute(),
-            observation_seeds=[
-                1,
-                1,
-                1,
-                1,
-                2,
-                2,
-                2,
-                2,
-                3,
-                3,
-                3,
-                3,
-                4,
-                4,
-                4,
-                4,
-                5,
-                5,
-                5,
-                5,
-            ],
+            observation_seeds=torch.tensor(
+                [
+                    1,
+                    2,
+                    4,
+                    5,
+                    6,
+                ]
+            ).repeat_interleave(4),
         )
+        self.num_trials_per_observation = torch.tensor([64, 128, 512, 1024]).repeat(5)
 
         # Prior
         self.prior_params = {
@@ -97,6 +86,7 @@ class DDM(Task):
         self,
         max_calls: Optional[int] = None,
         seed: int = -1,
+        num_trials: int = -1,
     ) -> Simulator:
         """Get function returning samples from simulator given parameters
 
@@ -114,7 +104,12 @@ class DDM(Task):
 
             def simulator(parameters):
                 v, a = parameters.numpy().T
-                rts, choices = self.ddm.simulate(v, a, seed=seed)
+                rts, choices = self.ddm.simulate(
+                    v,
+                    a,
+                    seed=seed,
+                    num_trials=num_trials if num_trials > 0 else self.num_trials,
+                )
                 # concatenate rts and choices into single column.
                 return torch.cat(
                     (
@@ -133,7 +128,13 @@ class DDM(Task):
                 bl = -w * a
                 bu = (1 - w) * a
 
-                rts, choices = self.ddm.simulate_simpleDDM(v, bl, bu, seed=seed)
+                rts, choices = self.ddm.simulate_simpleDDM(
+                    v,
+                    bl,
+                    bu,
+                    seed=seed,
+                    num_trials=num_trials if num_trials > 0 else self.num_trials,
+                )
                 # concatenate rts and choices into single column.
                 return torch.cat(
                     (
@@ -288,97 +289,151 @@ class DDM(Task):
         else:
             initial_params = None
 
-        if num_observation in [1, 5, 9, 13, 17]:
-            samples = run_grid(
-                task=self,
-                num_samples=num_samples,
-                num_observation=num_observation,
-                observation=observation,
-                resolution=20000,
-                batch_size=10000,
-                **dict(automatic_transforms_enabled=False),
-            )
-        elif num_observation in [2, 6, 10, 14, 18]:
-            samples = run_rejection(
-                task=self,
-                num_observation=num_observation,
-                observation=observation,
-                num_samples=num_samples,
-                batch_size=10000,
-                num_batches_without_new_max=1000,
-                multiplier_M=1.2,
-                proposal_dist=self.prior_dist,
-                **dict(automatic_transforms_enabled=False),
-            )
-        elif num_observation in [3, 7, 11, 15, 19]:
-            num_chains = 5
-            num_warmup = 10_000
-            automatic_transforms_enabled = True
+        # if num_observation in [1, 5, 9, 13, 17]:
+        #     samples = run_grid(
+        #         task=self,
+        #         num_samples=num_samples,
+        #         num_observation=num_observation,
+        #         observation=observation,
+        #         resolution=20000,
+        #         batch_size=10000,
+        #         **dict(automatic_transforms_enabled=False),
+        #     )
 
-            samples = run_mcmc(
-                task=self,
-                potential_fn=self.get_potential_fn(
-                    num_observation,
-                    observation,
-                    automatic_transforms_enabled=automatic_transforms_enabled,
-                ),
-                kernel="Slice",
-                jit_compile=False,
-                num_warmup=num_warmup,
-                num_chains=num_chains,
-                num_observation=num_observation,
-                observation=observation,
-                num_samples=num_samples,
-                initial_params=initial_params.repeat(num_chains, 1),
+        # idxs = torch.tensor([[1, 2, 4, 5, 6]])
+        # if num_observation in idxs:
+        #     samples = run_rejection(
+        #         task=self,
+        #         num_observation=num_observation,
+        #         observation=observation,
+        #         num_samples=num_samples,
+        #         batch_size=10000,
+        #         num_batches_without_new_max=1000,
+        #         multiplier_M=1.2,
+        #         proposal_dist=self.prior_dist,
+        #         **dict(automatic_transforms_enabled=False),
+        #     )
+        # if num_observation in idxs:
+        num_chains = 5
+        num_warmup = 10_000
+        automatic_transforms_enabled = True
+
+        samples = run_mcmc(
+            task=self,
+            potential_fn=self.get_potential_fn(
+                num_observation,
+                observation,
                 automatic_transforms_enabled=automatic_transforms_enabled,
-            )
-        else:
-            num_chains = 5
-            num_warmup = 10_000
-            automatic_transforms_enabled = True
+            ),
+            kernel="Slice",
+            jit_compile=False,
+            num_warmup=num_warmup,
+            num_chains=num_chains,
+            num_observation=num_observation,
+            observation=observation,
+            num_samples=num_samples,
+            initial_params=initial_params.repeat(num_chains, 1),
+            automatic_transforms_enabled=automatic_transforms_enabled,
+        )
+        # else:
+        #     num_chains = 5
+        #     num_warmup = 10_000
+        #     automatic_transforms_enabled = True
 
-            proposal_samples = run_mcmc(
-                task=self,
-                potential_fn=self.get_potential_fn(
-                    num_observation,
-                    observation,
-                    automatic_transforms_enabled=automatic_transforms_enabled,
-                ),
-                kernel="Slice",
-                jit_compile=False,
-                num_warmup=num_warmup,
-                num_chains=num_chains,
-                num_observation=num_observation,
-                observation=observation,
-                num_samples=num_samples,
-                initial_params=initial_params.repeat(num_chains, 1),
-                automatic_transforms_enabled=automatic_transforms_enabled,
-            )
+        #     proposal_samples = run_mcmc(
+        #         task=self,
+        #         potential_fn=self.get_potential_fn(
+        #             num_observation,
+        #             observation,
+        #             automatic_transforms_enabled=automatic_transforms_enabled,
+        #         ),
+        #         kernel="Slice",
+        #         jit_compile=False,
+        #         num_warmup=num_warmup,
+        #         num_chains=num_chains,
+        #         num_observation=num_observation,
+        #         observation=observation,
+        #         num_samples=num_samples,
+        #         initial_params=initial_params.repeat(num_chains, 1),
+        #         automatic_transforms_enabled=automatic_transforms_enabled,
+        #     )
 
-            proposal_dist = get_proposal(
-                task=self,
-                samples=proposal_samples,
-                prior_weight=0.1,
-                bounded=True,
-                density_estimator="flow",
-                flow_model="nsf",
-            )
+        #     proposal_dist = get_proposal(
+        #         task=self,
+        #         samples=proposal_samples,
+        #         prior_weight=0.1,
+        #         bounded=True,
+        #         density_estimator="flow",
+        #         flow_model="nsf",
+        #     )
 
-            samples = run_rejection(
-                task=self,
-                num_observation=num_observation,
-                observation=observation,
-                num_samples=num_samples,
-                batch_size=10000,
-                num_batches_without_new_max=1000,
-                multiplier_M=1.2,
-                proposal_dist=proposal_dist,
-                **dict(automatic_transforms_enabled=False),
-            )
+        #     samples = run_rejection(
+        #         task=self,
+        #         num_observation=num_observation,
+        #         observation=observation,
+        #         num_samples=num_samples,
+        #         batch_size=10000,
+        #         num_batches_without_new_max=1000,
+        #         multiplier_M=1.2,
+        #         proposal_dist=proposal_dist,
+        #         **dict(automatic_transforms_enabled=False),
+        #     )
 
         return samples
 
+    def _setup(self, n_jobs: int = -1, create_reference: bool = True, **kwargs: Any):
+        """Setup the task: generate observations and reference posterior samples
+
+        In most cases, you don't need to execute this method, since its results are stored to disk.
+
+        Re-executing will overwrite existing files.
+
+        Args:
+            n_jobs: Number of to use for Joblib
+            create_reference: If False, skips reference creation
+        """
+        from joblib import Parallel, delayed
+
+        def run(num_observation, observation_seed, **kwargs):
+            np.random.seed(observation_seed)
+            torch.manual_seed(observation_seed)
+            self._save_observation_seed(num_observation, observation_seed)
+
+            prior = self.get_prior()
+            true_parameters = prior(num_samples=1)
+            self._save_true_parameters(num_observation, true_parameters)
+
+            num_trials = int(self.num_trials_per_observation[num_observation - 1])
+            self.dim_data = 2 * num_trials
+            self.num_trials = num_trials
+            simulator = self.get_simulator(
+                seed=int(observation_seed),
+                num_trials=num_trials,
+            )
+            observation = simulator(true_parameters)
+            self._save_observation(num_observation, observation)
+
+            if create_reference:
+                reference_posterior_samples = self._sample_reference_posterior(
+                    num_observation=num_observation,
+                    num_samples=self.num_reference_posterior_samples,
+                    **kwargs,
+                )
+                num_unique = torch.unique(reference_posterior_samples, dim=0).shape[0]
+                assert num_unique == self.num_reference_posterior_samples
+                self._save_reference_posterior_samples(
+                    num_observation,
+                    reference_posterior_samples,
+                )
+
+        Parallel(n_jobs=n_jobs, verbose=50, backend="loky")(
+            delayed(run)(num_observation, observation_seed, **kwargs)
+            for num_observation, observation_seed in enumerate(
+                self.observation_seeds, start=1
+            )
+        )
+
 
 if __name__ == "__main__":
-    task = DDM(num_trials=128, dim_parameters=2)
+    task = DDM(num_trials=1, dim_parameters=3)
     task._setup(n_jobs=20)
