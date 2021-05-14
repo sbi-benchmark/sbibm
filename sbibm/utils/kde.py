@@ -5,6 +5,7 @@ import torch
 from sklearn.model_selection import GridSearchCV
 from sklearn.neighbors import KernelDensity
 from torch import distributions as dist
+from sbibm.utils.torch import get_log_abs_det_jacobian
 
 transform_types = Optional[
     Union[
@@ -131,7 +132,7 @@ class KDEWrapper:
         log_probs = torch.from_numpy(
             self.kde.score_samples(parameters_unconstrained.numpy()).astype(np.float32)
         )
-        log_probs += self.transform.log_abs_det_jacobian(
-            parameters_constrained, parameters_unconstrained
+        log_probs += get_log_abs_det_jacobian(
+            self.transform, parameters_constrained, parameters_unconstrained
         )
         return log_probs

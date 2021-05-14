@@ -17,7 +17,7 @@ from torch.utils import data
 from torch.utils.data.sampler import SubsetRandomSampler
 from tqdm import tqdm  # noqa
 
-from sbibm.utils.torch import get_default_device
+from sbibm.utils.torch import get_default_device, get_log_abs_det_jacobian
 
 
 def get_flow(
@@ -331,8 +331,8 @@ class FlowWrapper:
         log_probs = self.flow.log_prob(parameters_unconstrained)
         # NOTE: Does not need sum over axis anymore, is now summed in torch:
         # https://pytorch.org/docs/stable/_modules/torch/distributions/transforms.html#Transform.log_abs_det_jacobian
-        log_probs += self.transform.log_abs_det_jacobian(
-            parameters_constrained, parameters_unconstrained
+        log_probs += get_log_abs_det_jacobian(
+            self.transform, parameters_constrained, parameters_unconstrained
         )
         return log_probs
 

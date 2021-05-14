@@ -72,3 +72,38 @@ def choice_numpy(
     samples = np.random.choice(a, num_samples, replace, p)
 
     return torch.as_tensor(samples, dtype=torch.float32)
+
+
+def get_log_abs_det_jacobian(
+    transform,
+    parameters_constrained: torch.Tensor,
+    parameters_unconstrained: torch.Tensor,
+) -> torch.Tensor:
+    """Return log_abs_det_jacobian over batch of parameters.
+
+    Take sum over second dimension if needed, e.g., when torch < 1.8 is used.
+
+    Args:
+        transform: transform applied to the parameters
+        parameters_constrained:
+        parameters_unconstrained:
+
+    Returns:
+        torch.Tensor: log_abs_det_jacobian value for each batch entry.
+    """
+
+    batch_size, dim_parameters = parameters_constrained.shape
+
+    vals = transform.log_abs_det_jacobian(
+        parameters_constrained, parameters_unconstrained
+    )
+
+    # For torch < 1.8 log_abs_det_jacobian is returned for each dimension.
+    if vals.ndim > 1 and vals.shape[1] == dim_parameters:
+        vals = vals.sum(-1)
+
+    assert (
+        vals.numel == batch_size
+    ), "Mismatch in batch size, took sum over whole batch?"
+
+    return vals
