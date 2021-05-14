@@ -44,9 +44,9 @@ class DDM(Task):
             num_reference_posterior_samples=10000,
             num_simulations=[100, 1000, 10000, 100000, 1000000],
             path=Path(__file__).parent.absolute(),
-            observation_seeds=torch.tensor([1, 2, 4, 5, 6, 7, 8, 9, 10, 11]),
+            observation_seeds=torch.tensor([1, 1, 1, 1]),
         )
-        # self.num_trials_per_observation = torch.tensor([64, 128, 512, 1024]).repeat(5)
+        self.num_trials_per_observation = torch.tensor([1, 10, 100, 1000])
 
         # Prior
         self.prior_params = {
@@ -394,12 +394,12 @@ class DDM(Task):
             true_parameters = prior(num_samples=1)
             self._save_true_parameters(num_observation, true_parameters)
 
-            # num_trials = int(self.num_trials_per_observation[num_observation - 1])
-            # self.dim_data = 2 * num_trials
-            # self.num_trials = num_trials
+            num_trials = int(self.num_trials_per_observation[num_observation - 1])
+            self.dim_data = 2 * num_trials
+            self.num_trials = num_trials
             simulator = self.get_simulator(
                 seed=int(observation_seed),
-                # num_trials=num_trials,
+                num_trials=num_trials,
             )
             observation = simulator(true_parameters)
             self._save_observation(num_observation, observation)
