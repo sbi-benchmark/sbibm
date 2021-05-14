@@ -2,13 +2,12 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
-import pandas as pd
 
 import numpy as np
 import pyro
 import torch
 from pyro import distributions as pdist
-from utils import DDMJulia
+from sbibm.tasks.ddm.utils import DDMJulia
 
 import sbibm  # noqa -- needed for setting sysimage path
 from sbibm.tasks.simulator import Simulator
@@ -427,5 +426,5 @@ class DDM(Task):
 
 
 if __name__ == "__main__":
-    task = DDM(num_trials=1024, dim_parameters=3)
+    task = DDM(num_trials=1, dim_parameters=3)
     task._setup(n_jobs=-1)
