@@ -274,32 +274,6 @@ class DDM(Task):
             initial_params = self.get_true_parameters(num_observation=num_observation)
         else:
             initial_params = None
-
-        # if num_observation in [1, 5, 9, 13, 17]:
-        #     samples = run_grid(
-        #         task=self,
-        #         num_samples=num_samples,
-        #         num_observation=num_observation,
-        #         observation=observation,
-        #         resolution=20000,
-        #         batch_size=10000,
-        #         **dict(automatic_transforms_enabled=False),
-        #     )
-
-        # idxs = torch.tensor([[1, 2, 4, 5, 6]])
-        # if num_observation in idxs:
-        #     samples = run_rejection(
-        #         task=self,
-        #         num_observation=num_observation,
-        #         observation=observation,
-        #         num_samples=num_samples,
-        #         batch_size=10000,
-        #         num_batches_without_new_max=1000,
-        #         multiplier_M=1.2,
-        #         proposal_dist=self.prior_dist,
-        #         **dict(automatic_transforms_enabled=False),
-        #     )
-        # if num_observation in idxs:
         num_chains = 5
         num_warmup = 10_000
         automatic_transforms_enabled = True
@@ -321,50 +295,6 @@ class DDM(Task):
             initial_params=initial_params.repeat(num_chains, 1),
             automatic_transforms_enabled=automatic_transforms_enabled,
         )
-        # else:
-        #     num_chains = 5
-        #     num_warmup = 10_000
-        #     automatic_transforms_enabled = True
-
-        #     proposal_samples = run_mcmc(
-        #         task=self,
-        #         potential_fn=self.get_potential_fn(
-        #             num_observation,
-        #             observation,
-        #             automatic_transforms_enabled=automatic_transforms_enabled,
-        #         ),
-        #         kernel="Slice",
-        #         jit_compile=False,
-        #         num_warmup=num_warmup,
-        #         num_chains=num_chains,
-        #         num_observation=num_observation,
-        #         observation=observation,
-        #         num_samples=num_samples,
-        #         initial_params=initial_params.repeat(num_chains, 1),
-        #         automatic_transforms_enabled=automatic_transforms_enabled,
-        #     )
-
-        #     proposal_dist = get_proposal(
-        #         task=self,
-        #         samples=proposal_samples,
-        #         prior_weight=0.1,
-        #         bounded=True,
-        #         density_estimator="flow",
-        #         flow_model="nsf",
-        #     )
-
-        #     samples = run_rejection(
-        #         task=self,
-        #         num_observation=num_observation,
-        #         observation=observation,
-        #         num_samples=num_samples,
-        #         batch_size=10000,
-        #         num_batches_without_new_max=1000,
-        #         multiplier_M=1.2,
-        #         proposal_dist=proposal_dist,
-        #         **dict(automatic_transforms_enabled=False),
-        #     )
-
         return samples
 
     def _setup(self, n_jobs: int = -1, create_reference: bool = True, **kwargs: Any):
@@ -390,7 +320,7 @@ class DDM(Task):
             self._save_true_parameters(num_observation, true_parameters)
 
             num_trials = int(self.num_trials_per_observation[num_observation - 1])
-            self.dim_data = 2 * num_trials
+            self.dim_data = num_trials
             self.num_trials = num_trials
             simulator = self.get_simulator(
                 seed=int(observation_seed),
