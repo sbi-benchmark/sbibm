@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 import torch
-from sbi.utils.plot import pairplot
+from sbi.analysis import pairplot
 from torch.utils.tensorboard import SummaryWriter
 
 
@@ -18,10 +18,10 @@ def tb_plot_posterior(
 
 
 def tb_make_writer(
-    logger: logging.Logger = None, basepath: str = "tensorboard",
+    logger: logging.Logger = None,
+    basepath: str = "tensorboard",
 ) -> (SummaryWriter, Callable):
-    """Builds tensorboard summary writers
-    """
+    """Builds tensorboard summary writers"""
     log_dir = Path(f"{basepath}/summary")
     if log_dir.exists() and log_dir.is_dir():
         shutil.rmtree(log_dir)
@@ -41,7 +41,10 @@ def tb_make_writer(
 
 class TensorboardHandler(logging.Handler):
     def __init__(
-        self, writer: SummaryWriter, *args: Any, **kwargs: Any,
+        self,
+        writer: SummaryWriter,
+        *args: Any,
+        **kwargs: Any,
     ):
         super().__init__(*args, **kwargs)
         self.writer = writer

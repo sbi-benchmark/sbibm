@@ -1,6 +1,6 @@
 import pytest  # noqa
 import torch
-from sbi.utils.plot import pairplot
+from sbi.analysis import pairplot
 
 import sbibm
 from sbibm.algorithms.pytorch.baseline_rejection import run

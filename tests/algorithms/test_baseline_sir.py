@@ -1,6 +1,6 @@
 import pytest
 import torch
-from sbi.utils.plot import pairplot
+from sbi.analysis import pairplot
 
 import sbibm
 from sbibm.algorithms.pytorch.baseline_sir import run
