@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
 import numpy as np
+import pandas as pd
 import pyro
 import torch
 from pyro import distributions as pdist
@@ -36,7 +37,7 @@ class DDM(Task):
 
         super().__init__(
             dim_parameters=dim_parameters,
-            dim_data=2 * num_trials,
+            dim_data=num_trials,
             name=Path(__file__).parent.name,
             name_display="DDM",
             num_observations=10,
@@ -44,9 +45,9 @@ class DDM(Task):
             num_reference_posterior_samples=10000,
             num_simulations=[100, 1000, 10000, 100000, 1000000],
             path=Path(__file__).parent.absolute(),
-            observation_seeds=torch.tensor([1, 1, 1, 1]),
+            observation_seeds=torch.tensor([1, 2, 4, 5, 6]).repeat_interleave(4),
         )
-        self.num_trials_per_observation = torch.tensor([1, 10, 100, 1000])
+        self.num_trials_per_observation = torch.tensor([1, 10, 100, 1000]).repeat(5)
 
         # Prior
         self.prior_params = {
@@ -101,14 +102,9 @@ class DDM(Task):
                     seed=seed,
                     num_trials=num_trials if num_trials > 0 else self.num_trials,
                 )
-                # concatenate rts and choices into single column.
-                return torch.cat(
-                    (
-                        torch.tensor(rts, dtype=torch.float32),
-                        torch.tensor(choices, dtype=torch.float32),
-                    ),
-                    dim=1,
-                )
+                # encode zero choices as negative RTs.
+                rts[choices == 0] *= -1
+                return torch.tensor(rts, dtype=torch.float32)
 
         elif self.dim_parameters == 3:
 
@@ -126,14 +122,9 @@ class DDM(Task):
                     seed=seed,
                     num_trials=num_trials if num_trials > 0 else self.num_trials,
                 )
-                # concatenate rts and choices into single column.
-                return torch.cat(
-                    (
-                        torch.tensor(rts, dtype=torch.float32),
-                        torch.tensor(choices, dtype=torch.float32),
-                    ),
-                    dim=1,
-                )
+                # encode zero choices as negative RTs.
+                rts[choices == 0] *= -1
+                return torch.tensor(rts, dtype=torch.float32)
 
         else:
             raise NotImplementedError()
@@ -147,11 +138,15 @@ class DDM(Task):
 
         Batch dimension is only across parameters, the data is fixed.
         """
-        num_trials = int(data.shape[1] / 2)
+        num_trials = data.shape[1]
         parameters = parameters.numpy()
+        # Decode choices from RT sign.
+        choices = torch.where(
+            data[0, :] > 0, torch.ones(num_trials), torch.zeros(num_trials)
+        ).numpy()
+        # Convert negative RTs.
         data = data.numpy()
-        rts = data[0, :num_trials]
-        choices = data[0, num_trials:]
+        rts = abs(data[0, :])
 
         if self.dim_parameters == 2:
             log_likelihoods = self.ddm.log_likelihood(
