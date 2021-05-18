@@ -329,8 +329,6 @@ class FlowWrapper:
     def log_prob(self, parameters_constrained):
         parameters_unconstrained = self.transform(parameters_constrained)
         log_probs = self.flow.log_prob(parameters_unconstrained)
-        # NOTE: Does not need sum over axis anymore, is now summed in torch:
-        # https://pytorch.org/docs/stable/_modules/torch/distributions/transforms.html#Transform.log_abs_det_jacobian
         log_probs += get_log_abs_det_jacobian(
             self.transform, parameters_constrained, parameters_unconstrained
         )
