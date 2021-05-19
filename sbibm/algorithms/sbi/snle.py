@@ -40,6 +40,7 @@ def run(
     validation_fraction: float = 0.1,
     stop_after_epochs: int = 20,
     num_transforms: int = 1,
+    num_bins: int = 10,
 ) -> Tuple[torch.Tensor, int, Optional[torch.Tensor]]:
     """Runs (S)NLE from `sbi`
 
@@ -100,6 +101,7 @@ def run(
         z_score_x=z_score_x,
         z_score_theta=z_score_theta,
         num_transforms=num_transforms,
+        num_bins=num_bins,
     )
     inference_method = inference.SNLE_A(
         density_estimator=density_estimator_fun,
