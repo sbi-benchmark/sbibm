@@ -93,7 +93,7 @@ class DDMJulia:
                         batch_size = size(vs)[1]
                         num_trials = size(rts)[1]
 
-                        logprob = zeros(batch_size)
+                        logl = zeros(batch_size)
 
                         for i=1:batch_size
                             drift = ConstDrift(vs[i], dt)
@@ -102,13 +102,13 @@ class DDMJulia:
 
                             for j=1:num_trials
                                 if cs[j] == 1.0
-                                    logprob[i] += log(pdfu(drift, bound, rts[j]))
+                                    logl[i] += log(pdfu(drift, bound, rts[j]))
                                 else
-                                    logprob[i] += log(pdfl(drift, bound, rts[j]))
+                                    logl[i] += log(pdfl(drift, bound, rts[j]))
                                 end
                             end
                         end
-                        return logprob
+                        return logl
                     end
                 """
             )
@@ -121,6 +121,7 @@ class DDMJulia:
                         num_parameters = size(v)[1]
                         rt = fill(NaN, (num_parameters, num_trials))
                         c = fill(NaN, (num_parameters, num_trials))
+
                         # seeding
                         if seed > 0
                             Random.seed!(seed)
@@ -144,25 +145,36 @@ class DDMJulia:
             )
             self.log_likelihood_simpleDDM = self.jl.eval(
                 f"""
-                    function log_likelihood_simpleDDM(v, bl, bu, rts, cs; dt={self.dt})
-                        batch_size = size(v)[1]
+                    function log_likelihood_simpleDDM(v, bl, bu, rts, cs; ndt=0, dt={self.dt})
+                        parameter_batch_size = size(v)[1]
                         num_trials = size(rts)[1]
+                        # If no ndt is passed, use zeros without effect.
+                        if ndt == 0
+                            ndt = zeros(parameter_batch_size)
+                        end
 
-                        logprob = zeros(batch_size)
+                        logl = zeros(parameter_batch_size)
 
-                        for i=1:batch_size
+                        for i=1:parameter_batch_size
                             drift = ConstDrift(v[i], dt)
                             bound = ConstAsymBounds(bu[i], bl[i], dt)
 
                             for j=1:num_trials
-                                if cs[j] == 1.0
-                                    logprob[i] += log(pdfu(drift, bound, rts[j]))
+                                # Subtract the current ndt from rt to get correct likelihood.
+                                rt = rts[j] - ndt[i]
+                                # If rt negative (too high ndt) likelihood is 0.
+                                if rt < 0
+                                    logl[i] += -29
                                 else
-                                    logprob[i] += log(pdfl(drift, bound, rts[j]))
+                                    if cs[j] == 1.0
+                                        logl[i] += log(pdfu(drift, bound, rt))
+                                    else
+                                        logl[i] += log(pdfl(drift, bound, rt))
+                                    end
                                 end
                             end
                         end
-                        return logprob
+                        return logl
                     end
                 """
             )

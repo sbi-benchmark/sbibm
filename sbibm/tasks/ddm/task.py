@@ -33,7 +33,7 @@ class DDM(Task):
         """
         self.dt = dt
         self.num_trials = num_trials
-        assert dim_parameters in [2, 3], "dim_parameters must be 2 or 3."
+        assert dim_parameters in [2, 3, 4], "dim_parameters must be 2 or 3."
 
         super().__init__(
             dim_parameters=dim_parameters,
@@ -45,15 +45,16 @@ class DDM(Task):
             num_reference_posterior_samples=10000,
             num_simulations=[100, 1000, 10000, 100000, 1000000],
             path=Path(__file__).parent.absolute(),
-            observation_seeds=[0, 1, 2, 4, 5, 6, 7, 8, 9, 10],
+            # Seeds selected to give good references, e.g., not close to prior boundary.
+            observation_seeds=[1, 2, 4, 6, 7, 9, 10, 12, 13, 15],
         )
 
         # Prior
         self.prior_params = {
-            "low": torch.tensor([-2.0, 0.5, 0.3][:dim_parameters]),
-            "high": torch.tensor([2.0, 2.0, 0.7][:dim_parameters]),
+            "low": torch.tensor([-2.0, 0.5, 0.3, 0.2][:dim_parameters]),
+            "high": torch.tensor([2.0, 2.0, 0.7, 1.8][:dim_parameters]),
         }
-        self.prior_labels = ["v", "a", "w"][:dim_parameters]
+        self.prior_labels = ["v", "a", "w", "ndt"][:dim_parameters]
 
         self.prior_dist = pdist.Uniform(**self.prior_params).to_event(1)
 
@@ -89,7 +90,9 @@ class DDM(Task):
         Return:
             Simulator callable
         """
-
+        if not num_trials == -1:
+            self.num_trials = num_trials
+            self.dim_data = num_trials
         # Two-parameter case.
         if self.dim_parameters == 2:
 
@@ -99,7 +102,7 @@ class DDM(Task):
                     v,
                     a,
                     seed=seed,
-                    num_trials=num_trials if num_trials > 0 else self.num_trials,
+                    num_trials=self.num_trials,
                 )
                 # encode zero choices as negative RTs.
                 rts[choices == 0] *= -1
@@ -119,8 +122,28 @@ class DDM(Task):
                     bl,
                     bu,
                     seed=seed,
-                    num_trials=num_trials if num_trials > 0 else self.num_trials,
+                    num_trials=self.num_trials,
                 )
+                # encode zero choices as negative RTs.
+                rts[choices == 0] *= -1
+                return torch.tensor(rts, dtype=torch.float32)
+
+        elif self.dim_parameters == 4:
+
+            def simulator(parameters):
+                v, a, w, ndt = parameters.numpy().T
+                # using boundary separation a and offset w
+                # pass negative lower bound as required by DiffModels.
+                bl = -w * a
+                bu = (1 - w) * a
+                rts, choices = self.ddm.simulate_simpleDDM(
+                    v,
+                    bl,
+                    bu,
+                    seed=seed,
+                    num_trials=self.num_trials,
+                )
+                rts += ndt.reshape(-1, 1)
                 # encode zero choices as negative RTs.
                 rts[choices == 0] *= -1
                 return torch.tensor(rts, dtype=torch.float32)
@@ -137,15 +160,16 @@ class DDM(Task):
 
         Batch dimension is only across parameters, the data is fixed.
         """
-        num_trials = data.shape[1]
+        assert data.ndim == 2, "Data must have shape (1, num_trials)."
+        data_batch_size, num_trials = data.shape
+        assert data_batch_size == 1, "Data must be a single batch of trials."
         parameters = parameters.numpy()
         # Decode choices from RT sign.
         choices = torch.where(
             data[0, :] > 0, torch.ones(num_trials), torch.zeros(num_trials)
         ).numpy()
         # Convert negative RTs.
-        data = data.numpy()
-        rts = abs(data[0, :])
+        rts = abs(data.numpy()[0, :])
 
         if self.dim_parameters == 2:
             log_likelihoods = self.ddm.log_likelihood(
@@ -169,6 +193,25 @@ class DDM(Task):
                 rts,
                 choices,
             )
+        elif self.dim_parameters == 4:
+            # using boundary separation a and offset w
+            # pass negative lower bound as required by DiffModels.
+            v, a, w, ndt = parameters.T
+            bl = -w * a
+            bu = (1 - w) * a
+            log_likelihoods = self.ddm.log_likelihood_simpleDDM(
+                v,
+                bl,
+                bu,
+                # Pass rts and choices separately.
+                rts,
+                choices,
+                # Pass ndt to be subtracted in Julia.
+                ndt=ndt,
+            )
+            import pdb
+
+            pdb.set_trace()
         else:
             raise NotImplementedError()
 
