@@ -21,7 +21,7 @@ class DDM(Task):
         self,
         dt: float = 0.001,
         num_trials: int = 1,
-        dim_parameters: int = 3,
+        dim_parameters: int = 4,
     ):
         """Drift-diffusion model.
 
@@ -46,7 +46,7 @@ class DDM(Task):
             num_simulations=[100, 1000, 10000, 100000, 1000000],
             path=Path(__file__).parent.absolute(),
             # Seeds selected to give good references, e.g., not close to prior boundary.
-            observation_seeds=[1, 2, 4, 6, 7, 9, 10, 12, 13, 15],
+            observation_seeds=[1, 9, 12, 18, 23, 30, 32, 58, 61, 63],
         )
 
         # Prior
@@ -209,9 +209,6 @@ class DDM(Task):
                 # Pass ndt to be subtracted in Julia.
                 ndt=ndt,
             )
-            import pdb
-
-            pdb.set_trace()
         else:
             raise NotImplementedError()
 
@@ -393,5 +390,5 @@ class DDM(Task):
 
 
 if __name__ == "__main__":
-    task = DDM(num_trials=1024, dim_parameters=3)
+    task = DDM(num_trials=100, dim_parameters=4)
     task._setup(n_jobs=-1)

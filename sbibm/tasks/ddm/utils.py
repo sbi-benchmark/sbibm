@@ -164,7 +164,7 @@ class DDMJulia:
                                 rt = rts[j] - ndt[i]
                                 # If rt negative (too high ndt) likelihood is 0.
                                 if rt < 0
-                                    logl[i] += -29
+                                    logl[i] += -66.79
                                 else
                                     if cs[j] == 1.0
                                         logl[i] += log(pdfu(drift, bound, rt))
