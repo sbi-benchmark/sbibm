@@ -166,7 +166,7 @@ def run(
 
     if num_observation is not None:
         true_parameters = task.get_true_parameters(num_observation=num_observation)
-        log_prob_true_parameters = posterior.log_prob(true_parameters)
+        log_prob_true_parameters = posterior.log_prob(true_parameters.squeeze())
         return samples, simulator.num_simulations, log_prob_true_parameters
     else:
         return samples, simulator.num_simulations, None
