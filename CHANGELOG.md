@@ -1,3 +1,8 @@
+# v1.0.6
+
+- Additional fix for PyTorch >= 1.8 compatibility concerning (S)MC-ABC (thanks to @atiyo, #12)
+
+
 # v1.0.5
 
 - Fixed PyTorch >= 1.8 compatibility and added KDE warnings (#8, #10)
