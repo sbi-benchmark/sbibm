@@ -85,13 +85,15 @@ def run(
         training_batch_size=100,
         retrain_from_scratch_each_round=False,
         discard_prior_samples=False,
-        max_num_epochs=5,
+        max_num_epochs=2,
     )
 
     # network trained on KDE likelihood for 4-param ddm
-    lan_kde_model = "/home/janfb/qode/sbibm/sbibm/algorithms/lan/model_final_ddm.h5"
+    lan_ana_model = (
+        "/home/janfb/qode/sbibm/sbibm/algorithms/lan/model_final_ddm_analytic.h5"
+    )
     # load weights as keras model
-    lan_kde = keras.models.load_model(lan_kde_model, compile=False)
+    lan_ana = keras.models.load_model(lan_ana_model, compile=False)
     inference_method._x_shape = torch.Size([1, 1])
 
     posterior = inference_method.build_posterior(
@@ -104,8 +106,10 @@ def run(
     samples = posterior.sample(
         (num_samples,),
         # Monkey patch LAN likelihood into SBI potential function provider
-        potential_fn_provider=PotentialFunctionProvider(transforms, lan_kde),
-        x=observation_sbi,
+        **dict(
+            potential_fn_provider=PotentialFunctionProvider(transforms, lan_ana),
+            x=observation_sbi,
+        ),
     ).detach()
 
     return samples, num_simulations, None
