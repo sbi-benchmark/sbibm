@@ -2,8 +2,11 @@ import os
 from pathlib import Path
 
 import numpy as np
+import torch
 
 from numba import jit
+from torch import Tensor, nn
+from sbi.utils.torchutils import ScalarFloat, atleast_2d, ensure_theta_batched
 
 from julia import Julia
 from warnings import warn
@@ -89,7 +92,7 @@ class DDMJulia:
             )
             self.log_likelihood = self.jl.eval(
                 f"""
-                    function log_likelihood(vs, as, rts, cs; dt={self.dt})
+                    function log_likelihood(vs, as, rts, cs; dt={self.dt}, eps=1e-29)
                         batch_size = size(vs)[1]
                         num_trials = size(rts)[1]
 
@@ -102,9 +105,9 @@ class DDMJulia:
 
                             for j=1:num_trials
                                 if cs[j] == 1.0
-                                    logl[i] += log(pdfu(drift, bound, rts[j]))
+                                    logl[i] += log(max(l_lower_bound, pdfu(drift, bound, rts[j])))
                                 else
-                                    logl[i] += log(pdfl(drift, bound, rts[j]))
+                                    logl[i] += log(max(l_lower_bound, pdfl(drift, bound, rts[j])))
                                 end
                             end
                         end
@@ -145,7 +148,8 @@ class DDMJulia:
             )
             self.log_likelihood_simpleDDM = self.jl.eval(
                 f"""
-                    function log_likelihood_simpleDDM(v, bl, bu, rts, cs; ndt=0, dt={self.dt})
+                    function log_likelihood_simpleDDM(v, bl, bu, rts, cs; ndt=0, dt={self.dt}, l_lower_bound=1e-29)
+                        # eps is the numerical lower bound for the likelihood used in HDDM.
                         parameter_batch_size = size(v)[1]
                         num_trials = size(rts)[1]
                         # If no ndt is passed, use zeros without effect.
@@ -164,12 +168,13 @@ class DDMJulia:
                                 rt = rts[j] - ndt[i]
                                 # If rt negative (too high ndt) likelihood is 0.
                                 if rt < 0
-                                    logl[i] += -66.79
+                                    # 1e-29 is the lower bound for negative rts used in HDDM.
+                                    logl[i] += log(l_lower_bound)
                                 else
                                     if cs[j] == 1.0
-                                        logl[i] += log(pdfu(drift, bound, rt))
+                                        logl[i] += log(max(l_lower_bound, pdfu(drift, bound, rt)))
                                     else
-                                        logl[i] += log(pdfl(drift, bound, rt))
+                                        logl[i] += log(max(l_lower_bound, pdfl(drift, bound, rt)))
                                     end
                                 end
                             end
@@ -242,9 +247,12 @@ def choice_function(t, eps):
 
 
 @jit(nopython=True)
-def fptd(t=0, v=0, a=1, w=0.5, tau=0, eps=1e-10):
+def fptd(t=0, v=0, a=1, w=0.5, tau=0, eps=1e-29):
     """
     Compute first passage time distributions using Navarro-Fuss approximation.
+
+    Args
+        eps: lower bound on likelihood evaluations.
     """
     if t < 0:
         # negative reaction times signify upper boundary crossing
@@ -264,10 +272,10 @@ def fptd(t=0, v=0, a=1, w=0.5, tau=0, eps=1e-10):
         else:
             return max(eps, leading_term * fptd_small(t_adj, w, k_s))
     else:
-        return 1e-29
+        return eps
 
 
-def logfptd_batch_python(v, a, w, tau, rt, c, eps=1e-10):
+def logfptd_batch_python(v, a, w, tau, rt, c, eps=1e-29):
     """
     Compute a batch of log likelihoods for the 4-param model,
     roughly following the same call signature as the Julia counterpart.
@@ -329,3 +337,123 @@ def ddm_batch_python(v, a, w, tau, dt, t_max, num_trials, seed):
             )
 
     return rt, c
+
+
+class PotentialFunctionProvider:
+    """
+    This class is initialized without arguments during the initialization of the
+     Posterior class. When called, it specializes to the potential function appropriate
+     to the requested mcmc_method.
+
+    Returns:
+        Potential function for use by either numpy or pyro sampler.
+    """
+
+    def __init__(self, transforms, lan_net, ll_lower_bound: float = -16.11809) -> None:
+
+        self.transforms = transforms
+        self.lan_net = lan_net
+        self.ll_lower_bound = ll_lower_bound
+
+    def __call__(self, prior, sbi_net: nn.Module, x: Tensor, mcmc_method: str):
+        r"""Return potential function for posterior $p(\theta|x)$.
+
+        Switch on numpy or pyro potential function based on mcmc_method.
+
+        Args:
+            prior: Prior distribution that can be evaluated.
+            likelihood_nn: Neural likelihood estimator that can be evaluated.
+            x: Conditioning variable for posterior $p(\theta|x)$. Can be a batch of iid
+                x.
+            mcmc_method: One of `slice_np`, `slice`, `hmc` or `nuts`.
+
+        Returns:
+            Potential function for sampler.
+        """
+        self.likelihood_nn = self.lan_net
+        self.prior = prior
+        self.device = "cpu"
+        self.x = atleast_2d(x).to(self.device)
+        return self.np_potential
+
+    def log_likelihood(self, theta: Tensor, track_gradients: bool = False) -> Tensor:
+        """Return log likelihood of fixed data given a batch of parameters."""
+
+        log_likelihoods = self._log_likelihoods_over_trials(
+            self.x,
+            ensure_theta_batched(theta).to(self.device),
+        )
+
+        return log_likelihoods
+
+    def np_potential(self, theta: np.array):
+        r"""Return posterior log prob. of theta $p(\theta|x)$"
+
+        Args:
+            theta: Parameters $\theta$, batch dimension 1.
+
+        Returns:
+            Posterior log probability of the theta, $-\infty$ if impossible under prior.
+        """
+        theta = ensure_theta_batched(torch.as_tensor(theta, dtype=torch.float32))
+
+        # Notice opposite sign to pyro potential.
+        return self._log_likelihoods_over_trials(
+            self.x,
+            theta,
+            ll_lower_bound=self.ll_lower_bound
+            # the prior is assumend to live in unconstrained space.
+        ) + self.prior.log_prob(theta)
+
+    def _log_likelihoods_over_trials(
+        self, observation, theta_unconstrained, ll_lower_bound: float = -16.11809
+    ):
+        # lower bound for likelihood set to 1e-7 as in
+        # https://github.com/lnccbrown/lans/blob/f2636958bbdb6cb891393a137d1d353be5aa69cd/al-mlp/method_comparison_sim.py#L374
+
+        # move to parameters to constrained space.
+        parameters_constrained = self.transforms.inv(theta_unconstrained)
+        # turn boundary separation into symmetric boundary for LAN.
+        parameters_constrained[:, 1] *= 0.5
+
+        rts = abs(observation)
+        num_trials = rts.numel()
+        num_parameters = parameters_constrained.shape[0]
+        assert rts.shape == torch.Size([num_trials, 1])
+
+        # Code down -1 up +1.
+        cs = torch.ones_like(rts)
+        cs[observation < 0] *= -1
+
+        # Repeat theta trial times
+        theta_repeated = parameters_constrained.repeat(num_trials, 1)
+        # repeat trial data theta times.
+        rts_repeated = torch.repeat_interleave(rts, num_parameters, dim=0)
+        cs_repeated = torch.repeat_interleave(cs, num_parameters, dim=0)
+
+        # stack everything for the LAN net.
+        theta_x_stack = torch.cat((theta_repeated, rts_repeated, cs_repeated), dim=1)
+        ll_each_trial = torch.tensor(
+            self.lan_net.predict_on_batch(theta_x_stack.numpy()),
+            dtype=torch.float32,
+        ).reshape(num_trials, num_parameters)
+
+        # Lower bound on each trial ll.
+        # Sum across trials.
+        llsum = torch.where(
+            ll_each_trial > ll_lower_bound,
+            ll_each_trial,
+            ll_lower_bound * torch.ones_like(ll_each_trial),
+        ).sum(0)
+
+        # But we need log probs in unconstrained space. Get log abs det jac
+        log_abs_det = self.transforms.log_abs_det_jacobian(
+            self.transforms.inv(theta_unconstrained), theta_unconstrained
+        )
+        # Without transforms, logabsdet returns second dimension.
+        if log_abs_det.ndim > 1:
+            log_abs_det = log_abs_det.sum(-1)
+
+        assert llsum.numel() == num_parameters
+
+        return llsum - log_abs_det
