@@ -52,6 +52,7 @@ def run(
     assert not (num_observation is not None and observation is not None)
 
     log = logging.getLogger(__name__)
+    lan_budget = int(1e5 * 1.5e6)
 
     prior = task.get_prior_dist()
     if observation is None:
@@ -112,4 +113,4 @@ def run(
         ),
     ).detach()
 
-    return samples, num_simulations, None
+    return samples, lan_budget, None
