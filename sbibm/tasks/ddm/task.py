@@ -153,7 +153,7 @@ class DDM(Task):
 
         return Simulator(task=self, simulator=simulator, max_calls=max_calls)
 
-    def get_log_likelihood(self, parameters, data):
+    def get_log_likelihood(self, parameters, data, l_lower_bound=1e-7):
         """Return likelihood given parameters and data.
 
         Takes product of likelihoods across iid trials.
@@ -178,6 +178,7 @@ class DDM(Task):
                 # Pass rts and choices separately.
                 rts,
                 choices,
+                l_lower_bound=l_lower_bound,
             )
         elif self.dim_parameters == 3:
             # using boundary separation a and offset w
@@ -192,6 +193,7 @@ class DDM(Task):
                 # Pass rts and choices separately.
                 rts,
                 choices,
+                l_lower_bound=l_lower_bound,
             )
         elif self.dim_parameters == 4:
             # using boundary separation a and offset w
@@ -208,6 +210,7 @@ class DDM(Task):
                 choices,
                 # Pass ndt to be subtracted in Julia.
                 ndt=ndt,
+                l_lower_bound=l_lower_bound,
             )
         else:
             raise NotImplementedError()
@@ -232,7 +235,7 @@ class DDM(Task):
             observation,
             posterior=True,
             implementation="experimental",
-            **dict(automatic_transforms_enabled=automatic_transforms_enabled),
+            automatic_transforms_enabled=automatic_transforms_enabled,
         )
 
         def potential_fn(parameters: Dict) -> torch.Tensor:
@@ -246,13 +249,14 @@ class DDM(Task):
         observation: Optional[torch.Tensor],
         implementation: str,
         posterior: bool,
-        **kwargs: Any,
+        automatic_transforms_enabled: bool = True,
+        l_lower_bound: float = 1e-7,
     ) -> Callable:
 
         transforms = self._get_transforms(
             num_observation=num_observation,
             observation=observation,
-            automatic_transforms_enabled=kwargs["automatic_transforms_enabled"],
+            automatic_transforms_enabled=automatic_transforms_enabled,
         )["parameters"]
         if observation is None:
             observation = self.get_observation(num_observation)
@@ -264,7 +268,7 @@ class DDM(Task):
 
             # Get likelihoods from DiffModels.jl in constrained space.
             log_likelihood_constrained = self.get_log_likelihood(
-                parameters_constrained, observation
+                parameters_constrained, observation, l_lower_bound
             )
             # But we need log probs in unconstrained space. Get log abs det jac
             log_abs_det = transforms.log_abs_det_jacobian(
@@ -279,9 +283,11 @@ class DDM(Task):
             # log_prob_constrained - log_abs_det
             log_likelihood = log_likelihood_constrained - log_abs_det
             if posterior:
-                return log_likelihood + self.get_prior_dist().log_prob(
-                    parameters_constrained
+                # take prior log prob to unconstrained space as well.
+                log_prior = (
+                    self.get_prior_dist().log_prob(parameters_constrained) - log_abs_det
                 )
+                return log_likelihood + log_prior
             else:
                 return log_likelihood
 
@@ -305,9 +311,6 @@ class DDM(Task):
             Samples from reference posterior
         """
         from sbibm.algorithms.pyro.mcmc import run as run_mcmc
-        from sbibm.algorithms.pytorch.baseline_grid import run as run_grid
-        from sbibm.algorithms.pytorch.baseline_rejection import run as run_rejection
-        from sbibm.algorithms.pytorch.utils.proposal import get_proposal
 
         if num_observation is not None:
             initial_params = self.get_true_parameters(num_observation=num_observation)
@@ -390,5 +393,5 @@ class DDM(Task):
 
 
 if __name__ == "__main__":
-    task = DDM(num_trials=100, dim_parameters=4)
+    task = DDM(num_trials=10, dim_parameters=4)
     task._setup(n_jobs=-1)
