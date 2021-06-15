@@ -46,7 +46,7 @@ class DDM(Task):
             num_simulations=[100, 1000, 10000, 100000, 1000000],
             path=Path(__file__).parent.absolute(),
             # Seeds selected to give good references, e.g., not close to prior boundary.
-            observation_seeds=[1, 9, 12, 18, 23, 30, 32, 58, 61, 63],
+            observation_seeds=[1, 9, 12, 18, 23, 30, 32, 58, 61],
         )
 
         # Prior
@@ -393,5 +393,5 @@ class DDM(Task):
 
 
 if __name__ == "__main__":
-    task = DDM(num_trials=1, dim_parameters=4)
+    task = DDM(num_trials=100, dim_parameters=4)
     task._setup(n_jobs=-1)
