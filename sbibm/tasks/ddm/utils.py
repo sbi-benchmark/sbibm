@@ -7,6 +7,9 @@ import torch
 from numba import jit
 from torch import Tensor, nn
 from sbi.utils.torchutils import ScalarFloat, atleast_2d, ensure_theta_batched
+from sbi.mcmc import sir, SliceSamplerVectorized
+from sbi.utils import tensor2numpy
+
 
 from julia import Julia
 from warnings import warn
@@ -339,7 +342,7 @@ def ddm_batch_python(v, a, w, tau, dt, t_max, num_trials, seed):
     return rt, c
 
 
-class PotentialFunctionProvider:
+class LANPotentialFunctionProvider:
     """
     This class is initialized without arguments during the initialization of the
      Posterior class. When called, it specializes to the potential function appropriate
@@ -349,11 +352,11 @@ class PotentialFunctionProvider:
         Potential function for use by either numpy or pyro sampler.
     """
 
-    def __init__(self, transforms, lan_net, ll_lower_bound: float = -16.11809) -> None:
+    def __init__(self, transforms, lan_net, l_lower_bound: float = 1e-7) -> None:
 
         self.transforms = transforms
         self.lan_net = lan_net
-        self.ll_lower_bound = ll_lower_bound
+        self.l_lower_bound = l_lower_bound
 
     def __call__(self, prior, sbi_net: nn.Module, x: Tensor, mcmc_method: str):
         r"""Return potential function for posterior $p(\theta|x)$.
@@ -401,7 +404,7 @@ class PotentialFunctionProvider:
         return self._log_likelihoods_over_trials(
             self.x,
             theta,
-            ll_lower_bound=self.ll_lower_bound
+            ll_lower_bound=np.log(self.l_lower_bound),
             # the prior is assumend to live in unconstrained space.
         ) + self.prior.log_prob(theta)
 
@@ -441,7 +444,7 @@ class PotentialFunctionProvider:
         # Lower bound on each trial ll.
         # Sum across trials.
         llsum = torch.where(
-            ll_each_trial > ll_lower_bound,
+            ll_each_trial >= ll_lower_bound,
             ll_each_trial,
             ll_lower_bound * torch.ones_like(ll_each_trial),
         ).sum(0)
@@ -457,3 +460,31 @@ class PotentialFunctionProvider:
         assert llsum.numel() == num_parameters
 
         return llsum - log_abs_det
+
+
+def run_mcmc(prior, potential_fn, mcmc_parameters, num_samples):
+
+    num_chains = mcmc_parameters["num_chains"]
+    num_warmup = mcmc_parameters["warmup_steps"]
+    thin = mcmc_parameters["thin"]
+
+    initial_params = torch.cat(
+        [sir(prior, potential_fn, **mcmc_parameters) for _ in range(num_chains)]
+    )
+    dim_samples = initial_params.shape[1]
+
+    posterior_sampler = SliceSamplerVectorized(
+        init_params=tensor2numpy(initial_params),
+        log_prob_fn=potential_fn,
+        num_chains=num_chains,
+        verbose=False,
+    )
+    warmup_ = num_warmup * thin
+    num_samples_ = np.ceil((num_samples * thin) / num_chains)
+    samples = posterior_sampler.run(warmup_ + num_samples_)
+    samples = samples[:, warmup_:, :]  # discard warmup steps
+    samples = samples[:, ::thin, :]  # thin chains
+    samples = torch.from_numpy(samples)  # chains x samples x dim
+
+    samples = samples.reshape(-1, dim_samples)[:num_samples, :]
+    return samples

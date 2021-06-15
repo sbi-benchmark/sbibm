@@ -5,7 +5,7 @@ import keras
 import numpy as np
 import torch
 from sbibm.tasks.task import Task
-from sbibm.tasks.ddm.utils import PotentialFunctionProvider
+from sbibm.tasks.ddm.utils import LANPotentialFunctionProvider
 
 from sbibm.algorithms.sbi.utils import (
     wrap_posterior,
@@ -31,6 +31,7 @@ def run(
         "sir_batch_size": 1000,
         "sir_num_batches": 100,
     },
+    l_lower_bound: float = 1e-7,
 ) -> Tuple[torch.Tensor, int, Optional[torch.Tensor]]:
     """Runs LANs using pretrained nets.
 
@@ -62,8 +63,8 @@ def run(
 
     transforms = task._get_transforms(automatic_transforms_enabled)["parameters"]
     if automatic_transforms_enabled:
-        prior = wrap_prior_dist(prior, transforms)
-        simulator = wrap_simulator_fn(simulator, transforms)
+        prior_transformed = wrap_prior_dist(prior, transforms)
+        simulator_transformed = wrap_simulator_fn(simulator, transforms)
 
     num_trials = observation.shape[1]
     # sbi needs the trials in first dimension.
@@ -95,18 +96,25 @@ def run(
     lan_kde = keras.models.load_model(lan_kde_model, compile=False)
     inference_method._x_shape = torch.Size([1, 1])
 
-    posterior = inference_method.build_posterior(
-        None, mcmc_method=mcmc_method, mcmc_parameters=mcmc_parameters
+    from sbibm.tasks.ddm.utils import run_mcmc
+
+    potential_fn_lan = LANPotentialFunctionProvider(transforms, lan_kde, l_lower_bound)
+    # Call to initialize.
+    # Use transformed prior for MCMC.
+    potential_fn_lan(
+        prior=prior_transformed,
+        sbi_net=None,
+        x=observation,
+        mcmc_method=mcmc_method,
     )
-    posterior = wrap_posterior(posterior, transforms)
 
-    # Run MCMC like for reference posterior with LAN potential function.
+    # Run MCMC in transformed space.
+    samples = run_mcmc(
+        prior=prior_transformed,
+        potential_fn=potential_fn_lan.np_potential,
+        mcmc_parameters=mcmc_parameters,
+        num_samples=num_samples,
+    )
 
-    samples = posterior.sample(
-        (num_samples,),
-        # Monkey patch LAN likelihood into SBI potential function provider
-        potential_fn_provider=PotentialFunctionProvider(transforms, lan_kde),
-        x=observation_sbi,
-    ).detach()
-
-    return samples, lan_budget, None
+    # Return untransformed samples.
+    return transforms.inv(samples), lan_budget, None

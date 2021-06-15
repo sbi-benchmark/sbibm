@@ -41,6 +41,7 @@ def run(
     stop_after_epochs: int = 20,
     num_transforms: int = 1,
     num_bins: int = 10,
+    l_lower_bound: float = 1e-7,
 ) -> Tuple[torch.Tensor, int, Optional[torch.Tensor]]:
     """Runs (S)NLE from `sbi`
 
@@ -92,8 +93,8 @@ def run(
 
     transforms = task._get_transforms(automatic_transforms_enabled)["parameters"]
     if automatic_transforms_enabled:
-        prior = wrap_prior_dist(prior, transforms)
-        simulator = wrap_simulator_fn(simulator, transforms)
+        prior_transformed = wrap_prior_dist(prior, transforms)
+        simulator_transformed = wrap_simulator_fn(simulator, transforms)
 
     density_estimator_fun = likelihood_nn(
         model=neural_net.lower(),
@@ -110,7 +111,6 @@ def run(
 
     posteriors = []
     proposal = prior
-    # mcmc_parameters["init_strategy"] = "prior"
     num_trials = observation.shape[1]
     # sbi needs the trials in first dimension.
     observation_sbi = observation.reshape(num_trials, 1)
@@ -144,10 +144,32 @@ def run(
         proposal = posterior.set_default_x(observation_sbi)
         posteriors.append(posterior)
 
-    posterior = wrap_posterior(posteriors[-1], transforms)
+    # posterior = wrap_posterior(posteriors[-1], transforms)
 
-    assert simulator.num_simulations == num_simulations
+    from sbibm.tasks.ddm.utils import run_mcmc
+    from sbi.inference.posteriors.likelihood_based_posterior import (
+        PotentialFunctionProvider,
+    )
 
-    samples = posterior.sample((num_samples,)).detach()
+    potential_fn_snl = PotentialFunctionProvider()
+    # Call to initialize.
+    # Use transformed prior for MCMC.
+    potential_fn_snl(
+        prior_transformed,
+        density_estimator,
+        observation,
+        mcmc_method,
+        transforms,
+        l_lower_bound,
+    )
 
-    return samples, simulator.num_simulations, None
+    # Run MCMC in transformed space.
+    samples = run_mcmc(
+        prior=prior_transformed,
+        potential_fn=potential_fn_snl.posterior_potential,
+        mcmc_parameters=mcmc_parameters,
+        num_samples=num_samples,
+    )
+
+    # Return untransformed samples.
+    return transforms.inv(samples), simulator.num_simulations, None
