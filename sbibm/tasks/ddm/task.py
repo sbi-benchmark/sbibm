@@ -393,5 +393,5 @@ class DDM(Task):
 
 
 if __name__ == "__main__":
-    task = DDM(num_trials=100, dim_parameters=4)
+    task = DDM(num_trials=10, dim_parameters=4)
     task._setup(n_jobs=-1)
