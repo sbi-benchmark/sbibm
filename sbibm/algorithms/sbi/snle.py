@@ -157,7 +157,7 @@ def run(
     potential_fn_snl(
         prior_transformed,
         density_estimator,
-        observation,
+        observation_sbi,
         mcmc_method,
         transforms,
         l_lower_bound,

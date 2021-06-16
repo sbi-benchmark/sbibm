@@ -70,31 +70,10 @@ def run(
     # sbi needs the trials in first dimension.
     observation_sbi = observation.reshape(num_trials, 1)
 
-    # Define dummy sbi object and plug in LAN potential function.
-    inference_method = inference.SNLE_A(
-        density_estimator="nsf",
-        prior=prior,
-        device="cpu",
-    )
-    theta, x = inference.simulate_for_sbi(
-        simulator,
-        prior,
-        num_simulations=1000,
-        simulation_batch_size=100,
-    )
-
-    inference_method.append_simulations(theta, x, from_round=0).train(
-        training_batch_size=100,
-        retrain_from_scratch_each_round=False,
-        discard_prior_samples=False,
-        max_num_epochs=5,
-    )
-
     # network trained on KDE likelihood for 4-param ddm
     lan_kde_model = "/home/janfb/qode/sbibm/sbibm/algorithms/lan/model_final_ddm.h5"
     # load weights as keras model
     lan_kde = keras.models.load_model(lan_kde_model, compile=False)
-    inference_method._x_shape = torch.Size([1, 1])
 
     from sbibm.tasks.ddm.utils import run_mcmc
 
@@ -104,7 +83,7 @@ def run(
     potential_fn_lan(
         prior=prior_transformed,
         sbi_net=None,
-        x=observation,
+        x=observation_sbi,
         mcmc_method=mcmc_method,
     )
 
