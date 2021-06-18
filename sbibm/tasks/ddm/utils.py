@@ -446,7 +446,7 @@ class LANPotentialFunctionProvider:
         # Sum across trials.
 
         llsum = torch.where(
-            torch.logical_or(
+            torch.logical_and(
                 # Apply lower bound
                 ll_each_trial >= ll_lower_bound,
                 # Set to lower bound value when rt<=tau.
@@ -685,21 +685,23 @@ class MixedModelSyntheticDDM(nn.Module):
 
         theta_repeated = theta.repeat(num_trials, 1)
         choices_repeated = torch.repeat_interleave(choices, num_parameters, dim=0)
-        rts_repeated = torch.repeat_interleave(choices, num_parameters, dim=0)
+        rts_repeated = torch.repeat_interleave(rts, num_parameters, dim=0)
 
-        lp_choices = self.choice_net.log_prob(theta_repeated, choices_repeated).detach()
+        lp_choices = (
+            self.choice_net.log_prob(theta_repeated, choices_repeated)
+            .detach()
+            .reshape(-1)
+        )
 
         lp_rts = self.rt_net.log_prob(
             rts_repeated, context=torch.cat((theta_repeated, choices_repeated), dim=1)
         ).detach()
 
-        lp_combined = (lp_choices + lp_rts.reshape(-1, 1)).reshape(
-            num_trials, num_parameters
-        )
+        lp_combined = (lp_choices + lp_rts).reshape(num_trials, num_parameters)
 
         # Set to lower bound where reaction happend before non-decision time tau.
         lp = torch.where(
-            torch.logical_or(
+            torch.logical_and(
                 rts.repeat(1, num_parameters) > theta[:, -1],
                 lp_combined > ll_lower_bound,
             ),
