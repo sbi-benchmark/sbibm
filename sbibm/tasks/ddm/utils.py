@@ -9,6 +9,7 @@ from torch import Tensor, nn
 from sbi.utils.torchutils import ScalarFloat, atleast_2d, ensure_theta_batched
 from sbi.mcmc import sir, SliceSamplerVectorized
 from sbi.utils import tensor2numpy
+from torch.distributions import Bernoulli
 
 
 from julia import Julia
@@ -443,8 +444,15 @@ class LANPotentialFunctionProvider:
 
         # Lower bound on each trial ll.
         # Sum across trials.
+
         llsum = torch.where(
-            ll_each_trial >= ll_lower_bound,
+            torch.logical_or(
+                # Apply lower bound
+                ll_each_trial >= ll_lower_bound,
+                # Set to lower bound value when rt<=tau.
+                # rts need shape of ll_each_trial.
+                rts.repeat(1, num_parameters) > parameters_constrained[:, 3],
+            ),
             ll_each_trial,
             ll_lower_bound * torch.ones_like(ll_each_trial),
         ).sum(0)
@@ -488,3 +496,237 @@ def run_mcmc(prior, potential_fn, mcmc_parameters, num_samples):
 
     samples = samples.reshape(-1, dim_samples)[:num_samples, :]
     return samples
+
+
+# Mixed model utils
+class BernoulliMN(nn.Module):
+    """Net for learning a conditional Bernoulli mass function over choices given parameters.
+
+    Takes as input parameters theta and learns the parameter p of a Bernoulli.
+
+    Defines log prob and sample functions.
+    """
+
+    def __init__(self, n_input=4, n_output=1, n_hidden_units=20, n_hidden_layers=2):
+        super(BernoulliMN, self).__init__()
+
+        self.n_hidden_layers = n_hidden_layers
+
+        self.activation_fun = nn.Sigmoid()
+
+        self.input_layer = nn.Linear(n_input, n_hidden_units)
+
+        self.hidden_layers = nn.ModuleList()
+        for _ in range(self.n_hidden_layers):
+            self.hidden_layers.append(nn.Linear(n_hidden_units, n_hidden_units))
+
+        self.output_layer = nn.Linear(n_hidden_units, n_output)
+
+    def forward(self, theta):
+        assert theta.dim() == 2
+
+        # forward path
+        theta = self.activation_fun(self.input_layer(theta))
+
+        # iterate n hidden layers, input x and calculate tanh activation
+        for layer in self.hidden_layers:
+            theta = self.activation_fun(layer(theta))
+
+        p_hat = self.activation_fun(self.output_layer(theta))
+
+        return p_hat
+
+    def log_prob(self, theta, x):
+        p = self.forward(theta=theta)
+        return Bernoulli(probs=p).log_prob(x)
+
+    def sample(self, theta, num_samples):
+
+        p = self.forward(theta)
+
+        return Bernoulli(probs=p).sample((num_samples,))
+
+
+from torch import optim
+from torch.utils import data
+
+
+def get_data_loaders(theta, choices, batch_size, validation_fraction):
+    num_examples = theta.shape[0]
+    num_training_examples = int((1 - validation_fraction) * num_examples)
+
+    dataset = data.TensorDataset(theta, choices)
+    permuted_indices = torch.randperm(num_examples)
+    train_indices, val_indices = (
+        permuted_indices[:num_training_examples],
+        permuted_indices[num_training_examples:],
+    )
+
+    train_loader = data.DataLoader(
+        dataset,
+        batch_size=batch_size,
+        drop_last=True,
+        sampler=data.sampler.SubsetRandomSampler(train_indices),
+    )
+
+    val_loader = data.DataLoader(
+        dataset,
+        batch_size=batch_size,
+        drop_last=True,
+        shuffle=False,
+        sampler=data.sampler.SubsetRandomSampler(val_indices),
+    )
+
+    return train_loader, val_loader
+
+
+def train(
+    theta,
+    choices,
+    net: BernoulliMN,
+    batch_size: int = 100,
+    max_num_epochs: int = 1000,
+    learning_rate=5e-4,
+    validation_fraction=0.1,
+    stop_after_epochs=20,
+):
+    optimizer = optim.Adam(
+        list(net.parameters()),
+        lr=learning_rate,
+    )
+
+    train_loader, val_loader = get_data_loaders(
+        theta, choices, batch_size, validation_fraction
+    )
+
+    vallp = []
+    converged = False
+    num_epochs_trained = 0
+    largest_vallp = -float("inf")
+    last_vallp_change = 0
+    while num_epochs_trained < max_num_epochs and not converged:
+
+        net.train()
+        for batch in train_loader:
+            optimizer.zero_grad()
+            theta_batch, x_batch = (
+                batch[0],
+                batch[1],
+            )
+            # Evaluate on x with theta as context.
+            log_prob = net.log_prob(x=x_batch, theta=theta_batch)
+            loss = -torch.mean(log_prob)
+            loss.backward()
+            optimizer.step()
+
+        # Calculate validation performance.
+        net.eval()
+        log_prob_sum = 0
+        with torch.no_grad():
+            for batch in val_loader:
+                theta_batch, x_batch = (
+                    batch[0],
+                    batch[1],
+                )
+                # Evaluate on x with theta as context.
+                log_prob = net.log_prob(x=x_batch, theta=theta_batch)
+                log_prob_sum += log_prob.sum().item()
+        # Take mean over all validation samples.
+        _val_log_prob = log_prob_sum / (len(val_loader) * val_loader.batch_size)
+        vallp.append(_val_log_prob)
+
+        if largest_vallp < _val_log_prob:
+            last_vallp_change = 0
+            largest_vallp = _val_log_prob
+        else:
+            last_vallp_change += 1
+
+        converged = last_vallp_change > stop_after_epochs
+
+        return net, vallp
+
+
+class MixedModelSyntheticDDM(nn.Module):
+    def __init__(self, choice_net: nn.Module, rt_net: nn.Module):
+        super(MixedModelSyntheticDDM, self).__init__()
+
+        self.choice_net = choice_net
+        self.rt_net = rt_net
+
+    def sample(self, theta, num_samples: int = 1):
+        assert theta.shape[0] == 1
+
+        choices = (
+            self.choice_net.sample(theta, num_samples).reshape(num_samples, 1).detach()
+        )
+        # Pass num_samples=1 because the choices in the context contains num_samples elements already.
+        rts = (
+            self.rt_net.sample(
+                num_samples=1,
+                context=torch.cat((theta.repeat(num_samples, 1), choices), dim=1),
+            )
+            .reshape(num_samples, 1)
+            .detach()
+        )
+        return rts, choices
+
+    def log_prob(self, rts, choices, theta, ll_lower_bound=np.log(1e-7)):
+        """Return joint log likelihood of a batch rts and choices,
+        for each entry in a batch of parameters theta.
+
+        Note that we take the joint likelihood over the batch of iid trials.
+
+        I.e., only theta can be batched.
+        """
+        num_parameters = theta.shape[0]
+        num_trials = rts.shape[0]
+        assert rts.ndim > 1
+        assert rts.shape == choices.shape
+
+        theta_repeated = theta.repeat(num_trials, 1)
+        choices_repeated = torch.repeat_interleave(choices, num_parameters, dim=0)
+        rts_repeated = torch.repeat_interleave(choices, num_parameters, dim=0)
+
+        lp_choices = self.choice_net.log_prob(theta_repeated, choices_repeated).detach()
+
+        lp_rts = self.rt_net.log_prob(
+            rts_repeated, context=torch.cat((theta_repeated, choices_repeated), dim=1)
+        ).detach()
+
+        lp_combined = (lp_choices + lp_rts.reshape(-1, 1)).reshape(
+            num_trials, num_parameters
+        )
+
+        # Set to lower bound where reaction happend before non-decision time tau.
+        lp = torch.where(
+            torch.logical_or(
+                rts.repeat(1, num_parameters) > theta[:, -1],
+                lp_combined > ll_lower_bound,
+            ),
+            lp_combined,
+            ll_lower_bound * torch.ones_like(lp_combined),
+        )
+
+        # Return sum over iid trial likelihoods.
+        return lp.sum(0)
+
+    def get_potential_fn(self, data, transforms, prior_transformed, ll_lower_bound):
+        def pf(theta_transformed):
+            theta_transformed = ensure_theta_batched(
+                torch.as_tensor(theta_transformed, dtype=torch.float32)
+            )
+            theta = transforms.inv(theta_transformed)
+            ladj = transforms.log_abs_det_jacobian(theta, theta_transformed)
+            # Without transforms, logabsdet returns second dimension.
+            if ladj.ndim > 1:
+                ladj = ladj.sum(-1)
+
+            rts = abs(data)
+            choices = torch.ones_like(data)
+            choices[data < 0] = 0
+
+            ll = self.log_prob(rts, choices, theta, ll_lower_bound)
+
+            return ll - ladj + prior_transformed.log_prob(theta_transformed)
+
+        return pf
