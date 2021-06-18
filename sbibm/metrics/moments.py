@@ -17,9 +17,12 @@ def mean_error(
     assert samples.ndim == 2
     assert reference_posterior_samples.ndim == 2
 
+    # Normalize with marginal variance of true posterior samples.
+    reference_posterior_variance = reference_posterior_samples.var(0)
+
     squared_error = (
         samples.mean(0) - reference_posterior_samples.mean(0)
-    ) ** 2 / prior_variance
+    ) ** 2 / reference_posterior_variance
 
     return torch.mean(squared_error)
 
@@ -40,8 +43,11 @@ def variance_error(
     assert samples.ndim == 2
     assert reference_posterior_samples.ndim == 2
 
+    # Normalize with marginal variance of true posterior samples.
+    reference_posterior_variance = reference_posterior_samples.var(0)
+
     squared_error = (
         samples.var(0) - reference_posterior_samples.var(0)
-    ) ** 2 / prior_variance
+    ) ** 2 / reference_posterior_variance
 
     return torch.mean(squared_error)
