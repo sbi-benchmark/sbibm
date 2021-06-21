@@ -103,66 +103,55 @@ def run(
         simulator_transformed = wrap_simulator_fn(simulator, transforms)
 
     # Load pretrained network.
-    try:
-        assert use_pretrained
-        with open(f"pretrained_DDMNLE_{num_simulations}.p", "rb") as fh:
-            density_estimator = pickle.load(fh)["density_estimator"]
-    except:
-        density_estimator_fun = likelihood_nn(
-            model=neural_net.lower(),
-            hidden_features=hidden_features,
-            z_score_x=z_score_x,
-            z_score_theta=z_score_theta,
-            num_transforms=num_transforms,
-            num_bins=num_bins,
+    density_estimator_fun = likelihood_nn(
+        model=neural_net.lower(),
+        hidden_features=hidden_features,
+        z_score_x=z_score_x,
+        z_score_theta=z_score_theta,
+        num_transforms=num_transforms,
+        num_bins=num_bins,
+    )
+    inference_method = inference.SNLE_A(
+        density_estimator=density_estimator_fun,
+        prior=prior,
+    )
+
+    posteriors = []
+    proposal = prior
+    num_trials = observation.shape[1]
+    # sbi needs the trials in first dimension.
+    observation_sbi = observation.reshape(num_trials, 1)
+
+    for r in range(num_rounds):
+        theta, x = inference.simulate_for_sbi(
+            simulator,
+            proposal,
+            num_simulations=num_simulations_per_round,
+            simulation_batch_size=simulation_batch_size,
         )
-        inference_method = inference.SNLE_A(
-            density_estimator=density_estimator_fun,
-            prior=prior,
+
+        density_estimator = inference_method.append_simulations(
+            theta, x, from_round=r
+        ).train(
+            training_batch_size=training_batch_size,
+            retrain_from_scratch_each_round=False,
+            discard_prior_samples=False,
+            show_train_summary=True,
+            validation_fraction=validation_fraction,
+            stop_after_epochs=stop_after_epochs,
         )
-
-        posteriors = []
-        proposal = prior
-        num_trials = observation.shape[1]
-        # sbi needs the trials in first dimension.
-        observation_sbi = observation.reshape(num_trials, 1)
-
-        for r in range(num_rounds):
-            theta, x = inference.simulate_for_sbi(
-                simulator,
-                proposal,
-                num_simulations=num_simulations_per_round,
-                simulation_batch_size=simulation_batch_size,
-            )
-
-            density_estimator = inference_method.append_simulations(
-                theta, x, from_round=r
-            ).train(
-                training_batch_size=training_batch_size,
-                retrain_from_scratch_each_round=False,
-                discard_prior_samples=False,
-                show_train_summary=True,
-                validation_fraction=validation_fraction,
-                stop_after_epochs=stop_after_epochs,
-            )
-            if r > 1:
-                mcmc_parameters["init_strategy"] = "latest_sample"
-            posterior = inference_method.build_posterior(
-                density_estimator,
-                mcmc_method=mcmc_method,
-                mcmc_parameters=mcmc_parameters,
-            )
-            # Copy hyperparameters, e.g., mcmc_init_samples for "latest_sample" strategy.
-            if r > 0:
-                posterior.copy_hyperparameters_from(posteriors[-1])
-            proposal = posterior.set_default_x(observation_sbi)
-            posteriors.append(posterior)
-
-    try:
-        with open(f"pretrained_DDMNLE_{num_simulations}.p", "wb") as fh:
-            pickle.dump(density_estimator, fh)
-    except:
-        pass
+        if r > 1:
+            mcmc_parameters["init_strategy"] = "latest_sample"
+        posterior = inference_method.build_posterior(
+            density_estimator,
+            mcmc_method=mcmc_method,
+            mcmc_parameters=mcmc_parameters,
+        )
+        # Copy hyperparameters, e.g., mcmc_init_samples for "latest_sample" strategy.
+        if r > 0:
+            posterior.copy_hyperparameters_from(posteriors[-1])
+        proposal = posterior.set_default_x(observation_sbi)
+        posteriors.append(posterior)
 
     potential_fn_snl = PotentialFunctionProvider()
     # Call to initialize.
