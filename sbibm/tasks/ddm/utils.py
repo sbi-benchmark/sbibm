@@ -10,6 +10,12 @@ from sbi.utils.torchutils import ScalarFloat, atleast_2d, ensure_theta_batched
 from sbi.mcmc import sir, SliceSamplerVectorized
 from sbi.utils import tensor2numpy
 from torch.distributions import Bernoulli
+from torch import tensor, Tensor, uint8
+from pyknos.nflows import flows, transforms
+from sbi.neural_nets.flow import ContextSplineMap
+from functools import partial
+from sbi.utils.sbiutils import standardizing_net, standardizing_transform
+from pyknos.nflows.distributions import StandardLogNormal
 
 
 from julia import Julia
@@ -475,6 +481,7 @@ def run_mcmc(prior, potential_fn, mcmc_parameters, num_samples):
     num_chains = mcmc_parameters["num_chains"]
     num_warmup = mcmc_parameters["warmup_steps"]
     thin = mcmc_parameters["thin"]
+    num_init_workers = mcmc_parameters["num_init_workers"]
 
     initial_params = torch.cat(
         [sir(prior, potential_fn, **mcmc_parameters) for _ in range(num_chains)]
@@ -580,7 +587,7 @@ def get_data_loaders(theta, choices, batch_size, validation_fraction):
     return train_loader, val_loader
 
 
-def train(
+def train_choice_net(
     theta,
     choices,
     net: BernoulliMN,
@@ -604,6 +611,9 @@ def train(
     num_epochs_trained = 0
     largest_vallp = -float("inf")
     last_vallp_change = 0
+    import logging
+
+    log = logging.getLogger(__name__)
     while num_epochs_trained < max_num_epochs and not converged:
 
         net.train()
@@ -642,16 +652,20 @@ def train(
             last_vallp_change += 1
 
         converged = last_vallp_change > stop_after_epochs
+        num_epochs_trained += 1
 
-        return net, vallp
+    return net, vallp
 
 
 class MixedModelSyntheticDDM(nn.Module):
-    def __init__(self, choice_net: nn.Module, rt_net: nn.Module):
+    def __init__(
+        self, choice_net: nn.Module, rt_net: nn.Module, use_log_rts: bool = False
+    ):
         super(MixedModelSyntheticDDM, self).__init__()
 
         self.choice_net = choice_net
         self.rt_net = rt_net
+        self.use_log_rts = use_log_rts
 
     def sample(self, theta, num_samples: int = 1):
         assert theta.shape[0] == 1
@@ -660,7 +674,7 @@ class MixedModelSyntheticDDM(nn.Module):
             self.choice_net.sample(theta, num_samples).reshape(num_samples, 1).detach()
         )
         # Pass num_samples=1 because the choices in the context contains num_samples elements already.
-        rts = (
+        samples = (
             self.rt_net.sample(
                 num_samples=1,
                 context=torch.cat((theta.repeat(num_samples, 1), choices), dim=1),
@@ -668,7 +682,7 @@ class MixedModelSyntheticDDM(nn.Module):
             .reshape(num_samples, 1)
             .detach()
         )
-        return rts, choices
+        return samples.exp() if self.use_log_rts else samples, choices
 
     def log_prob(self, rts, choices, theta, ll_lower_bound=np.log(1e-7)):
         """Return joint log likelihood of a batch rts and choices,
@@ -685,7 +699,9 @@ class MixedModelSyntheticDDM(nn.Module):
 
         theta_repeated = theta.repeat(num_trials, 1)
         choices_repeated = torch.repeat_interleave(choices, num_parameters, dim=0)
-        rts_repeated = torch.repeat_interleave(rts, num_parameters, dim=0)
+        rts_repeated = torch.repeat_interleave(
+            torch.log(rts) if self.use_log_rts else rts, num_parameters, dim=0
+        )
 
         lp_choices = (
             self.choice_net.log_prob(theta_repeated, choices_repeated)
@@ -698,6 +714,9 @@ class MixedModelSyntheticDDM(nn.Module):
         ).detach()
 
         lp_combined = (lp_choices + lp_rts).reshape(num_trials, num_parameters)
+        # add log abs det jacobian of RTs: log(1/rt) = - log(rt)
+        if self.use_log_rts:
+            lp_combined -= torch.log(rts)
 
         # Set to lower bound where reaction happend before non-decision time tau.
         lp = torch.where(
