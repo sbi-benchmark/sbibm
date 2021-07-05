@@ -46,7 +46,9 @@ class DDM(Task):
             num_simulations=[100, 1000, 10000, 100000, 1000000],
             path=Path(__file__).parent.absolute(),
             # Seeds selected to give good references, e.g., not close to prior boundary.
-            observation_seeds=[1, 9, 64, 18, 23, 30, 32, 58, 61],
+            observation_seeds=torch.tensor(
+                [1, 9, 64, 18, 23, 30, 32, 58, 61, 68]
+            ).repeat(4),
         )
 
         # Prior
@@ -55,8 +57,10 @@ class DDM(Task):
             "high": torch.tensor([2.0, 2.0, 0.7, 1.8][:dim_parameters]),
         }
         self.prior_labels = ["v", "a", "w", "ndt"][:dim_parameters]
-
         self.prior_dist = pdist.Uniform(**self.prior_params).to_event(1)
+        self.num_trials_per_observation = torch.tensor(
+            [1, 10, 100, 1000]
+        ).repeat_interleave(10)
 
     @lazy_property
     def ddm(self):
@@ -361,12 +365,12 @@ class DDM(Task):
             true_parameters = prior(num_samples=1)
             self._save_true_parameters(num_observation, true_parameters)
 
-            # num_trials = int(self.num_trials_per_observation[num_observation - 1])
-            # self.dim_data = num_trials
-            # self.num_trials = num_trials
+            num_trials = int(self.num_trials_per_observation[num_observation - 1])
+            self.dim_data = num_trials
+            self.num_trials = num_trials
             simulator = self.get_simulator(
                 seed=int(observation_seed),
-                # num_trials=num_trials,
+                num_trials=num_trials,
             )
             observation = simulator(true_parameters)
             self._save_observation(num_observation, observation)
@@ -393,5 +397,5 @@ class DDM(Task):
 
 
 if __name__ == "__main__":
-    task = DDM(num_trials=100, dim_parameters=4)
+    task = DDM(num_trials=1, dim_parameters=4)
     task._setup(n_jobs=-1)
