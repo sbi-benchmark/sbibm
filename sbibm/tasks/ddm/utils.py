@@ -6,17 +6,14 @@ import torch
 
 from numba import jit
 from torch import Tensor, nn
-from sbi.utils.torchutils import ScalarFloat, atleast_2d, ensure_theta_batched
+from sbi.utils.torchutils import atleast_2d, ensure_theta_batched
 from sbi.mcmc import sir, SliceSamplerVectorized
 from sbi.utils import tensor2numpy
 from torch.distributions import Bernoulli
-from torch import tensor, Tensor, uint8
-from pyknos.nflows import flows, transforms
-from sbi.neural_nets.flow import ContextSplineMap
-from functools import partial
-from sbi.utils.sbiutils import standardizing_net, standardizing_transform
-from pyknos.nflows.distributions import StandardLogNormal
+from torch import Tensor
 
+from torch import optim
+from torch.utils import data
 
 from julia import Julia
 from warnings import warn
@@ -481,7 +478,6 @@ def run_mcmc(prior, potential_fn, mcmc_parameters, num_samples):
     num_chains = mcmc_parameters["num_chains"]
     num_warmup = mcmc_parameters["warmup_steps"]
     thin = mcmc_parameters["thin"]
-    num_init_workers = mcmc_parameters["num_init_workers"]
 
     initial_params = torch.cat(
         [sir(prior, potential_fn, **mcmc_parameters) for _ in range(num_chains)]
@@ -554,10 +550,6 @@ class BernoulliMN(nn.Module):
         return Bernoulli(probs=p).sample((num_samples,))
 
 
-from torch import optim
-from torch.utils import data
-
-
 def get_data_loaders(theta, choices, batch_size, validation_fraction):
     num_examples = theta.shape[0]
     num_training_examples = int((1 - validation_fraction) * num_examples)
@@ -591,7 +583,7 @@ def train_choice_net(
     theta,
     choices,
     net: BernoulliMN,
-    batch_size: int = 100,
+    batch_size: int = 1000,
     max_num_epochs: int = 1000,
     learning_rate=5e-4,
     validation_fraction=0.1,

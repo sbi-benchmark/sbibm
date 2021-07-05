@@ -3,9 +3,9 @@ import math
 from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
+import pickle
 import torch
 from sbi import inference as inference
-from sbi.utils.get_nn_models import likelihood_nn
 
 from sbibm.algorithms.sbi.utils import (
     wrap_posterior,
@@ -13,12 +13,7 @@ from sbibm.algorithms.sbi.utils import (
     wrap_simulator_fn,
 )
 from sbibm.tasks.task import Task
-from sbibm.tasks.ddm.utils import (
-    BernoulliMN,
-    MixedModelSyntheticDDM,
-    run_mcmc,
-    train_choice_net,
-)
+from sbibm.tasks.ddm.utils import run_mcmc
 
 
 def run(
@@ -27,13 +22,7 @@ def run(
     num_simulations: int,
     num_observation: Optional[int] = None,
     observation: Optional[torch.Tensor] = None,
-    neural_net: str = "nsf",
-    base_distribution: str = "normal",
-    hidden_features: int = 50,
-    simulation_batch_size: int = 1000,
-    training_batch_size: int = 10000,
     automatic_transforms_enabled: bool = True,
-    mcmc_method: str = "slice_np_vectorized",
     mcmc_parameters: Dict[str, Any] = {
         "num_chains": 100,
         "thin": 10,
@@ -41,18 +30,15 @@ def run(
         "init_strategy": "sir",
         "sir_batch_size": 100,
         "sir_num_batches": 1000,
-        "num_init_workers": 5,
     },
-    z_score_x: bool = True,
-    z_score_theta: bool = True,
-    validation_fraction: float = 0.1,
-    stop_after_epochs: int = 20,
-    num_transforms: int = 1,
-    num_bins: int = 10,
-    tail_bound: float = 3.0,
-    tail_bound_eps: float = 1e-10,
+    base_distribution: str = "lognormal",
+    num_transforms: int = 5,
+    num_bins: int = 5,
+    tails: str = "rectified",
+    tail_bound: float = 5.0,
     l_lower_bound: float = 1e-7,
-    use_log_rts: bool = False,
+    use_log_rts: bool = True,
+    tail_bound_eps: float = 1e-5,
 ) -> Tuple[torch.Tensor, int, Optional[torch.Tensor]]:
     """Runs Mixed Model for DDM.
 
@@ -94,54 +80,43 @@ def run(
 
     # Train choice net
     log.info(f"Running Mixed Model NLE")
-    log.info(f"Training Bernoulli choice net")
-    theta = prior.sample((num_simulations,))
-    theta, x = inference.simulate_for_sbi(
-        simulator,
-        prior,
-        num_simulations=num_simulations,
-        simulation_batch_size=simulation_batch_size,
-    )
-    rts = abs(x)
-    choices = torch.ones_like(x)
-    choices[x < 0] = 0
-    theta_and_choices = torch.cat((theta, choices), dim=1)
-    choice_net, val_lp = train_choice_net(
-        theta,
-        choices,
-        BernoulliMN(n_input=theta.shape[1], n_hidden_units=20, n_hidden_layers=2),
-    )
 
-    # Train rt flow
-    log.info(f"Training RT flow")
-    density_estimator_fun = likelihood_nn(
-        model=neural_net,
-        num_transforms=num_transforms,
-        hidden_features=hidden_features,
-        num_bins=num_bins,
-        base_distribution=base_distribution,
-        tail_bound=tail_bound,
-        tail_bound_eps=tail_bound_eps,
-        z_score_theta=z_score_theta,
-        z_score_x=z_score_x,
-    )
-    inference_method = inference.SNLE(
-        density_estimator=density_estimator_fun,
-        prior=prior,
-    )
-    inference_method = inference_method.append_simulations(
-        theta=theta_and_choices,
-        x=torch.log(rts) if use_log_rts else rts,
-        from_round=0,
-    )
-    rt_flow = inference_method.train(
-        training_batch_size=training_batch_size,
-        show_train_summary=False,
-        stop_after_epochs=stop_after_epochs,
-        validation_fraction=validation_fraction,
-    )
+    # Load model and given args.
+    desired_args = [
+        use_log_rts,
+        num_bins,
+        num_transforms,
+        base_distribution,
+        tails,
+        tail_bound,
+    ]
+    if num_simulations == 100000:
+        model_filename_base = "mm"
+    elif num_simulations == 10000:
+        model_filename_base = "mm10k"
+        desired_args.append(tail_bound_eps)
+    else:
+        ValueError(f"No pretrained model with {num_simulations} budget.")
 
-    mixed_model = MixedModelSyntheticDDM(choice_net, rt_flow, use_log_rts=use_log_rts)
+    with open(
+        f"/home/janfb/qode/results/benchmarking_sbi/gridsearch{num_simulations}.p", "rb"
+    ) as fh:
+        _, a1 = pickle.load(fh).values()
+        args = np.array(a1)
+
+    # Search for desired args in pretrained models.
+    try:
+        model_idx = np.where((args == desired_args).all(1))[0][0]
+    except IndexError:
+        raise IndexError(f"Model with {desired_args} was not found.")
+
+    with open(
+        f"/home/janfb/qode/results/benchmarking_sbi/models/{model_filename_base}{model_idx}.p",
+        "rb",
+    ) as fh:
+        mixed_model = pickle.load(fh)
+    log.info(f"Loaded pretrained model with index {model_idx}.")
+
     potential_fn_mm = mixed_model.get_potential_fn(
         observation.reshape(-1, 1),
         transforms,
@@ -159,4 +134,4 @@ def run(
     )
 
     # Return untransformed samples.
-    return transforms.inv(samples), simulator.num_simulations, None
+    return transforms.inv(samples), 100000, None
