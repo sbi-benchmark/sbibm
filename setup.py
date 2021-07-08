@@ -34,6 +34,8 @@ REQUIRED = [
     "scikit-learn",
     "torch>=1.5.1",
     "tqdm",
+    "tensorflow",
+    "keras",
 ]
 
 EXTRAS = {

@@ -5,10 +5,7 @@ import torch
 
 from sbibm.tasks.task import Task
 
-from sbibm.algorithms.sbi.utils import (
-    wrap_prior_dist,
-    wrap_simulator_fn,
-)
+from sbibm.algorithms.sbi.utils import wrap_prior_dist
 from sbibm.tasks.ddm.utils import run_mcmc
 
 

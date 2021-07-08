@@ -2,7 +2,6 @@ import logging
 import math
 from typing import Any, Dict, Optional, Tuple
 
-import pickle
 import torch
 from sbi import inference as inference
 from sbi.utils.get_nn_models import likelihood_nn
