@@ -30,10 +30,10 @@ def run(
     },
     l_lower_bound: float = 1e-7,
 ) -> Tuple[torch.Tensor, int, Optional[torch.Tensor]]:
-    """Runs LANs using pretrained nets.
+    """Runs MCMC with analytical DDM likelihood.
 
     Args:
-        task: Task instance
+        task: Task instance, here DDM.
         num_observation: Observation number to load, alternative to `observation`
         observation: Observation, alternative to `num_observation`
         num_samples: Number of samples to generate from posterior
@@ -42,25 +42,27 @@ def run(
         automatic_transforms_enabled: Whether to enable automatic transforms
         mcmc_method: MCMC method
         mcmc_parameters: MCMC parameters
+        l_lower_bound: lower bound for single trial likelihood evaluations.
 
     Returns:
         Samples from posterior, number of simulator calls, log probability of true params if computable
     """
     assert not (num_observation is None and observation is None)
     assert not (num_observation is not None and observation is not None)
+    assert (
+        task.name == "ddm"
+    ), "This algorithm works only for the DDM task as it uses its analytical likeklihood."
 
     log = logging.getLogger(__name__)
+    log.info(f"Running MCMC with analytical likelihoods from Julia package.")
 
     prior = task.get_prior_dist()
     if observation is None:
         observation = task.get_observation(num_observation)
 
-    simulator = task.get_simulator(max_calls=num_simulations)
-
     transforms = task._get_transforms(automatic_transforms_enabled)["parameters"]
     if automatic_transforms_enabled:
         prior_transformed = wrap_prior_dist(prior, transforms)
-        simulator_transformed = wrap_simulator_fn(simulator, transforms)
 
     # sbi needs the trials in first dimension.
 

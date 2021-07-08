@@ -1,15 +1,17 @@
 import os
 from pathlib import Path
+from typing import Callable
 
 import numpy as np
 import torch
 
+import logging
 from numba import jit
 from torch import Tensor, nn
 from sbi.utils.torchutils import atleast_2d, ensure_theta_batched
 from sbi.mcmc import sir, SliceSamplerVectorized
 from sbi.utils import tensor2numpy
-from torch.distributions import Bernoulli
+from torch.distributions import Bernoulli, Distribution
 from torch import Tensor
 
 from torch import optim
@@ -192,7 +194,9 @@ class DDMJulia:
             )
 
 
-########
+######## The following functions have been copied and refactored from
+# https://github.com/AlexanderFengler/hddm/tree/nn_likelihood
+# and https://github.com/lnccbrown/lans/
 ## python simulator and likelihoods
 @jit(nopython=True)
 def fptd_large(t, w, k):
@@ -346,6 +350,11 @@ def ddm_batch_python(v, a, w, tau, dt, t_max, num_trials, seed):
     return rt, c
 
 
+#######
+
+
+# Refactored from
+# https://github.com/mackelab/sbi/blob/main/sbi/inference/posteriors/likelihood_based_posterior.py
 class LANPotentialFunctionProvider:
     """
     This class is initialized without arguments during the initialization of the
@@ -423,12 +432,13 @@ class LANPotentialFunctionProvider:
         # turn boundary separation into symmetric boundary for LAN.
         parameters_constrained[:, 1] *= 0.5
 
+        # convert RTs on real line to positive RTs.
         rts = abs(observation)
         num_trials = rts.numel()
         num_parameters = parameters_constrained.shape[0]
         assert rts.shape == torch.Size([num_trials, 1])
 
-        # Code down -1 up +1.
+        # Code down choices as -1 and up choices as +1.
         cs = torch.ones_like(rts)
         cs[observation < 0] *= -1
 
@@ -447,7 +457,6 @@ class LANPotentialFunctionProvider:
 
         # Lower bound on each trial ll.
         # Sum across trials.
-
         llsum = torch.where(
             torch.logical_and(
                 # Apply lower bound
@@ -460,36 +469,52 @@ class LANPotentialFunctionProvider:
             ll_lower_bound * torch.ones_like(ll_each_trial),
         ).sum(0)
 
-        # But we need log probs in unconstrained space. Get log abs det jac
+        # But we need log probs in unconstrained space. Get log abs det jacobian
         log_abs_det = self.transforms.log_abs_det_jacobian(
             self.transforms.inv(theta_unconstrained), theta_unconstrained
         )
-        # Without transforms, logabsdet returns second dimension.
+        # With identity transform, logabsdet returns second dimension, so sum over it.
         if log_abs_det.ndim > 1:
             log_abs_det = log_abs_det.sum(-1)
-
+        # Double check.
         assert llsum.numel() == num_parameters
 
         return llsum - log_abs_det
 
 
-def run_mcmc(prior, potential_fn, mcmc_parameters, num_samples):
+def run_mcmc(
+    prior: Distribution, potential_fn: Callable, mcmc_parameters: dict, num_samples: int
+) -> Tensor:
+    """Run slice sampling MCMC given prior and potential function, return samples.
+
+    Args:
+        prior: prior distribution, usually a TransformedDistribution in unconstrained space.
+        potential_fn: Callable returning the negative log posterior potential.
+        mcmc_parameters: MCMC hyperparameters.
+        num_samples: number of samples to obtain.
+
+    Returns:
+        Tensor: [description]
+    """
 
     num_chains = mcmc_parameters["num_chains"]
     num_warmup = mcmc_parameters["warmup_steps"]
     thin = mcmc_parameters["thin"]
 
+    # Obtain initial parameters for each chain using sequential importantce reweighting.
     initial_params = torch.cat(
         [sir(prior, potential_fn, **mcmc_parameters) for _ in range(num_chains)]
     )
     dim_samples = initial_params.shape[1]
 
+    # Use vectorized slice sampling.
     posterior_sampler = SliceSamplerVectorized(
         init_params=tensor2numpy(initial_params),
         log_prob_fn=potential_fn,
         num_chains=num_chains,
         verbose=False,
     )
+    # Extract relevant samples.
     warmup_ = num_warmup * thin
     num_samples_ = np.ceil((num_samples * thin) / num_chains)
     samples = posterior_sampler.run(warmup_ + num_samples_)
@@ -511,6 +536,14 @@ class BernoulliMN(nn.Module):
     """
 
     def __init__(self, n_input=4, n_output=1, n_hidden_units=20, n_hidden_layers=2):
+        """Initialize Bernoulli mass network.
+
+        Args:
+            n_input: number of input features
+            n_output: number of output features, default 1 for a single Bernoulli variable.
+            n_hidden_units: number of hidden units per hidden layer.
+            n_hidden_layers: number of hidden layers.
+        """
         super(BernoulliMN, self).__init__()
 
         self.n_hidden_layers = n_hidden_layers
@@ -519,6 +552,7 @@ class BernoulliMN(nn.Module):
 
         self.input_layer = nn.Linear(n_input, n_hidden_units)
 
+        # Repeat hidden units hidden layers times.
         self.hidden_layers = nn.ModuleList()
         for _ in range(self.n_hidden_layers):
             self.hidden_layers.append(nn.Linear(n_hidden_units, n_hidden_units))
@@ -526,7 +560,15 @@ class BernoulliMN(nn.Module):
         self.output_layer = nn.Linear(n_hidden_units, n_output)
 
     def forward(self, theta):
-        assert theta.dim() == 2
+        """Return Bernoulli probability predicted from a batch of parameters.
+
+        Args:
+            theta: batch of input parameters for the net.
+
+        Returns:
+            Tensor: batch of predicted Bernoulli probabilities.
+        """
+        assert theta.dim() == 2, "theta needs to have a batch dimension."
 
         # forward path
         theta = self.activation_fun(self.input_layer(theta))
@@ -540,17 +582,47 @@ class BernoulliMN(nn.Module):
         return p_hat
 
     def log_prob(self, theta, x):
+        """Return Bernoulli log probability of choices x, given parameters theta.
+
+        Args:
+            theta: parameters for input to the BernoulliMN.
+            x: choices to evaluate.
+
+        Returns:
+            Tensor: log probs with shape (x.shape[0],)
+        """
+        # Predict Bernoulli p and evaluate.
         p = self.forward(theta=theta)
         return Bernoulli(probs=p).log_prob(x)
 
     def sample(self, theta, num_samples):
+        """Returns samples from Bernoulli RV with p predicted via net.
 
+        Args:
+            theta: batch of parameters for prediction.
+            num_samples: number of samples to obtain.
+
+        Returns:
+            Tensor: Bernoulli samples with shape (batch, num_samples, 1)
+        """
+
+        # Predict Bernoulli p and sample.
         p = self.forward(theta)
-
         return Bernoulli(probs=p).sample((num_samples,))
 
 
 def get_data_loaders(theta, choices, batch_size, validation_fraction):
+    """Return train and test data loaders given data.
+
+    Args:
+        theta: DDM parameters.
+        choices: Corresponding DDM choices.
+        batch_size: training batch size.
+        validation_fraction: fraction of test data set.
+
+    Returns:
+        Dataloader, Dataloader: train and test dataloaders.
+    """
     num_examples = theta.shape[0]
     num_training_examples = int((1 - validation_fraction) * num_examples)
 
@@ -589,6 +661,22 @@ def train_choice_net(
     validation_fraction=0.1,
     stop_after_epochs=20,
 ):
+    """Return trained BernoulliMN given data and training hyperparameters.
+
+    Args:
+        theta: DDM parameters
+        choices: corresponding DDM choices.
+        net: initialized BernoulliMN
+        batch_size: training batch size
+        max_num_epochs: maximum number of epochs to train.
+        learning_rate: learning rate.
+        validation_fraction: fraction of validation data.
+        stop_after_epochs: number of epochs to wait without validation loss reduction
+            before stopping training.
+
+    Returns:
+        nn.Module, Tensor: Trained net, validation log probs.
+    """
     optimizer = optim.Adam(
         list(net.parameters()),
         lr=learning_rate,
@@ -603,7 +691,6 @@ def train_choice_net(
     num_epochs_trained = 0
     largest_vallp = -float("inf")
     last_vallp_change = 0
-    import logging
 
     log = logging.getLogger(__name__)
     while num_epochs_trained < max_num_epochs and not converged:
@@ -650,9 +737,21 @@ def train_choice_net(
 
 
 class MixedModelSyntheticDDM(nn.Module):
+    """Class for combining a Bernoulli choice net and a flow over reaction times for a
+    joint DDM synthetic likelihood."""
+
     def __init__(
         self, choice_net: nn.Module, rt_net: nn.Module, use_log_rts: bool = False
     ):
+        """Initializa synthetic likelihood class from a choice net and reaction time
+        flow.
+
+        Args:
+            choice_net: BernoulliMN net trained to predict choices from DDM parameters.
+            rt_net: generative model of reaction time given DDM parameters and choices.
+            use_log_rts: whether the rt_net was trained with reaction times transformed
+                to log space.
+        """
         super(MixedModelSyntheticDDM, self).__init__()
 
         self.choice_net = choice_net
@@ -660,8 +759,18 @@ class MixedModelSyntheticDDM(nn.Module):
         self.use_log_rts = use_log_rts
 
     def sample(self, theta, num_samples: int = 1):
-        assert theta.shape[0] == 1
+        """Return choices and reaction times given DDM parameters.
 
+        Args:
+            theta: DDM parameters, shape (batch, 4)
+            num_samples: number of samples to generate.
+
+        Returns:
+            Tensor: samples (rt, choice) with shape (num_samples, 2)
+        """
+        assert theta.shape[0] == 1, "for samples, no batching in theta is possible yet."
+
+        # Sample choices given parameters, from BernoulliMN.
         choices = (
             self.choice_net.sample(theta, num_samples).reshape(num_samples, 1).detach()
         )
@@ -669,6 +778,7 @@ class MixedModelSyntheticDDM(nn.Module):
         samples = (
             self.rt_net.sample(
                 num_samples=1,
+                # repeat the single theta to match number of sampled choices.
                 context=torch.cat((theta.repeat(num_samples, 1), choices), dim=1),
             )
             .reshape(num_samples, 1)
@@ -680,66 +790,104 @@ class MixedModelSyntheticDDM(nn.Module):
         """Return joint log likelihood of a batch rts and choices,
         for each entry in a batch of parameters theta.
 
-        Note that we take the joint likelihood over the batch of iid trials.
-
-        I.e., only theta can be batched.
+        Note that we calculate the joint log likelihood over the batch of iid trials.
+        Therefore, only theta can be batched and the data is fixed (or a batch of data
+        is interpreted as iid trials)
         """
         num_parameters = theta.shape[0]
         num_trials = rts.shape[0]
         assert rts.ndim > 1
         assert rts.shape == choices.shape
 
+        # Repeat parameters for each trial.
         theta_repeated = theta.repeat(num_trials, 1)
+        # Repeat choices and rts for each parameter in batch.
         choices_repeated = torch.repeat_interleave(choices, num_parameters, dim=0)
         rts_repeated = torch.repeat_interleave(
             torch.log(rts) if self.use_log_rts else rts, num_parameters, dim=0
         )
 
+        # Get choice log probs from choice net.
         lp_choices = (
             self.choice_net.log_prob(theta_repeated, choices_repeated)
             .detach()
             .reshape(-1)
         )
 
+        # Get rt log probs from rt net.
         lp_rts = self.rt_net.log_prob(
             rts_repeated, context=torch.cat((theta_repeated, choices_repeated), dim=1)
         ).detach()
 
+        # Combine into joint lp with first dim over trials.
         lp_combined = (lp_choices + lp_rts).reshape(num_trials, num_parameters)
-        # add log abs det jacobian of RTs: log(1/rt) = - log(rt)
+
+        # Maybe add log abs det jacobian of RTs: log(1/rt) = - log(rt)
         if self.use_log_rts:
             lp_combined -= torch.log(rts)
 
         # Set to lower bound where reaction happend before non-decision time tau.
         lp = torch.where(
             torch.logical_and(
+                # If rt < tau the likelihood should be zero (or at lower bound).
                 rts.repeat(1, num_parameters) > theta[:, -1],
+                # Apply lower bound.
                 lp_combined > ll_lower_bound,
             ),
             lp_combined,
             ll_lower_bound * torch.ones_like(lp_combined),
         )
 
-        # Return sum over iid trial likelihoods.
+        # Return sum over iid trial log likelihoods.
         return lp.sum(0)
 
-    def get_potential_fn(self, data, transforms, prior_transformed, ll_lower_bound):
+    def get_potential_fn(
+        self,
+        data: Tensor,
+        transforms,
+        prior_transformed: Distribution,
+        ll_lower_bound: float,
+    ):
+        """Return potential function for DDM synthetic likelihood.
+
+        Args:
+            data: data to condition on, batch of iid trials of (rt, choice)s.
+            transforms: applied transforms
+            prior_transformed: prior in unconstrained space.
+            ll_lower_bound: lower bound on the log likelihood.
+        """
+
+        # Encode rts and choices.
+        rts = abs(data)
+        choices = torch.ones_like(data)
+        choices[data < 0] = 0
+
         def pf(theta_transformed):
+            """Return log posterior potential for parameters theta.
+
+            Args:
+                theta_transformed: parameters in unconstrained space.
+
+            Returns:
+                Tensor: potential.
+            """
             theta_transformed = ensure_theta_batched(
                 torch.as_tensor(theta_transformed, dtype=torch.float32)
             )
+            # Go to constrained space to get the likelihood.
             theta = transforms.inv(theta_transformed)
+            # Get the log abs det jacobian of the transforms.
             ladj = transforms.log_abs_det_jacobian(theta, theta_transformed)
+
             # Without transforms, logabsdet returns second dimension.
             if ladj.ndim > 1:
                 ladj = ladj.sum(-1)
 
-            rts = abs(data)
-            choices = torch.ones_like(data)
-            choices[data < 0] = 0
-
+            # Get synthetic log likelihood in constrained space.
             ll = self.log_prob(rts, choices, theta, ll_lower_bound)
 
+            # Return log likelihood in unconstrained space by correcting with ladj.
+            # Add prior log prob in unconstrained to make a posterior potential.
             return ll - ladj + prior_transformed.log_prob(theta_transformed)
 
         return pf
