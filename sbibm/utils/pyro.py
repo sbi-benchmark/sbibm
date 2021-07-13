@@ -18,6 +18,7 @@ from pyro.poutine.subsample_messenger import _Subsample
 from pyro.util import check_site_shape, ignore_jit_warnings
 from torch.autograd import grad
 from torch.distributions import biject_to
+from torch.distributions.transforms import IndependentTransform
 
 from sbibm.utils.torch import get_log_abs_det_jacobian
 
@@ -100,6 +101,11 @@ def get_log_prob_fn(
             transforms[name] = biject_to(fn.support).inv
         else:
             transforms[name] = dist.transforms.identity_transform
+
+        if not isinstance(transforms[name], IndependentTransform):
+            transforms[name] = IndependentTransform(
+                transforms[name], reinterpreted_batch_ndims=1
+            )
 
     if implementation == "pyro":
         trace_prob_evaluator = TraceEinsumEvaluator(

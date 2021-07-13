@@ -81,7 +81,8 @@ def get_log_abs_det_jacobian(
 ) -> torch.Tensor:
     """Return log_abs_det_jacobian over batch of parameters.
 
-    Take sum over second dimension if needed, e.g., when torch < 1.8 is used.
+    Take sum over event dimension if needed, e.g., when torch < 1.8 is used
+    or the transform is defined to not sum over event dimension.
 
     Args:
         transform: transform applied to the parameters
@@ -98,12 +99,11 @@ def get_log_abs_det_jacobian(
         parameters_constrained, parameters_unconstrained
     )
 
-    # For torch < 1.8 log_abs_det_jacobian is returned for each dimension.
     if vals.ndim > 1 and vals.shape[1] == dim_parameters:
-        vals = vals.sum(-1)
+        vals = vals.sum(1)
 
     assert (
-        vals.numel == batch_size
+        vals.numel() == batch_size
     ), "Mismatch in batch size, took sum over whole batch?"
 
     return vals
