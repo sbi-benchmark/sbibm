@@ -52,7 +52,7 @@ def get_proposal(
         )
 
     elif density_estimator == "kde":
-        density_estimator_ = get_kde(X=samples, transform=transform, **kwargs)
+        density_estimator_ = get_kde(samples=samples, transform=transform, **kwargs)
 
     else:
         raise NotImplementedError

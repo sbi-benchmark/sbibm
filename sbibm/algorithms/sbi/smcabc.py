@@ -158,7 +158,7 @@ def run(
         kde = get_kde(
             samples,
             bandwidth=kde_bandwidth,
-            sample_weight=posterior._log_weights.exp() if kde_sample_weights else None,
+            sample_weights=posterior._log_weights.exp() if kde_sample_weights else None,
         )
         samples = kde.sample(num_samples)
     else:

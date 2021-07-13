@@ -1,4 +1,5 @@
 from typing import Optional, Tuple
+import pandas as pd
 
 import torch
 from sbi.inference import MCABC
@@ -7,7 +8,6 @@ import sbibm
 from sbibm.tasks.task import Task
 from sbibm.utils.io import save_tensor_to_csv
 from sbibm.utils.kde import get_kde
-from .utils import get_sass_transform, run_lra
 
 
 def run(
@@ -117,7 +117,7 @@ def run(
 
     if num_observation is not None:
         true_parameters = task.get_true_parameters(num_observation=num_observation)
-        log_prob_true_parameters = posterior.log_prob(true_parameters)
+        log_prob_true_parameters = posterior.log_prob(true_parameters.squeeze())
         return samples, simulator.num_simulations, log_prob_true_parameters
     else:
         return samples, simulator.num_simulations, None

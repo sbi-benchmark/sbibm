@@ -4,7 +4,7 @@ import numpy as np
 import torch
 from sklearn.model_selection import GridSearchCV
 from sklearn.neighbors import KernelDensity
-from torch import distributions as dist
+from torch.distributions.transforms import identity_transform
 from sbibm.utils.torch import get_log_abs_det_jacobian
 
 transform_types = Optional[
@@ -16,28 +16,37 @@ transform_types = Optional[
 
 
 def get_kde(
-    X: torch.Tensor,
-    bandwidth: str = "cv",
+    samples: torch.Tensor,
+    bandwidth: Union[float, str] = "cv",
     transform: transform_types = None,
-    verbose: bool = True,
-    sample_weight: Optional[np.ndarray] = None,
+    sample_weights: Optional[np.ndarray] = None,
+    num_cv_partitions: int = 20,
+    num_cv_repetitions: int = 5,
 ) -> KernelDensity:
-    """Get KDE estimator with selected bandwidth
+    """Get KDE estimator with selected bandwidth.
 
     Args:
-        X: Samples
-        bandwidth: Bandwidth method
-        transform: Optional transform
-        sample_weight: Sample weights attached to the data
-        verbose: Verbosity level
+        samples: Samples to perfrom KDE on
+        bandwidth: Bandwidth method, 'silvermann' or 'scott' heuristics, or 'cv' for a
+            tailored cross validation to find the best bandwidth for passed samples.
+        transform: Optional transform applied before running kde.
+        sample_weights: Sample weights attached to the samples, used to perform weighted
+            KDE.
+        num_cv_partitions: number of partitions for cross validation
+        num_cv_repetitions: how many times to repeat the cross validation to zoom into
+            the hyperparameter grid.
 
     References:
-    [1]: https://github.com/scikit-learn/scikit-learn/blob/0303fca35e32add9d7346dcb2e0e697d4e68706f/sklearn/neighbors/kde.py
+    [1]: https://github.com/scikit-learn/scikit-learn/blob/
+         0303fca35e32add9d7346dcb2e0e697d4e68706f/sklearn/neighbors/kde.py
     """
     if transform is None or not transform:
-        transform = dist.transforms.identity_transform
+        transform = identity_transform
+    if isinstance(bandwidth, str):
+        assert bandwidth in ["cv", "scott", "silvermann"], "invalid kde bandwidth name."
 
-    X = transform(X).numpy()
+    transformed_samples = transform(samples).numpy()
+    num_samples, dim_samples = transformed_samples.shape
 
     algorithm = "auto"
     kernel = "gaussian"
@@ -49,18 +58,20 @@ def get_kde(
     metric_params = None
 
     if bandwidth == "scott":
-        bandwidth_selected = X.shape[0] ** (-1.0 / (X.shape[1] + 4))
+        bandwidth_selected = num_samples ** (-1.0 / (dim_samples + 4))
     elif bandwidth == "silvermann":
-        bandwidth_selected = (X.shape[0] * (X.shape[1] + 2) / 4.0) ** (
-            -1.0 / (X.shape[1] + 4)
+        bandwidth_selected = (num_samples * (dim_samples + 2) / 4.0) ** (
+            -1.0 / (dim_samples + 4)
         )
     elif bandwidth == "cv":
+        _std = transformed_samples.std()
         steps = 10
-        lower = 0.1 * X.std()
-        upper = 0.5 * X.std()
+        lower = 0.1 * _std
+        upper = 0.5 * _std
         current_best = -10000000
 
-        for _ in range(5):
+        # Run cv multiple times and to "zoom in" to better bandwidths.
+        for _ in range(num_cv_repetitions):
             bandwidth_range = np.linspace(lower, upper, steps)
             grid = GridSearchCV(
                 KernelDensity(
@@ -74,10 +85,11 @@ def get_kde(
                     metric_params=metric_params,
                 ),
                 {"bandwidth": bandwidth_range},
-                cv=20,
+                cv=num_cv_partitions,
             )
-            grid.fit(X)
+            grid.fit(transformed_samples)
 
+            # If new best score, update and zoom in.
             if abs(current_best - grid.best_score_) > 0.001:
                 current_best = grid.best_score_
             else:
@@ -97,11 +109,12 @@ def get_kde(
                     upper, lower = lower, upper
 
         bandwidth_selected = grid.best_params_["bandwidth"]
-    elif bandwidth > 0:
+    elif float(bandwidth) > 0:
         bandwidth_selected = float(bandwidth)
     else:
-        raise ValueError("bandwidth must be positive, scott, silvermann or cv")
+        raise ValueError("bandwidth must be positive, 'scott', 'silvermann' or 'cv'")
 
+    # Run final fit with selected bandwidth.
     kde = KernelDensity(
         kernel=kernel,
         algorithm=algorithm,
@@ -113,12 +126,18 @@ def get_kde(
         metric_params=metric_params,
         bandwidth=bandwidth_selected,
     )
-    kde.fit(X, sample_weight=sample_weight)
+    kde.fit(transformed_samples, sample_weight=sample_weights)
 
     return KDEWrapper(kde, transform)
 
 
 class KDEWrapper:
+    """Wrapper class to enable sampling and evaluation with a kde object fitted on
+    transformed parameters.
+
+    Applies inverse transforms on samples and log abs det Jacobian on log prob.
+    """
+
     def __init__(self, kde, transform):
         self.kde = kde
         self.transform = transform
@@ -132,7 +151,12 @@ class KDEWrapper:
         log_probs = torch.from_numpy(
             self.kde.score_samples(parameters_unconstrained.numpy()).astype(np.float32)
         )
-        log_probs += get_log_abs_det_jacobian(
-            self.transform, parameters_constrained, parameters_unconstrained
+        # Sum over event dimension of parameters returned by log abs det jacobian.
+        log_probs += self.transform.log_abs_det_jacobian(
+            parameters_constrained, parameters_unconstrained
         )
+        assert (
+            log_probs.numel() == parameters_constrained.shape[0]
+        ), """batch shape mismatch, log_abs_det_jacobian not summing over event
+              dimensions?"""
         return log_probs
