@@ -282,18 +282,18 @@ class DDM(Task):
             if log_abs_det.ndim > 1:
                 log_abs_det = log_abs_det.sum(-1)
 
-            # Likelihood in unconstrained space is:
-            # prob_constrained * 1/abs_det_jacobian
-            # log_prob_constrained - log_abs_det
-            log_likelihood = log_likelihood_constrained - log_abs_det
             if posterior:
-                # take prior log prob to unconstrained space as well.
-                log_prior = (
-                    self.get_prior_dist().log_prob(parameters_constrained) - log_abs_det
+                posterior_potential_constrained = (
+                    log_likelihood_constrained
+                    + self.get_prior_dist().log_prob(parameters_constrained)
                 )
-                return log_likelihood + log_prior
+                # Return posterior potential moved to unconstrained space.
+                return posterior_potential_constrained - log_abs_det
             else:
-                return log_likelihood
+                # Likelihood in unconstrained space is:
+                # prob_constrained * 1/abs_det_jacobian
+                # log_prob_constrained - log_abs_det
+                return log_likelihood_constrained - log_abs_det
 
         return log_prob_fn
 
