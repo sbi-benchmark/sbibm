@@ -11,10 +11,9 @@ from torch import Tensor, nn
 from sbi.utils.torchutils import atleast_2d, ensure_theta_batched
 from sbi.mcmc import sir, SliceSamplerVectorized
 from sbi.utils import tensor2numpy
-from torch.distributions import Bernoulli, Distribution
-from torch import Tensor
+from torch.distributions import Bernoulli, Distribution, TransformedDistribution
+from torch import Tensor, optim
 
-from torch import optim
 from torch.utils import data
 
 from julia import Julia
@@ -377,7 +376,7 @@ class LANPotentialFunctionProvider:
         Switch on numpy or pyro potential function based on mcmc_method.
 
         Args:
-            prior: Prior distribution that can be evaluated.
+            prior: Prior distribution that can be evaluated, untransformed.
             likelihood_nn: Neural likelihood estimator that can be evaluated.
             x: Conditioning variable for posterior $p(\theta|x)$. Can be a batch of iid
                 x.
@@ -387,39 +386,36 @@ class LANPotentialFunctionProvider:
             Potential function for sampler.
         """
         self.likelihood_nn = self.lan_net
+        assert not isinstance(prior, TransformedDistribution)
         self.prior = prior
         self.device = "cpu"
         self.x = atleast_2d(x).to(self.device)
-        return self.np_potential
+        return self.posterior_potential
 
-    def log_likelihood(self, theta: Tensor, track_gradients: bool = False) -> Tensor:
-        """Return log likelihood of fixed data given a batch of parameters."""
-
-        log_likelihoods = self._log_likelihoods_over_trials(
-            self.x,
-            ensure_theta_batched(theta).to(self.device),
-        )
-
-        return log_likelihoods
-
-    def np_potential(self, theta: np.array):
+    def posterior_potential(self, theta: np.array):
         r"""Return posterior log prob. of theta $p(\theta|x)$"
 
         Args:
-            theta: Parameters $\theta$, batch dimension 1.
+            theta: Parameters $\theta$, batch dimension 1, possibly in transformed space.
 
         Returns:
             Posterior log probability of the theta, $-\infty$ if impossible under prior.
         """
         theta = ensure_theta_batched(torch.as_tensor(theta, dtype=torch.float32))
+        theta_untransformed = self.transforms.inv(theta)
 
-        # Notice opposite sign to pyro potential.
-        return self._log_likelihoods_over_trials(
+        ll_transformed = self._log_likelihoods_over_trials(
             self.x,
             theta,
             ll_lower_bound=np.log(self.l_lower_bound),
-            # the prior is assumend to live in unconstrained space.
-        ) + self.prior.log_prob(theta)
+        )
+        # Because ladj is subtracted from ll already we can just add the untransformed
+        # prior log prob.
+        potential_transformed = ll_transformed + self.prior.log_prob(
+            theta_untransformed
+        )
+
+        return potential_transformed
 
     def _log_likelihoods_over_trials(
         self, observation, theta_unconstrained, ll_lower_bound: float = -16.11809
@@ -483,7 +479,10 @@ class LANPotentialFunctionProvider:
 
 
 def run_mcmc(
-    prior: Distribution, potential_fn: Callable, mcmc_parameters: dict, num_samples: int
+    prior: Distribution,
+    potential_fn: Callable,
+    mcmc_parameters: dict,
+    num_samples: int,
 ) -> Tensor:
     """Run slice sampling MCMC given prior and potential function, return samples.
 
@@ -500,11 +499,15 @@ def run_mcmc(
     num_chains = mcmc_parameters["num_chains"]
     num_warmup = mcmc_parameters["warmup_steps"]
     thin = mcmc_parameters["thin"]
+    init_strategy = mcmc_parameters["init_strategy"]
 
     # Obtain initial parameters for each chain using sequential importantce reweighting.
-    initial_params = torch.cat(
-        [sir(prior, potential_fn, **mcmc_parameters) for _ in range(num_chains)]
-    )
+    if init_strategy == "sir":
+        initial_params = torch.cat(
+            [sir(prior, potential_fn, **mcmc_parameters) for _ in range(num_chains)]
+        )
+    else:
+        initial_params = prior.sample((num_chains,))
     dim_samples = initial_params.shape[1]
 
     # Use vectorized slice sampling.
@@ -816,7 +819,8 @@ class MixedModelSyntheticDDM(nn.Module):
 
         # Get rt log probs from rt net.
         lp_rts = self.rt_net.log_prob(
-            rts_repeated, context=torch.cat((theta_repeated, choices_repeated), dim=1)
+            rts_repeated,
+            context=torch.cat((theta_repeated, choices_repeated), dim=1),
         ).detach()
 
         # Combine into joint lp with first dim over trials.
@@ -845,7 +849,7 @@ class MixedModelSyntheticDDM(nn.Module):
         self,
         data: Tensor,
         transforms,
-        prior_transformed: Distribution,
+        prior: Distribution,
         ll_lower_bound: float,
     ):
         """Return potential function for DDM synthetic likelihood.
@@ -853,7 +857,7 @@ class MixedModelSyntheticDDM(nn.Module):
         Args:
             data: data to condition on, batch of iid trials of (rt, choice)s.
             transforms: applied transforms
-            prior_transformed: prior in unconstrained space.
+            prior: prior in untransformed space.
             ll_lower_bound: lower bound on the log likelihood.
         """
 
@@ -886,8 +890,10 @@ class MixedModelSyntheticDDM(nn.Module):
             # Get synthetic log likelihood in constrained space.
             ll = self.log_prob(rts, choices, theta, ll_lower_bound)
 
-            # Return log likelihood in unconstrained space by correcting with ladj.
-            # Add prior log prob in unconstrained to make a posterior potential.
-            return ll - ladj + prior_transformed.log_prob(theta_transformed)
+            # Get potential in untransformed space.
+            potential = ll + prior.log_prob(theta)
+
+            # Return potential in transformed space.
+            return potential - ladj
 
         return pf

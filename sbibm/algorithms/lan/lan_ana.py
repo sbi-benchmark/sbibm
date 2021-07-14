@@ -64,6 +64,8 @@ def run(
     transforms = task._get_transforms(automatic_transforms_enabled)["parameters"]
     if automatic_transforms_enabled:
         prior_transformed = wrap_prior_dist(prior, transforms)
+    else:
+        prior_transformed = prior
 
     num_trials = observation.shape[1]
     # sbi needs the trials in first dimension.
@@ -76,19 +78,17 @@ def run(
 
     # Use potential function provided refactored from SBI toolbox for LAN.
     potential_fn_lan = LANPotentialFunctionProvider(transforms, lan_ana, l_lower_bound)
-    # Call to initialize.
-    potential_fn_lan(
-        # Use transformed prior for MCMC.
-        prior=prior_transformed,
-        sbi_net=None,
-        x=observation_sbi,
-        mcmc_method=mcmc_method,
-    )
 
     # Run MCMC in transformed space.
     samples = run_mcmc(
         prior=prior_transformed,
-        potential_fn=potential_fn_lan.np_potential,
+        # Pass original prior to pf and correct potential with ladj.
+        potential_fn=potential_fn_lan(
+            prior=prior,
+            sbi_net=None,
+            x=observation_sbi,
+            mcmc_method=mcmc_method,
+        ),
         mcmc_parameters=mcmc_parameters,
         num_samples=num_samples,
     )

@@ -75,6 +75,8 @@ def run(
     transforms = task._get_transforms(automatic_transforms_enabled)["parameters"]
     if automatic_transforms_enabled:
         prior_transformed = wrap_prior_dist(prior, transforms)
+    else:
+        prior_transformed = prior
 
     # Train choice net
     log.info(f"Running Mixed Model NLE")
@@ -121,7 +123,8 @@ def run(
     potential_fn_mm = mixed_model.get_potential_fn(
         observation.reshape(-1, 1),
         transforms,
-        prior_transformed,
+        # Pass untransformed prior and correct internally with ladj.
+        prior=prior,
         ll_lower_bound=np.log(l_lower_bound),
     )
 

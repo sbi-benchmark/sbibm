@@ -72,9 +72,7 @@ def run(
         l_lower_bound=l_lower_bound,
     )
 
-    def potential_fn_julia(
-        theta,
-    ):
+    def potential_fn_julia(theta):
         theta = torch.as_tensor(theta, dtype=torch.float32)
 
         return llj(theta)
