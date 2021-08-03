@@ -9,9 +9,9 @@ Additionally, we use MCMC via slice sampling to compare two approaches in poster
 For this comparison we have added the DDM as a task in a framework developed for benchmarking 
 simulation-based inference algorithms, `sbibm`. 
 
-In general, the code relies on three repositories, (`sbi`)[https://github.com/mackelab/sbi] for using NLE, 
-(`sbibm`)[https://github.com/sbi-benchmark/sbibm] for simulating the data and loading the LAN keras weights, 
-and (`benchmarking-results`)[https://github.com/sbi-benchmark/results/tree/main/benchmarking_sbi] for running the benchmark. 
+In general, the code relies on three repositories, [`sbi`](https://github.com/mackelab/sbi) for using NLE, 
+[`sbibm`](https://github.com/sbi-benchmark/sbibm) for simulating the data and loading the LAN keras weights, 
+and [`benchmarking-results`](https://github.com/sbi-benchmark/results/tree/main/benchmarking_sbi) for running the benchmark. 
 
 ## Comparison in likelihood space
 For a demo of the likelihood comparison you find a jupyter notebook in this folder. For
