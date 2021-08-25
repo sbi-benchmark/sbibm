@@ -761,7 +761,7 @@ class MixedModelSyntheticDDM(nn.Module):
         self.rt_net = rt_net
         self.use_log_rts = use_log_rts
 
-    def sample(self, theta, num_samples: int = 1):
+    def sample(self, theta, num_samples: int = 1, track_gradients=False):
         """Return choices and reaction times given DDM parameters.
 
         Args:
@@ -773,23 +773,21 @@ class MixedModelSyntheticDDM(nn.Module):
         """
         assert theta.shape[0] == 1, "for samples, no batching in theta is possible yet."
 
-        # Sample choices given parameters, from BernoulliMN.
-        choices = (
-            self.choice_net.sample(theta, num_samples).reshape(num_samples, 1).detach()
-        )
-        # Pass num_samples=1 because the choices in the context contains num_samples elements already.
-        samples = (
-            self.rt_net.sample(
+        with torch.set_grad_enabled(track_gradients):
+
+            # Sample choices given parameters, from BernoulliMN.
+            choices = self.choice_net.sample(theta, num_samples).reshape(num_samples, 1)
+            # Pass num_samples=1 because the choices in the context contains num_samples elements already.
+            samples = self.rt_net.sample(
                 num_samples=1,
                 # repeat the single theta to match number of sampled choices.
                 context=torch.cat((theta.repeat(num_samples, 1), choices), dim=1),
-            )
-            .reshape(num_samples, 1)
-            .detach()
-        )
+            ).reshape(num_samples, 1)
         return samples.exp() if self.use_log_rts else samples, choices
 
-    def log_prob(self, rts, choices, theta, ll_lower_bound=np.log(1e-7)):
+    def log_prob(
+        self, rts, choices, theta, ll_lower_bound=np.log(1e-7), track_gradients=False
+    ):
         """Return joint log likelihood of a batch rts and choices,
         for each entry in a batch of parameters theta.
 
@@ -810,18 +808,29 @@ class MixedModelSyntheticDDM(nn.Module):
             torch.log(rts) if self.use_log_rts else rts, num_parameters, dim=0
         )
 
-        # Get choice log probs from choice net.
-        lp_choices = (
-            self.choice_net.log_prob(theta_repeated, choices_repeated)
-            .detach()
-            .reshape(-1)
-        )
+        with torch.set_grad_enabled(track_gradients):
+            # Get choice log probs from choice net.
+            # There are only two choices, thus we only have to get the log probs of those.
+            # (We could even just calculate one and then use the complement.)
+            zero_choice = torch.zeros(1, 1)
+            zero_choice_lp = self.choice_net.log_prob(
+                theta,
+                torch.repeat_interleave(zero_choice, num_parameters, dim=0),
+            ).reshape(1, -1)
 
-        # Get rt log probs from rt net.
-        lp_rts = self.rt_net.log_prob(
-            rts_repeated,
-            context=torch.cat((theta_repeated, choices_repeated), dim=1),
-        ).detach()
+            # Calculate complement one-choice log prob.
+            one_choice_lp = torch.log(1 - zero_choice_lp.exp())
+            zero_one_lps = torch.cat((zero_choice_lp, one_choice_lp), dim=0)
+
+            lp_choices = zero_one_lps[
+                choices.type_as(torch.zeros(1, dtype=np.int)).squeeze()
+            ].reshape(-1)
+
+            # Get rt log probs from rt net.
+            lp_rts = self.rt_net.log_prob(
+                rts_repeated,
+                context=torch.cat((theta_repeated, choices_repeated), dim=1),
+            )
 
         # Combine into joint lp with first dim over trials.
         lp_combined = (lp_choices + lp_rts).reshape(num_trials, num_parameters)
