@@ -100,7 +100,7 @@ class DDMJulia:
             )
             self.log_likelihood = self.jl.eval(
                 f"""
-                    function log_likelihood(vs, as, rts, cs; dt={self.dt}, eps=1e-29)
+                    function log_likelihood(vs, as, rts, cs; dt={self.dt}, l_lower_bound=1e-29)
                         batch_size = size(vs)[1]
                         num_trials = size(rts)[1]
 
