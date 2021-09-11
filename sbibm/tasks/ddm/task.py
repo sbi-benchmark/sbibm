@@ -46,9 +46,7 @@ class DDM(Task):
             num_simulations=[100, 1000, 10000, 100000, 1000000],
             path=Path(__file__).parent.absolute(),
             # Seeds selected to give good references, e.g., not close to prior boundary.
-            observation_seeds=torch.tensor(
-                [1, 9, 64, 18, 23, 30, 32, 58, 61, 68]
-            ).repeat(4),
+            observation_seeds=torch.arange(10),
         )
 
         # Prior
@@ -58,9 +56,7 @@ class DDM(Task):
         }
         self.prior_labels = ["v", "a", "w", "ndt"][:dim_parameters]
         self.prior_dist = pdist.Uniform(**self.prior_params).to_event(1)
-        self.num_trials_per_observation = torch.tensor(
-            [1, 10, 100, 1000]
-        ).repeat_interleave(10)
+        self.num_trials_per_observation = torch.tensor([1024]).repeat_interleave(100)
 
     @lazy_property
     def ddm(self):
