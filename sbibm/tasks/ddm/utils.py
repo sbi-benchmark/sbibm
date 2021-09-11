@@ -193,6 +193,79 @@ class DDMJulia:
             )
 
 
+class FullDDMJulia:
+    """Implementation of the full DDM model as used in Fengler et al. 2021.
+
+    Difference to simple DDM: drift v, offset w and non-decision time change over trials.
+
+    This results in three additional parameters for that change.
+
+    """
+
+    def __init__(
+        self,
+        dt: float = 0.001,
+        num_trials: int = 1,
+        dim_parameters: int = 7,
+        seed: int = -1,
+    ) -> None:
+        """Wrapping DDM simulation and likelihood computation from Julia.
+
+        Based on Julia package DiffModels.jl
+
+        https://github.com/DrugowitschLab/DiffModels.jl
+
+        Calculates likelihoods via Navarro and Fuss 2009.
+        """
+
+        self.dt = dt
+        self.num_trials = num_trials
+        self.seed = seed
+
+        self.jl = Julia(
+            compiled_modules=False,
+            sysimage=find_sysimage(),
+            runtime="julia",
+        )
+        self.jl.eval("using DiffModels")
+        self.jl.eval("using Random")
+
+        self.simulate = self.jl.eval(
+            f"""
+                function simulate_fullDDM(v, a, w, tau, sv, eps_w, eps_tau; dt={self.dt}, num_trials={self.num_trials}, seed={self.seed})
+                    num_parameters = size(v)[1]
+                    rt = fill(NaN, (num_parameters, num_trials))
+                    c = fill(NaN, (num_parameters, num_trials))
+
+                    # seeding
+                    if seed > 0
+                        Random.seed!(seed)
+                    end
+
+                    for i=1:num_parameters
+                        for j=1:num_trials
+                            # Perturb for current trial.
+                            v_j = v[i] + randn() * sv[i]
+                            w_j = w[i] - eps_w[i] + rand() * 2 * eps_w[i]
+                            tau_j = tau[i] - eps_tau[i] + rand() * 2 * eps_tau[i]
+                            bl = -w_j * a[i]
+                            bu = (1 - w_j) * a[i]
+
+                            drift = ConstDrift(v_j, dt)
+                            bound = ConstAsymBounds(bu, bl, dt)
+                            s = sampler(drift, bound)
+
+                            # Simulate DDM.
+                            rt[i, j], cj = rand(s)
+                            c[i, j] = cj ? 1.0 : 0.0
+                        end
+                    end
+                    return rt, c
+                end
+            """
+        )
+
+
 ######## The following functions have been copied and refactored from
 # https://github.com/AlexanderFengler/hddm/tree/nn_likelihood
 # and https://github.com/lnccbrown/lans/
