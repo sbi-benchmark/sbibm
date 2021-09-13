@@ -5,8 +5,7 @@ from typing import Any, Dict, Optional, Tuple
 import keras
 import torch
 from sbibm.tasks.task import Task
-from sbibm.tasks.ddm.utils import LANPotentialFunctionProvider, run_mcmc
-
+from sbibm.algorithms.lan.utils import LANPotentialFunctionProvider, run_mcmc
 from sbibm.algorithms.sbi.utils import wrap_prior_dist
 
 

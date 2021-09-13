@@ -15,7 +15,7 @@ from sbibm.algorithms.sbi.utils import (
     wrap_simulator_fn,
 )
 from sbibm.tasks.task import Task
-from sbibm.tasks.ddm.utils import run_mcmc
+from sbibm.algorithms.lan.utils import run_mcmc
 
 
 def run(

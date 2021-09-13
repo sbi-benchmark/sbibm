@@ -9,7 +9,7 @@ from sbi import inference as inference
 
 from sbibm.algorithms.sbi.utils import wrap_prior_dist
 from sbibm.tasks.task import Task
-from sbibm.tasks.ddm.utils import run_mcmc
+from sbibm.algorithms.lan.utils import run_mcmc
 
 
 def run(
