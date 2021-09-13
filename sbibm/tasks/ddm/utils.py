@@ -182,7 +182,7 @@ class DDMJulia:
 
 
 class FullDDMJulia:
-    """Implementation of the full DDM model as used in Fengler et al. 2021.
+    """Implementation of the full DDM as used in Fengler et al. 2021.
 
     Difference to simple DDM: drift v, offset w and non-decision time change over trials.
 
@@ -251,6 +251,152 @@ class FullDDMJulia:
                     return rt, c
                 end
             """
+        )
+
+
+class LinearCollapsingDDM:
+    """Implementation of the DDM with collapsing boundaries as used in Fengler et al. 2021.
+
+    This variant has no non-decision time, and one additional parameter, gamma, for the slope
+    of the collapsing boundary.
+    """
+
+    def __init__(
+        self,
+        dt: float = 0.001,
+        num_trials: int = 1,
+        dim_parameters: int = 4,
+        tmax: float = 10.0,
+        seed: int = -1,
+    ) -> None:
+        """Wrapping DDM simulation and likelihood computation from Julia.
+
+        Based on Julia package DiffModels.jl
+
+        https://github.com/DrugowitschLab/DiffModels.jl
+
+        Calculates likelihoods via Navarro and Fuss 2009.
+        """
+
+        self.dt = dt
+        self.num_trials = num_trials
+        self.seed = seed
+        self.tmax = tmax
+
+        self.jl = Julia(
+            compiled_modules=False,
+            sysimage=find_sysimage(),
+            runtime="julia",
+        )
+        self.jl.eval("using DiffModels")
+        self.jl.eval("using Random")
+
+        self.simulate = self.jl.eval(
+            f"""
+                    function simulate_collapsingDDM(v, a, w, gamma; dt={self.dt}, num_trials={self.num_trials}, seed={self.seed})
+                        num_parameters = size(v)[1]
+                        rt = fill(NaN, (num_parameters, num_trials))
+                        c = fill(NaN, (num_parameters, num_trials))
+
+                        # seeding
+                        if seed > 0
+                            Random.seed!(seed)
+                        end
+                        t = range(dt, {self.tmax}, step=dt) |> collect
+
+                        for i=1:num_parameters
+                            drift = ConstDrift(v[i], dt)
+                            bg = fill(gamma[i], size(t)[1])
+                            bl = w[i] * a[i]
+                            bu = (1-w[i]) * a[1]
+
+                            upper = VarBound(t * gamma[i] + fill(bu, size(t)[1]), bg, dt)
+                            lower = VarBound(t * gamma[i] + fill(bl, size(t)[1]), bg, dt)
+                            bounds = VarAsymBounds(upper, lower)
+
+                            s = sampler(drift, bounds)
+
+                            for j=1:num_trials
+                                # Simulate DDM.
+                                rt[i, j], cj = rand(s)
+                                c[i, j] = cj ? 1.0 : 0.0
+                            end
+
+                        end
+                        return rt, c
+                    end
+                """
+        )
+        self.log_likelihood_collapsingDDM = self.jl.eval(
+            f"""
+                    function log_likelihood_collapsingDDM(v, a, w, gamma, rts, cs; dt={self.dt}, l_lower_bound=1e-29)
+                        # eps is the numerical lower bound for the likelihood used in HDDM.
+                        parameter_batch_size = size(v)[1]
+                        num_trials = size(rts)[1]
+
+                        logl = zeros(parameter_batch_size)
+                        t = range(dt, {self.tmax}, step=dt) |> collect
+                        
+                        for i=1:parameter_batch_size
+                            drift = ConstDrift(v[i], dt)
+                            bg = fill(gamma[i], size(t)[1])
+                            bl = w[i] * a[i]
+                            bu = (1-w[i]) * a[1]
+
+                            upper = VarBound(t * gamma[i] + fill(bu, size(t)[1]), bg, dt)
+                            lower = VarBound(t * gamma[i] + fill(bl, size(t)[1]), bg, dt)
+                            bounds = VarAsymBounds(upper, lower)
+
+                            # Get densities
+                            g1, g2 = pdf(drift, bounds, maximum(rts))
+
+                            for j=1:num_trials
+                                idx = Int(round(rts[j]/dt))
+                                if cs[j] == 1.0
+                                    # Get density by indexing at rt / dt
+                                    logl[i] += log(max(l_lower_bound, g1[idx]))
+                                else
+                                    logl[i] += log(max(l_lower_bound, g2[idx]))
+                                end
+                            end
+                        end
+                        return logl
+                    end
+                """
+        )
+
+        # Function for returning the full likelihood for each parameter in batch,
+        # given single rt,c pair.
+        self.get_full_likelihood = self.jl.eval(
+            f"""
+                    function full_likelihood(v, a, w, gamma, rts, cs; dt={self.dt}, l_lower_bound=1e-29)
+                        # eps is the numerical lower bound for the likelihood used in HDDM.
+                        parameter_batch_size = size(v)[1]
+                        num_trials = size(rts)[1]
+                        num_trials == 0.0 || error("full likelihoods only for single trial data.")
+
+                        t = range(dt, {self.tmax}, step=dt) |> collect
+                        logl = zeros(parameter_batch_size, 2, size(t)[1])
+
+                        for i=1:parameter_batch_size
+                            drift = ConstDrift(v[i], dt)
+                            bg = fill(gamma[i], size(t)[1])
+                            bl = w[i] * a[i]
+                            bu = (1-w[i]) * a[1]
+
+                            upper = VarBound(t * gamma[i] + fill(bu, size(t)[1]), bg, dt)
+                            lower = VarBound(t * gamma[i] + fill(bl, size(t)[1]), bg, dt)
+                            bounds = VarAsymBounds(upper, lower)
+
+                            # Get densities
+                            g1, g2 = pdf(drift, bounds, {self.tmax}-dt)
+
+                            logl[i, 1, :] = g1
+                            logl[i, 2, :] = g2
+                        end
+                        return logl
+                    end
+                """
         )
 
 
