@@ -46,7 +46,7 @@ class DDM(Task):
             num_simulations=[100, 1000, 10000, 100000, 1000000],
             path=Path(__file__).parent.absolute(),
             # Seeds selected to give good references, e.g., not close to prior boundary.
-            observation_seeds=torch.arange(10),
+            observation_seeds=torch.arange(100),
         )
 
         # Prior
