@@ -7,9 +7,7 @@ import pickle
 import torch
 from sbi import inference as inference
 
-from sbibm.algorithms.sbi.utils import (
-    wrap_prior_dist,
-)
+from sbibm.algorithms.sbi.utils import wrap_prior_dist
 from sbibm.tasks.task import Task
 from sbibm.tasks.ddm.utils import run_mcmc
 
@@ -114,6 +112,10 @@ def run(
         raise IndexError(f"Model with {desired_args} was not found.")
 
     path_to_model = f"{Path(__file__).parent.resolve()}/nle_pretrained/{model_filename_base}{model_idx}.p"
+
+    path_to_model = (
+        "/home/janfb/qode/sbibm/sbibm/algorithms/lan/nle_pretrained/mm_315_2.p"
+    )
 
     with open(path_to_model, "rb") as fh:
         mixed_model = pickle.load(fh)
