@@ -26,7 +26,7 @@ def run(
     tail_bound_eps: float = 1e-5,
     automatic_transforms_enabled: bool = True,
     mcmc_parameters: Dict[str, Any] = {
-        "num_chains": 100,
+        "num_chains": 10,
         "thin": 10,
         "warmup_steps": 100,
         "init_strategy": "sir",
