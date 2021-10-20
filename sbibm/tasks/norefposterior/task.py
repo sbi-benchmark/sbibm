@@ -10,15 +10,17 @@ from sbibm.tasks.task import Task
 from sbibm.utils.io import get_tensor_from_csv, save_tensor_to_csv
 
 
-class FWD_ONLY(Task):
+class norefposterior(Task):
+
     def __init__(self):
         """Forward-only simulator (without a reference posterior)
         """
 
         self.max_axis = 100
         dim_data = 2*self.max_axis
-        name_display = "forward-only"
+        name_display = "norefposterior"
 
+        # TODO: no clear what purpose these serve
         # Observation seeds to use when generating ground truth
         # Avoiding extremely spiked posteriors, e.g., 1000006, 1000007, ...
         observation_seeds = [
@@ -86,6 +88,8 @@ class FWD_ONLY(Task):
             s1 = parameters[:, [2]].squeeze() #** 2
             s2 = parameters[:, [3]].squeeze() #** 2
 
+            # TODO: double check if the formulae below make sense
+            # (mostly used as placeholders for now)
             S = torch.empty((self.max_axis, self.max_axis, num_samples, 2, 2))
             S[..., 0, 0] = s1 ** 2
             S[..., 0, 1] = s1 * s2
@@ -97,8 +101,8 @@ class FWD_ONLY(Task):
             S[..., 0, 0] += eps
             S[..., 1, 1] += eps
 
-            assert S.shape == (self.max_axis, self.max_axis, num_samples, 2, 2), f"fwd_only_example :: cov matrix {S.shape} != expectation"
-            assert m.shape == (self.max_axis, self.max_axis, num_samples, 2), f"fwd_only_example :: mean vector {m.shape} != expectation"
+            assert S.shape == (self.max_axis, self.max_axis, num_samples, 2, 2), f"{name_display} :: cov matrix {S.shape} != expectation"
+            assert m.shape == (self.max_axis, self.max_axis, num_samples, 2), f"{name_display} :: mean vector {m.shape} != expectation"
 
             data_dist = pdist.MultivariateNormal(
                 m.float(),
@@ -110,21 +114,27 @@ class FWD_ONLY(Task):
             y = torch.linspace(0, self.max_axis, self.max_axis).detach()
             xx, yy = torch.meshgrid(x, y)
 
-            # prepare grid values to eval MultivariateNormal
-            val = torch.swapaxes(torch.stack((xx.flatten(), yy.flatten())),1,0).float()
+            # prepare grid values to eval MultivariateNormal upon
+            val = torch.swapaxes(torch.stack((xx.flatten(), yy.flatten())),
+                                 1,
+                                 0).float()
 
             assert val.shape == (self.max_axis*self.max_axis,2), f"grid values shape {val.shape} unexpected"
 
-            valr = val.reshape(self.max_axis, self.max_axis,2)
-            assert valr.shape == (self.max_axis, self.max_axis, 2), f"fwd_only_example :: batched grid values shape {valr.shape[1:]} unexpected"
+            valr = val.reshape(self.max_axis, self.max_axis,
+                               2)
+
+            assert valr.shape == (self.max_axis, self.max_axis, 2), f"{name_display} :: batched grid values shape {valr.shape[1:]} unexpected"
 
             valb = torch.swapaxes(torch.broadcast_to(valr, (num_samples, *valr.shape)).detach(),
-                                  0,2)
-            assert valb.shape == (self.max_axis, self.max_axis, num_samples, 2), f"fwd_only_example :: batched grid values shape {valb.shape[1:]} unexpected"
+                                  0,
+                                  2)
+            assert valb.shape == (self.max_axis, self.max_axis, num_samples, 2), f"{name_display} :: batched grid values shape {valb.shape[1:]} unexpected"
 
-
+            # TODO: replace this with sampling
             # create images from probabilities
             img = torch.exp(data_dist.log_prob(valb))
+            # images = data_dist.sample()
 
             first = img.sum(axis=0)
             second = img.sum(axis=1)
@@ -180,7 +190,7 @@ class FWD_ONLY(Task):
     #             **kwargs,
     #         )
     #     else:
-    #         task = FWD_ONLY(distractors=False)
+    #         task = norefposterior(distractors=False)
     #         return task._get_transforms(
     #             automatic_transforms_enabled=automatic_transforms_enabled,
     #             num_observation=num_observation,
@@ -298,6 +308,6 @@ class FWD_ONLY(Task):
 
 if __name__ == "__main__":
 
-    task = FWD_ONLY()
+    task = norefposterior()
     # task._generate_noise_dist_parameters()
     task._setup()

@@ -63,10 +63,10 @@ def get_task(task_name: str, *args: Any, **kwargs: Any) -> Task:
 
         return TwoMoons(*args, **kwargs)
 
-    elif task_name == "forward-only":
-        from sbibm.tasks.fwd_only_example.task import FWD_ONLY
+    elif task_name == "norefposterior":
+        from sbibm.tasks.norefposterior.task import norefposterior
 
-        return FWD_ONLY(*args, **kwargs)
+        return norefposterior(*args, **kwargs)
 
     else:
         raise NotImplementedError()
