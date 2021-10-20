@@ -5,7 +5,79 @@ import sbibm
 from sbibm.tasks.norefposterior.task import norefposterior
 
 
-## API tests
+########### sbibm related ################
+## testing the actual task
+
+def test_task_constructs():
+
+    t = norefposterior()
+
+    assert t
+
+
+def test_obtain_task():
+
+    task = sbibm.get_task("norefposterior")
+
+    assert task is not None
+
+
+def test_obtain_prior():
+
+    task = sbibm.get_task("norefposterior")  # See sbibm.get_available_tasks() for all tasks
+    prior = task.get_prior()
+
+    assert prior is not None
+
+
+
+def test_obtain_simulator():
+
+    task = sbibm.get_task("norefposterior")
+
+    simulator = task.get_simulator()
+
+    assert simulator is not None
+
+
+
+def test_obtain_observe_once():
+
+    task = sbibm.get_task("norefposterior")
+
+    x_o = task.get_observation(num_observation=1)
+
+    assert x_o is not None
+    assert hasattr(x_o, "shape")
+
+
+
+def test_obtain_prior_samples():
+
+    task = sbibm.get_task("norefposterior")
+    prior = task.get_prior()
+    nsamples = 10
+
+    thetas = prior(num_samples=nsamples)
+
+    assert thetas.shape == (nsamples,4)
+
+
+def test_simulate_from_thetas():
+
+    task = sbibm.get_task("norefposterior")
+    prior = task.get_prior()
+    sim = task.get_simulator()
+    nsamples = 10
+
+    thetas = prior(num_samples=nsamples)
+    xs = sim(thetas)
+
+    assert xs.shape == (nsamples, 200)
+
+
+################################################
+## API tests that related the internal task code
 
 def test_multivariate_normal_constructs():
 
@@ -203,73 +275,3 @@ def test_multivariate_normal_sample_binomial_from_logprob():
     m_hat1 = torch.sum(xt * samples_toy, axis=0) / torch.sum(samples_toy, axis=0)
     assert m_hat1.shape == (batch_size,)
     assert torch.allclose(m_hat1, m_[:,1], atol=1e-1)
-
-
-## testing the task
-
-def test_task_constructs():
-
-    t = norefposterior()
-
-    assert t
-
-
-def test_obtain_task():
-
-    task = sbibm.get_task("norefposterior")
-
-    assert task is not None
-
-
-def test_obtain_prior():
-
-    task = sbibm.get_task("norefposterior")  # See sbibm.get_available_tasks() for all tasks
-    prior = task.get_prior()
-
-    assert prior is not None
-
-
-
-def test_obtain_simulator():
-
-    task = sbibm.get_task("norefposterior")
-
-    simulator = task.get_simulator()
-
-    assert simulator is not None
-
-
-
-def test_obtain_observe_once():
-
-    task = sbibm.get_task("norefposterior")
-
-    x_o = task.get_observation(num_observation=1)
-
-    assert x_o is not None
-    assert hasattr(x_o, "shape")
-
-
-
-def test_obtain_prior_samples():
-
-    task = sbibm.get_task("norefposterior")
-    prior = task.get_prior()
-    nsamples = 10
-
-    thetas = prior(num_samples=nsamples)
-
-    assert thetas.shape == (nsamples,4)
-
-
-def test_simulate_from_thetas():
-
-    task = sbibm.get_task("norefposterior")
-    prior = task.get_prior()
-    sim = task.get_simulator()
-    nsamples = 10
-
-    thetas = prior(num_samples=nsamples)
-    xs = sim(thetas)
-
-    assert xs.shape == (nsamples, 200)
