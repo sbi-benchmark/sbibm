@@ -10,13 +10,65 @@ from sbibm.tasks.task import Task
 from sbibm.utils.io import get_tensor_from_csv, save_tensor_to_csv
 
 
+def torch_average(a, weights=None, axis=0):
+
+    if isinstance(weights, type(None)):
+        return a.mean(axis=axis)
+    else:
+        assert weights.sum() > 0, f"received all 0 weights tensor"
+        value = torch.sum(a * weights, axis=axis) / torch.sum(weights, axis=axis)
+        return value
+
+
+def quadratic_coordinate_field(min_axis = -16, max_axis = 16, batch_size = 32):
+    """ returns a torch tensor that contains the coordinates of a regular
+    grid between <min_axis> and <max_axis> broadcasted/cloned
+    <batchsize> times, i.e.
+    >>> arr = quadratic_coordinate_field(-3,3,4)
+    >>> arr.shape
+    (6,6,4,2)
+     ^^^ dimensions of max_axis - min_axis
+    """
+
+    size_axis = max_axis - min_axis
+
+    x = torch.arange(min_axis, max_axis).detach().float()
+    y = torch.arange(min_axis, max_axis).detach().float()
+
+    xx, yy = torch.meshgrid(x, y)
+    val = torch.swapaxes(torch.stack((xx.flatten(), yy.flatten())),
+                         1,
+                         0).float()
+
+    valr = val.reshape(size_axis, size_axis,
+                       2)
+
+    #at every point of the image w=size_axis x w=size_axis
+    #we store the (x,y) coordinate of a regular grid
+    #so we get:
+    # valr[0,0] = (-16,-16),
+    # valr[0,1] = (-16,-15),
+    # valr[0,2] = (-16,-14)
+
+        #broadcast to <batchsize> doublicates
+    valr_ = torch.broadcast_to(valr, (batch_size, *valr.shape)).detach()
+
+    #move axis from position 2 to front
+    value = torch.swapaxes(valr_, 2, 0)
+
+    return value
+
+
+
 class norefposterior(Task):
 
     def __init__(self):
         """Forward-only simulator (without a reference posterior)
         """
 
-        self.max_axis = 100
+        self.min_axis = 0
+        self.max_axis = 200
+        self.flood_samples = 32*1024
         dim_data = 2*self.max_axis
         name_display = "norefposterior"
 
@@ -104,41 +156,30 @@ class norefposterior(Task):
             assert S.shape == (self.max_axis, self.max_axis, num_samples, 2, 2), f"{name_display} :: cov matrix {S.shape} != expectation"
             assert m.shape == (self.max_axis, self.max_axis, num_samples, 2), f"{name_display} :: mean vector {m.shape} != expectation"
 
+            # define the probility distribution of our beamspot
+            # on a 2D grid (in batches)
             data_dist = pdist.MultivariateNormal(
                 m.float(),
                 S.float()
             )
 
-            # discretize on grid
-            x = torch.linspace(0, self.max_axis, self.max_axis).detach()
-            y = torch.linspace(0, self.max_axis, self.max_axis).detach()
-            xx, yy = torch.meshgrid(x, y)
-
-            # prepare grid values to eval MultivariateNormal upon
-            val = torch.swapaxes(torch.stack((xx.flatten(), yy.flatten())),
-                                 1,
-                                 0).float()
-
-            assert val.shape == (self.max_axis*self.max_axis,2), f"grid values shape {val.shape} unexpected"
-
-            valr = val.reshape(self.max_axis, self.max_axis,
-                               2)
-
-            assert valr.shape == (self.max_axis, self.max_axis, 2), f"{name_display} :: batched grid values shape {valr.shape[1:]} unexpected"
-
-            valb = torch.swapaxes(torch.broadcast_to(valr, (num_samples, *valr.shape)).detach(),
-                                  0,
-                                  2)
-            assert valb.shape == (self.max_axis, self.max_axis, num_samples, 2), f"{name_display} :: batched grid values shape {valb.shape[1:]} unexpected"
+            valb = quadratic_coordinate_field(self.min_axis,
+                                              self.max_axis,
+                                              num_samples)
 
             # TODO: replace this with sampling
             # create images from probabilities
             img = torch.exp(data_dist.log_prob(valb))
             # images = data_dist.sample()
+            bdist = pdist.Binomial(total_count=self.flood_samples,
+                                   probs=img)
+            samples = bdist.sample()
 
-            first = img.sum(axis=0)
-            second = img.sum(axis=1)
+            # project on the axes
+            first = torch.sum(samples, axis=0)
+            second = torch.sum(samples, axis=1)
 
+            # concatenate and return
             return torch.cat([first, second], axis=-1)
 
         return Simulator(task=self, simulator=simulator, max_calls=max_calls)

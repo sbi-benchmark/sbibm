@@ -2,7 +2,7 @@ from pyro import distributions as pdist
 import torch
 import numpy as np
 import sbibm
-from sbibm.tasks.norefposterior.task import norefposterior
+from sbibm.tasks.norefposterior.task import norefposterior, quadratic_coordinate_field, torch_average
 
 
 ########### sbibm related ################
@@ -73,7 +73,7 @@ def test_simulate_from_thetas():
     thetas = prior(num_samples=nsamples)
     xs = sim(thetas)
 
-    assert xs.shape == (nsamples, 200)
+    assert xs.shape == (nsamples, 400)
 
 
 ################################################
@@ -192,6 +192,21 @@ def test_prepare_coordinates():
     assert torch.allclose(valb[:,:,0,:], valb[:,:,1,:])
 
 
+def test_quadratic_coordinate_field():
+
+    batch_size = 8
+    max_axis = batch_size*2
+    min_axis = -max_axis
+    size_axis = max_axis - min_axis
+
+    arr = quadratic_coordinate_field(min_axis, max_axis, batch_size)
+
+    assert arr.shape == (size_axis,size_axis, batch_size, 2)
+    assert torch.allclose(arr[:,:,0,:], arr[:,:,1,:])
+    assert torch.allclose(arr[:,:,0,:], arr[:,:,-1,:])
+    assert torch.allclose(arr[:,:,batch_size // 2,:], arr[:,:,-1,:])
+
+
 def test_binomial_api():
 
     img = torch.tensor([[0.05, 0.1, 0.05],
@@ -238,7 +253,6 @@ def test_multivariate_normal_sample_binomial_from_logprob():
                        2)
 
     valr_ = torch.broadcast_to(valr, (batch_size, *valr.shape)).detach()
-    print(valr_.shape)
     valb = torch.swapaxes(valr_,2, 0)
 
     # TODO: replace this with sampling
@@ -275,3 +289,31 @@ def test_multivariate_normal_sample_binomial_from_logprob():
     m_hat1 = torch.sum(xt * samples_toy, axis=0) / torch.sum(samples_toy, axis=0)
     assert m_hat1.shape == (batch_size,)
     assert torch.allclose(m_hat1, m_[:,1], atol=1e-1)
+
+
+def test_torch_average():
+
+    m_ = 5*torch.arange(1, 3).float()
+    S  = torch.eye(2).float()
+
+    data_dist = pdist.MultivariateNormal(
+                m_,S
+    )
+
+    samples = data_dist.sample((2048,))
+
+    bins0, edges0 = np.histogram(samples[:,0].numpy(),
+                                 bins=15)
+
+    m0 = torch_average(torch.from_numpy(edges0[:-1]), torch.from_numpy(bins0))
+
+    assert m0 > 4.
+    assert m0 < 6.
+
+    bins1, edges1 = np.histogram(samples[:,1].numpy(),
+                                 bins=15)
+
+    m1 = torch_average(torch.from_numpy(edges1[:-1]), torch.from_numpy(bins1))
+
+    assert m1 > 9.
+    assert m1 < 11.
