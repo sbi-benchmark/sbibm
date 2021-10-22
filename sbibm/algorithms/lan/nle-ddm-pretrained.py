@@ -79,47 +79,14 @@ def run(
     # Train choice net
     log.info(f"Running Mixed Model NLE")
 
-    # Load model and given args.
-    desired_args = [
-        use_log_rts,
-        num_bins,
-        num_transforms,
-        base_distribution,
-        tails,
-        tail_bound,
-    ]
-    # Load 100k or 10k model.
-    if num_simulations == 100000:
-        model_filename_base = "mm"
-    elif num_simulations == 10000:
-        model_filename_base = "mm10k"
-        desired_args.append(tail_bound_eps)
-    else:
-        ValueError(f"No pretrained model with {num_simulations} budget.")
-
-    path_to_arglist = (
-        f"{Path(__file__).parent.resolve()}/nle_pretrained/arglist{num_simulations}.p"
-    )
-
-    with open(path_to_arglist, "rb") as fh:
-        _, args = pickle.load(fh).values()
-        args = np.array(args)
-
-    # Search for desired args in pretrained models.
-    try:
-        model_idx = np.where((args == desired_args).all(1))[0][0]
-    except IndexError:
-        raise IndexError(f"Model with {desired_args} was not found.")
-
-    path_to_model = f"{Path(__file__).parent.resolve()}/nle_pretrained/{model_filename_base}{model_idx}.p"
-
+    pretrained_model_filename = "mm_315_2"
     path_to_model = (
-        "/home/janfb/qode/sbibm/sbibm/algorithms/lan/nle_pretrained/mm_315_2.p"
+        f"/home/janfb/qode/sbibm/sbibm/algorithms/lan/nle_pretrained/{pretrained_model_filename}.p"
     )
 
     with open(path_to_model, "rb") as fh:
         mixed_model = pickle.load(fh)
-    log.info(f"Loaded pretrained model with index {model_idx}.")
+    log.info(f"Loaded pretrained model {pretrained_model_filename}.")
 
     # Get potential function for mixed model.
     potential_fn_mm = mixed_model.get_potential_fn(
