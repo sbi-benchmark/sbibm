@@ -34,8 +34,15 @@ class DDM(Task):
         self.dt = dt
         self.num_trials = num_trials
         assert dim_parameters in [2, 3, 4], "dim_parameters must be 2 or 3."
-        num_observations = 100
-        num_trials = [1, 10]
+
+        num_trials_list = [1, 10, 100, 1000]
+        observation_seeds = torch.arange(0, 103, 1)
+        invalid_seeds = [49, 63, 90]
+        for iseed in invalid_seeds:
+            mask = observation_seeds == iseed
+            observation_seeds = observation_seeds[~mask]
+        observation_seeds = observation_seeds.repeat(len(num_trials_list)).tolist()
+        num_observations = len(observation_seeds)
 
         super().__init__(
             dim_parameters=dim_parameters,
@@ -47,10 +54,7 @@ class DDM(Task):
             num_reference_posterior_samples=10000,
             num_simulations=[100, 1000, 10000, 100000, 1000000],
             path=Path(__file__).parent.absolute(),
-            # Seeds selected to give good references, e.g., not close to prior boundary.
-            observation_seeds=torch.arange(0, num_observations, 1).repeat(
-                len(num_trials)
-            ),  # repeat for all entries in num_trials.
+            observation_seeds=observation_seeds,
         )
 
         # Prior
@@ -60,8 +64,8 @@ class DDM(Task):
         }
         self.prior_labels = ["v", "a", "w", "ndt"][:dim_parameters]
         self.prior_dist = pdist.Uniform(**self.prior_params).to_event(1)
-        self.num_trials_per_observation = torch.tensor(num_trials).repeat_interleave(
-            num_observations
+        self.num_trials_per_observation = (
+            torch.tensor(num_trials_list).repeat_interleave(100).tolist()
         )
 
     @lazy_property
