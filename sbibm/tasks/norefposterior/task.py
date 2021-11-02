@@ -20,8 +20,8 @@ def torch_average(a, weights=None, axis=0):
         return value
 
 
-def quadratic_coordinate_field(min_axis = -16, max_axis = 16, batch_size = 32):
-    """ returns a torch tensor that contains the coordinates of a regular
+def quadratic_coordinate_field(min_axis=-16, max_axis=16, batch_size=32):
+    """returns a torch tensor that contains the coordinates of a regular
     grid between <min_axis> and <max_axis> broadcasted/cloned
     <batchsize> times, i.e.
     >>> arr = quadratic_coordinate_field(-3,3,4)
@@ -36,40 +36,34 @@ def quadratic_coordinate_field(min_axis = -16, max_axis = 16, batch_size = 32):
     y = torch.arange(min_axis, max_axis).detach().float()
 
     xx, yy = torch.meshgrid(x, y)
-    val = torch.swapaxes(torch.stack((xx.flatten(), yy.flatten())),
-                         1,
-                         0).float()
+    val = torch.swapaxes(torch.stack((xx.flatten(), yy.flatten())), 1, 0).float()
 
-    valr = val.reshape(size_axis, size_axis,
-                       2)
+    valr = val.reshape(size_axis, size_axis, 2)
 
-    #at every point of the image w=size_axis x w=size_axis
-    #we store the (x,y) coordinate of a regular grid
-    #so we get:
+    # at every point of the image w=size_axis x w=size_axis
+    # we store the (x,y) coordinate of a regular grid
+    # so we get:
     # valr[0,0] = (-16,-16),
     # valr[0,1] = (-16,-15),
     # valr[0,2] = (-16,-14)
 
-        #broadcast to <batchsize> doublicates
+    # broadcast to <batchsize> doublicates
     valr_ = torch.broadcast_to(valr, (batch_size, *valr.shape)).detach()
 
-    #move axis from position 2 to front
+    # move axis from position 2 to front
     value = torch.swapaxes(valr_, 2, 0)
 
     return value
 
 
-
 class norefposterior(Task):
-
     def __init__(self):
-        """Forward-only simulator (without a reference posterior)
-        """
+        """Forward-only simulator (without a reference posterior)"""
 
         self.min_axis = 0
         self.max_axis = 200
-        self.flood_samples = 32*1024
-        dim_data = 2*self.max_axis
+        self.flood_samples = 32 * 1024
+        dim_data = 2 * self.max_axis
         name_display = "norefposterior"
 
         # TODO: no clear what purpose these serve
@@ -102,13 +96,12 @@ class norefposterior(Task):
         )
 
         self.prior_params = {
-            "low": torch.tensor([20,20,5,5]).float(),
-            "high": torch.tensor([80,80,15,15]).float(),
+            "low": torch.tensor([20, 20, 5, 5]).float(),
+            "high": torch.tensor([80, 80, 15, 15]).float(),
         }
         self.prior_dist = pdist.Uniform(**self.prior_params).to_event(1)
 
     def get_prior(self) -> Callable:
-
         def prior(num_samples=1):
             return pyro.sample("parameters", self.prior_dist.expand_by([num_samples]))
 
@@ -137,15 +130,15 @@ class norefposterior(Task):
 
             m = torch.broadcast_to(m_, (self.max_axis, self.max_axis, *m_.shape))
 
-            s1 = parameters[:, [2]].squeeze() #** 2
-            s2 = parameters[:, [3]].squeeze() #** 2
+            s1 = parameters[:, [2]].squeeze()  # ** 2
+            s2 = parameters[:, [3]].squeeze()  # ** 2
 
             # TODO: double check if the formulae below make sense
             # (mostly used as placeholders for now)
             S = torch.empty((self.max_axis, self.max_axis, num_samples, 2, 2))
             S[..., 0, 0] = s1 ** 2
             S[..., 0, 1] = s1 * s2
-            S[..., 1, 0] = 0. #s1 * s2
+            S[..., 1, 0] = 0.0  # s1 * s2
             S[..., 1, 1] = s2 ** 2
 
             # Add eps to diagonal to ensure PSD
@@ -153,26 +146,31 @@ class norefposterior(Task):
             S[..., 0, 0] += eps
             S[..., 1, 1] += eps
 
-            assert S.shape == (self.max_axis, self.max_axis, num_samples, 2, 2), f"{name_display} :: cov matrix {S.shape} != expectation"
-            assert m.shape == (self.max_axis, self.max_axis, num_samples, 2), f"{name_display} :: mean vector {m.shape} != expectation"
+            assert S.shape == (
+                self.max_axis,
+                self.max_axis,
+                num_samples,
+                2,
+                2,
+            ), f"{name_display} :: cov matrix {S.shape} != expectation"
+            assert m.shape == (
+                self.max_axis,
+                self.max_axis,
+                num_samples,
+                2,
+            ), f"{name_display} :: mean vector {m.shape} != expectation"
 
             # define the probility distribution of our beamspot
             # on a 2D grid (in batches)
-            data_dist = pdist.MultivariateNormal(
-                m.float(),
-                S.float()
-            )
+            data_dist = pdist.MultivariateNormal(m.float(), S.float())
 
-            valb = quadratic_coordinate_field(self.min_axis,
-                                              self.max_axis,
-                                              num_samples)
+            valb = quadratic_coordinate_field(self.min_axis, self.max_axis, num_samples)
 
             # TODO: replace this with sampling
             # create images from probabilities
             img = torch.exp(data_dist.log_prob(valb))
             # images = data_dist.sample()
-            bdist = pdist.Binomial(total_count=self.flood_samples,
-                                   probs=img)
+            bdist = pdist.Binomial(total_count=self.flood_samples, probs=img)
             samples = bdist.sample()
 
             # project on the axes
