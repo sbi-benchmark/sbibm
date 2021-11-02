@@ -121,11 +121,15 @@ def test_quick_demo_c2st(vanilla_samples):
                                       num_simulations=500)
 
     from sbibm.metrics import c2st
+    # TODO: catch the error as we don't have a reference posterior
     reference_samples = task.get_reference_posterior_samples(num_observation=1)
     c2st_accuracy = c2st(reference_samples, posterior_samples)
 
     assert c2st_accuracy > 0.
     assert c2st_accuracy < 1.
+
+
+## TODO: demonstrate on how to run a benchmark
 
 
 ################################################
