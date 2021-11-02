@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 import torch
 from pyro import distributions as pdist
 
@@ -78,6 +79,32 @@ def test_simulate_from_thetas():
     xs = sim(thetas)
 
     assert xs.shape == (nsamples, 400)
+
+
+@pytest.fixture
+def vanilla_samples():
+
+    task = sbibm.get_task("norefposterior")
+    prior = task.get_prior()
+    sim = task.get_simulator()
+    nsamples = 10
+
+    thetas = prior(num_samples=nsamples)
+    xs = sim(thetas)
+
+    return task, thetas, xs
+
+
+def test_quick_demo_rej_abc(vanilla_samples):
+
+    task, thetas, xs = vanilla_samples
+    from sbibm.algorithms import rej_abc  # See help(rej_abc) for keywords
+    posterior_samples, _, _ = rej_abc(task=task,
+                                      num_samples=50,
+                                      num_observation=1,
+                                      num_simulations=500)
+
+    assert posterior_samples != None
 
 
 ################################################
