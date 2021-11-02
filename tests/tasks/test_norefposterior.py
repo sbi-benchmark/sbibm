@@ -1,9 +1,13 @@
-from pyro import distributions as pdist
-import torch
 import numpy as np
-import sbibm
-from sbibm.tasks.norefposterior.task import norefposterior, quadratic_coordinate_field, torch_average
+import torch
+from pyro import distributions as pdist
 
+import sbibm
+from sbibm.tasks.norefposterior.task import (
+    norefposterior,
+    quadratic_coordinate_field,
+    torch_average,
+)
 
 ########### sbibm related ################
 ## testing the actual task
