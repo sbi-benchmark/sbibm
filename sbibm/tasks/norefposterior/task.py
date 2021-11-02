@@ -5,6 +5,7 @@ import pyro
 import torch
 from pyro import distributions as pdist
 
+from sbibm import get_logger
 from sbibm.tasks.simulator import Simulator
 from sbibm.tasks.task import Task
 from sbibm.utils.io import get_tensor_from_csv, save_tensor_to_csv
@@ -66,7 +67,7 @@ class norefposterior(Task):
         dim_data = 2 * self.max_axis
         name_display = "norefposterior"
 
-        # TODO: no clear what purpose these serve
+        # TODO: not clear what purpose these serve
         # Observation seeds to use when generating ground truth
         # Avoiding extremely spiked posteriors, e.g., 1000006, 1000007, ...
         observation_seeds = [
@@ -347,6 +348,21 @@ class norefposterior(Task):
 
 if __name__ == "__main__":
 
+    log = get_logger(__file__)
+    log.warning("[norefposterior] producing observations may result in errors/exceptions thrown!")
+    ## run this to generate the `files` infrastructure in this folder
+    ## repo/sbibm/sbibm/tasks/norefposterior/files
+    ## ├── num_observation_1
+    ## ├── num_observation_10
+    ## ├── num_observation_2
+    ## ├── num_observation_3
+    ## ├── num_observation_4
+    ## ├── num_observation_5
+    ## ├── num_observation_6
+    ## ├── num_observation_7
+    ## ├── num_observation_8
+    ## └── num_observation_9
     task = norefposterior()
-    # task._generate_noise_dist_parameters()
+
     task._setup()
+    ## note: the folders mentioned above
