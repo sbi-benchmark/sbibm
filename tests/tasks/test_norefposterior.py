@@ -81,6 +81,10 @@ def test_simulate_from_thetas():
     assert xs.shape == (nsamples, 400)
 
 
+################################################
+## sbibm compliant API tests as documented in
+## the top-level README.md
+
 @pytest.fixture
 def vanilla_samples():
 
@@ -98,13 +102,30 @@ def vanilla_samples():
 def test_quick_demo_rej_abc(vanilla_samples):
 
     task, thetas, xs = vanilla_samples
-    from sbibm.algorithms import rej_abc  # See help(rej_abc) for keywords
+    from sbibm.algorithms import rej_abc
     posterior_samples, _, _ = rej_abc(task=task,
                                       num_samples=50,
                                       num_observation=1,
                                       num_simulations=500)
 
     assert posterior_samples != None
+
+
+def test_quick_demo_c2st(vanilla_samples):
+
+    task, thetas, xs = vanilla_samples
+    from sbibm.algorithms import rej_abc
+    posterior_samples, _, _ = rej_abc(task=task,
+                                      num_samples=50,
+                                      num_observation=1,
+                                      num_simulations=500)
+
+    from sbibm.metrics import c2st
+    reference_samples = task.get_reference_posterior_samples(num_observation=1)
+    c2st_accuracy = c2st(reference_samples, posterior_samples)
+
+    assert c2st_accuracy > 0.
+    assert c2st_accuracy < 1.
 
 
 ################################################
