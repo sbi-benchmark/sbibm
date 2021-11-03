@@ -1,13 +1,10 @@
 import pytest
+import torch
 
 import sbibm
-from sbibm.tasks.two_moons.task import (
-    TwoMoons
-)
+from sbibm.tasks.two_moons.task import TwoMoons
 
-import torch
 torch.manual_seed(47)
-
 
 
 def test_task_constructs():
@@ -26,9 +23,7 @@ def test_obtain_task():
 
 def test_obtain_prior():
 
-    task = sbibm.get_task(
-        "two_moons"
-    )  # See sbibm.get_available_tasks() for all tasks
+    task = sbibm.get_task("two_moons")  # See sbibm.get_available_tasks() for all tasks
     prior = task.get_prior()
 
     assert prior is not None
@@ -105,11 +100,11 @@ def test_reference_posterior_exists():
 def test_quick_demo_rej_abc():
 
     from sbibm.algorithms import rej_abc  # See help(rej_abc) for keywords
+
     task = sbibm.get_task("two_moons")
-    posterior_samples, _, _ = rej_abc(task=task,
-                                      num_samples=50,
-                                      num_observation=1,
-                                      num_simulations=500)
+    posterior_samples, _, _ = rej_abc(
+        task=task, num_samples=50, num_observation=1, num_simulations=500
+    )
 
     assert posterior_samples != None
     assert posterior_samples.shape[0] == 50
@@ -118,28 +113,30 @@ def test_quick_demo_rej_abc():
 def test_quick_demo_c2st():
 
     from sbibm.algorithms import rej_abc  # See help(rej_abc) for keywords
+
     task = sbibm.get_task("two_moons")
-    posterior_samples, _, _ = rej_abc(task=task,
-                                      num_samples=50,
-                                      num_observation=1,
-                                      num_simulations=500)
+    posterior_samples, _, _ = rej_abc(
+        task=task, num_samples=50, num_observation=1, num_simulations=500
+    )
 
     from sbibm.metrics import c2st
+
     reference_samples = task.get_reference_posterior_samples(num_observation=1)
     c2st_accuracy = c2st(reference_samples, posterior_samples)
 
-    assert c2st_accuracy > 0.
-    assert c2st_accuracy < 1.
+    assert c2st_accuracy > 0.0
+    assert c2st_accuracy < 1.0
+
 
 ################################################
 ## demonstrate on how to run a minimal benchmark
 ## see https://github.com/sbi-benchmark/results/blob/main/benchmarking_sbi/run.py
 
+
 def test_benchmark_metrics_selfobserved():
 
     from sbibm.algorithms.sbi.snpe import run
     from sbibm.metrics.ppc import median_distance
-
 
     task = sbibm.get_task("two_moons")
 
@@ -148,13 +145,14 @@ def test_benchmark_metrics_selfobserved():
     sim = task.get_simulator()
     x_o = sim(theta_o)
 
-    outputs, nsim, logprob_truep = run(task,
-                  observation=x_o,
-                  num_samples = 16,
-                  num_simulations = 64,
-                  neural_net = "mdn",
-                  num_rounds = 1 # let's do NPE not SNPE (to avoid MCMC)
-                  )
+    outputs, nsim, logprob_truep = run(
+        task,
+        observation=x_o,
+        num_samples=16,
+        num_simulations=64,
+        neural_net="mdn",
+        num_rounds=1,  # let's do NPE not SNPE (to avoid MCMC)
+    )
 
     assert outputs.shape
     assert outputs.shape[0] > 0
@@ -175,13 +173,14 @@ def test_benchmark_metrics():
     task = sbibm.get_task("two_moons")
     sim = task.get_simulator()
 
-    outputs, nsim, logprob_truep = run(task,
-                  num_observation=7,
-                  num_samples = 64,
-                  num_simulations = 100,
-                  neural_net = "mdn",
-                  num_rounds = 1 # let's do NPE not SNPE (to avoid MCMC)
-                  )
+    outputs, nsim, logprob_truep = run(
+        task,
+        num_observation=7,
+        num_samples=64,
+        num_simulations=100,
+        neural_net="mdn",
+        num_rounds=1,  # let's do NPE not SNPE (to avoid MCMC)
+    )
 
     assert outputs.shape
     assert outputs.shape[0] > 0

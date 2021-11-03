@@ -87,8 +87,7 @@ def quadratic_coordinate_field(min_axis=-16, max_axis=16, batch_size=32):
 
 
 class norefposterior(Task):
-
-    def __init__(self, min_axis = 0, max_axis = 200, flood_samples = 1*1024):
+    def __init__(self, min_axis=0, max_axis=200, flood_samples=1 * 1024):
         """Forward-only simulator (without a reference posterior)"""
 
         self.min_axis = min_axis
@@ -132,7 +131,9 @@ class norefposterior(Task):
         }
         self.prior_dist = pdist.Uniform(**self.prior_params).to_event(1)
 
-        self.base_coordinate_field = base_coordinate_field(self.min_axis, self.max_axis).detach()
+        self.base_coordinate_field = base_coordinate_field(
+            self.min_axis, self.max_axis
+        ).detach()
 
     def get_prior(self) -> Callable:
         def prior(num_samples=1):
@@ -197,8 +198,10 @@ class norefposterior(Task):
             # on a 2D grid (in batches)
             data_dist = pdist.MultivariateNormal(m.float(), S.float())
 
-            valb = bcast_coordinate_field(self.base_coordinate_field, num_samples).detach()
-            #valb = quadratic_coordinate_field(self.min_axis, self.max_axis, num_samples).detach()
+            valb = bcast_coordinate_field(
+                self.base_coordinate_field, num_samples
+            ).detach()
+            # valb = quadratic_coordinate_field(self.min_axis, self.max_axis, num_samples).detach()
 
             # create images from log probabilities
             img = torch.exp(data_dist.log_prob(valb)).detach()
@@ -333,7 +336,9 @@ class norefposterior(Task):
 if __name__ == "__main__":
 
     log = get_logger(__file__)
-    log.warning("[norefposterior] producing observations may result in errors/exceptions thrown!")
+    log.warning(
+        "[norefposterior] producing observations may result in errors/exceptions thrown!"
+    )
     ## run this to generate the `files` infrastructure in this folder
     ## repo/sbibm/sbibm/tasks/norefposterior/files
     ## ├── num_observation_1
