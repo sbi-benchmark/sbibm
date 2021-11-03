@@ -20,8 +20,6 @@ from torch.autograd import grad
 from torch.distributions import biject_to
 from torch.distributions.transforms import IndependentTransform
 
-from sbibm.utils.torch import get_log_abs_det_jacobian
-
 
 def get_log_prob_fn(
     model,
@@ -215,9 +213,10 @@ class _LPMaker:
         )
         log_joint = self.trace_prob_evaluator.log_prob(model_trace)
         for name, t in self.transforms.items():
-            log_joint -= get_log_abs_det_jacobian(
-                t, params_constrained[name], params[name]
-            )
+            log_joint -= t.log_abs_det_jacobian(
+                params_constrained[name], params[name]
+            ).squeeze()
+
         return log_joint
 
     def _lp_fn_jit(self, skip_jit_warnings, jit_options, params):

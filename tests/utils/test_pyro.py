@@ -3,8 +3,6 @@ import torch
 
 import sbibm
 
-from sbibm.utils.torch import get_log_abs_det_jacobian
-
 
 @pytest.mark.parametrize(
     "task_name,jit_compile,batch_size,implementation,posterior",
@@ -50,7 +48,10 @@ def test_log_prob_fn(task_name, jit_compile, batch_size, implementation, posteri
             )
 
     # Test whether proportionality holds
-    diff_ref = log_prob(parameters) - posterior_dist.log_prob(parameters)
+    diff_ref = log_prob(parameters).reshape(
+        parameters.shape[0]
+    ) - posterior_dist.log_prob(parameters)
+
     if not posterior:
         diff_ref += prior_dist.log_prob(parameters)
     for _ in range(10):
@@ -108,7 +109,11 @@ def test_log_prob_grad_fn(jit_compile, batch_size, implementation):
     assert torch.allclose(grads, analytical_grad)
 
 
-def test_transforms():
+# Test transforms with tasks with uniform, Gaussian and LogNormal priors.
+@pytest.mark.parametrize(
+    "task", ["gaussian_linear_uniform", "gaussian_linear", "lotka_volterra"]
+)
+def test_transforms(task):
     task = sbibm.get_task("gaussian_linear_uniform")
 
     observation = task.get_observation(num_observation=1)
@@ -132,8 +137,8 @@ def test_transforms():
 
     # through change of variables, we can recover the original log prob
     # ladj(x,y) -> log |dy/dx| -> ladj(untransformed, transformed)
-    log_prob_3 = log_prob_2 + get_log_abs_det_jacobian(
-        transforms, parameters_constrained, parameters_unconstrained
+    log_prob_3 = log_prob_2 + transforms.log_abs_det_jacobian(
+        parameters_constrained, parameters_unconstrained
     )
 
     assert torch.allclose(log_prob_1, log_prob_3)
