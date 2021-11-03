@@ -30,6 +30,16 @@ def test_obtain_task():
     assert task is not None
 
 
+def test_obtain_task_modified():
+
+    task = sbibm.get_task("norefposterior", min_axis = 0, max_axis = 20, flood_samples = 64)
+
+    assert task is not None
+    assert task.flood_samples == 64
+    assert task.min_axis == 0
+    assert task.max_axis == 20
+
+
 def test_obtain_prior():
 
     task = sbibm.get_task(
