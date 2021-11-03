@@ -197,7 +197,7 @@ class norefposterior(Task):
             # on a 2D grid (in batches)
             data_dist = pdist.MultivariateNormal(m.float(), S.float())
 
-            valb = bcast_coordinate_field(self.base_coordinate_field, num_samples)
+            valb = bcast_coordinate_field(self.base_coordinate_field, num_samples).detach()
             #valb = quadratic_coordinate_field(self.min_axis, self.max_axis, num_samples).detach()
 
             # create images from log probabilities
