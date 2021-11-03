@@ -3,13 +3,11 @@ from typing import Optional, Tuple
 import pandas as pd
 import torch
 from sbi.inference import SMCABC
-from sklearn.linear_model import LinearRegression
 
 import sbibm
 from sbibm.tasks.task import Task
-from sbibm.utils.kde import get_kde
 
-from .utils import clip_int, get_sass_transform, run_lra
+from .utils import clip_int
 
 
 def run(
@@ -120,7 +118,7 @@ def run(
         kernel=kernel,
         algorithm_variant=algorithm_variant,
     )
-    posterior, summary = inference_method(
+    kde_posterior, summary = inference_method(
         x_o=observation,
         num_particles=population_size,
         num_initial_pop=initial_round_size,
@@ -136,7 +134,15 @@ def run(
         sass=sass,
         sass_fraction=sass_fraction,
         sass_expansion_degree=sass_feature_expansion_degree,
+        kde=True,
+        kde_kwargs=dict(
+            kde_bandwidth=kde_bandwidth,
+            kde_sample_weights=kde_sample_weights,
+            num_cv_partitions=20,
+            num_cv_repetitions=5,
+        ),
     )
+    samples = kde_posterior.sample(num_samples)
 
     if save_summary:
         log.info("Saving smcabc summary to csv.")
@@ -146,27 +152,10 @@ def run(
 
     assert simulator.num_simulations == num_simulations
 
-    if kde_bandwidth is not None:
-        samples = posterior._samples
-
-        log.info(
-            f"""KDE on {samples.shape[0]} samples with bandwidth option {kde_bandwidth}.
-            Beware that KDE can give unreliable results when used with too few samples
-            and in high dimensions."""
-        )
-
-        kde = get_kde(
-            samples,
-            bandwidth=kde_bandwidth,
-            sample_weight=posterior._log_weights.exp() if kde_sample_weights else None,
-        )
-        samples = kde.sample(num_samples)
-    else:
-        samples = posterior.sample((num_samples,)).detach()
-
-    if num_observation is not None:
+    # Returning log prob true parameters is only possible after kde.
+    if num_observation is not None and kde_bandwidth is not None:
         true_parameters = task.get_true_parameters(num_observation=num_observation)
-        log_prob_true_parameters = posterior.log_prob(true_parameters.squeeze())
+        log_prob_true_parameters = kde_posterior.log_prob(true_parameters.squeeze())
         return samples, simulator.num_simulations, log_prob_true_parameters
     else:
         return samples, simulator.num_simulations, None
