@@ -15,13 +15,33 @@ transform_types = Optional[
 ]
 
 
+class KDEWrapper:
+    def __init__(self, kde, transform):
+        self.kde = kde
+        self.transform = transform
+
+    def sample(self, *args, **kwargs):
+        Y = torch.from_numpy(self.kde.sample(*args, **kwargs).astype(np.float32))
+        return self.transform.inv(Y)
+
+    def log_prob(self, parameters_constrained):
+        parameters_unconstrained = self.transform(parameters_constrained)
+        log_probs = torch.from_numpy(
+            self.kde.score_samples(parameters_unconstrained.numpy()).astype(np.float32)
+        )
+        log_probs += get_log_abs_det_jacobian(
+            self.transform, parameters_constrained, parameters_unconstrained
+        )
+        return log_probs
+
+
 def get_kde(
     X: torch.Tensor,
     bandwidth: str = "cv",
     transform: transform_types = None,
     verbose: bool = True,
     sample_weight: Optional[np.ndarray] = None,
-) -> KernelDensity:
+) -> KDEWrapper:
     """Get KDE estimator with selected bandwidth
 
     Args:
@@ -116,23 +136,3 @@ def get_kde(
     kde.fit(X, sample_weight=sample_weight)
 
     return KDEWrapper(kde, transform)
-
-
-class KDEWrapper:
-    def __init__(self, kde, transform):
-        self.kde = kde
-        self.transform = transform
-
-    def sample(self, *args, **kwargs):
-        Y = torch.from_numpy(self.kde.sample(*args, **kwargs).astype(np.float32))
-        return self.transform.inv(Y)
-
-    def log_prob(self, parameters_constrained):
-        parameters_unconstrained = self.transform(parameters_constrained)
-        log_probs = torch.from_numpy(
-            self.kde.score_samples(parameters_unconstrained.numpy()).astype(np.float32)
-        )
-        log_probs += get_log_abs_det_jacobian(
-            self.transform, parameters_constrained, parameters_unconstrained
-        )
-        return log_probs
