@@ -74,13 +74,24 @@ def test_simulate_from_thetas():
     assert xs.shape == (nsamples, 2)
 
 
+def test_reference_posterior_exists():
+
+    task = sbibm.get_task("two_moons")
+
+    reference_samples = task.get_reference_posterior_samples(num_observation=1)
+
+    assert getattr(reference_samples, "shape")
+    assert len(reference_samples.shape) == 2
+    assert reference_samples.shape == (10_000, 2)
+
+
 @pytest.fixture
 def vanilla_samples():
 
     task = sbibm.get_task("two_moons")
     prior = task.get_prior()
     sim = task.get_simulator()
-    nsamples = 10
+    nsamples = 1_000
 
     thetas = prior(num_samples=nsamples)
     xs = sim(thetas)
@@ -116,3 +127,7 @@ def test_quick_demo_c2st(vanilla_samples):
 
     assert c2st_accuracy > 0.
     assert c2st_accuracy < 1.
+
+
+## TODO: demonstrate on how to run a minimal benchmark
+##       see https://github.com/sbi-benchmark/results/blob/main/benchmarking_sbi/run.py
