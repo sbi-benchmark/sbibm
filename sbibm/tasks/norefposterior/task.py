@@ -21,16 +21,15 @@ def torch_average(a, weights=None, axis=0):
         return value
 
 
-def quadratic_coordinate_field(min_axis=-16, max_axis=16, batch_size=32):
+def base_coordinate_field(min_axis=-16, max_axis=16):
     """returns a torch tensor that contains the coordinates of a regular
     grid between <min_axis> and <max_axis> broadcasted/cloned
     <batchsize> times, i.e.
-    >>> arr = quadratic_coordinate_field(-3,3,4)
+    >>> arr = quadratic_coordinate_field(-3,3)
     >>> arr.shape
-    (6,6,4,2)
-     ^^^ dimensions of max_axis - min_axis
+    (6,6,2)
+     ^^^---- dimensions of max_axis - min_axis, 3-(-3)
     """
-
     size_axis = max_axis - min_axis
 
     x = torch.arange(min_axis, max_axis).detach().float()
@@ -39,7 +38,37 @@ def quadratic_coordinate_field(min_axis=-16, max_axis=16, batch_size=32):
     xx, yy = torch.meshgrid(x, y)
     val = torch.swapaxes(torch.stack((xx.flatten(), yy.flatten())), 1, 0).float()
 
-    valr = val.reshape(size_axis, size_axis, 2)
+    value = val.reshape(size_axis, size_axis, 2)
+
+    return value
+
+
+def bcast_coordinate_field(base_field, num_samples):
+
+    # boadcast to <num_samples> doublicates
+    valr_ = torch.broadcast_to(base_field, (num_samples, *base_field.shape)).detach()
+
+    # move axis from position 2 to front
+    value = torch.swapaxes(valr_, 2, 0)
+
+    return value
+
+
+def quadratic_coordinate_field(min_axis=-16, max_axis=16, batch_size=32):
+    """returns a torch tensor that contains the coordinates of a regular
+    grid between <min_axis> and <max_axis> broadcasted/cloned
+    <batchsize> times, i.e.
+    >>> arr = quadratic_coordinate_field(-3,3,4)
+    >>> arr.shape
+    #    --- batch_size
+    #    v
+    (6,6,4,2)
+    #^ ^
+    #| |
+    #------- dimensions of max_axis - min_axis, 3-(-3)
+    """
+
+    valr = base_coordinate_field(min_axis, max_axis)
 
     # at every point of the image w=size_axis x w=size_axis
     # we store the (x,y) coordinate of a regular grid
@@ -58,12 +87,13 @@ def quadratic_coordinate_field(min_axis=-16, max_axis=16, batch_size=32):
 
 
 class norefposterior(Task):
-    def __init__(self):
+
+    def __init__(self, min_axis = 0, max_axis = 200, flood_samples = 1*1024):
         """Forward-only simulator (without a reference posterior)"""
 
-        self.min_axis = 0
-        self.max_axis = 200
-        self.flood_samples = 32 * 1024
+        self.min_axis = min_axis
+        self.max_axis = max_axis
+        self.flood_samples = flood_samples
         dim_data = 2 * self.max_axis
         name_display = "norefposterior"
 
@@ -101,6 +131,8 @@ class norefposterior(Task):
             "high": torch.tensor([80, 80, 15, 15]).float(),
         }
         self.prior_dist = pdist.Uniform(**self.prior_params).to_event(1)
+
+        self.base_coordinate_field = base_coordinate_field(self.min_axis, self.max_axis).detach()
 
     def get_prior(self) -> Callable:
         def prior(num_samples=1):
@@ -165,12 +197,13 @@ class norefposterior(Task):
             # on a 2D grid (in batches)
             data_dist = pdist.MultivariateNormal(m.float(), S.float())
 
-            valb = quadratic_coordinate_field(self.min_axis, self.max_axis, num_samples)
+            valb = bcast_coordinate_field(self.base_coordinate_field, num_samples)
+            #valb = quadratic_coordinate_field(self.min_axis, self.max_axis, num_samples).detach()
 
-            # TODO: replace this with sampling
-            # create images from probabilities
-            img = torch.exp(data_dist.log_prob(valb))
-            # images = data_dist.sample()
+            # create images from log probabilities
+            img = torch.exp(data_dist.log_prob(valb)).detach()
+
+            # sample through binomial with fixed prob map
             bdist = pdist.Binomial(total_count=self.flood_samples, probs=img)
             samples = bdist.sample()
 
@@ -295,55 +328,6 @@ class norefposterior(Task):
     #         multiplier_M=1.2,
     #         proposal_dist=proposal_dist,
     #     )
-
-    # def _generate_noise_dist_parameters(self):
-    #     import numpy as np
-
-    #     noise_dim = 92
-    #     n_noise_comps = 20
-
-    #     rng = np.random
-    #     rng.seed(42)
-
-    #     loc = torch.from_numpy(
-    #         np.array([15 * rng.normal(size=noise_dim) for i in range(n_noise_comps)])
-    #     )
-
-    #     cholesky_factors = [
-    #         np.tril(rng.normal(size=(noise_dim, noise_dim)))
-    #         + np.diag(np.exp(rng.normal(size=noise_dim)))
-    #         for i in range(n_noise_comps)
-    #     ]
-    #     scale_tril = torch.from_numpy(3 * np.array(cholesky_factors))
-
-    #     mix = pdist.Categorical(torch.ones(n_noise_comps,))
-    #     comp = pdist.Independent(
-    #         pdist.MultivariateStudentT(df=2, loc=loc, scale_tril=scale_tril), 0,
-    #     )
-    #     gmm = pdist.MixtureSameFamily(mix, comp)
-    #     torch.save(gmm, "files/gmm.torch")
-
-    #     permutation_idx = torch.from_numpy(rng.permutation(noise_dim + 8))
-    #     torch.save(permutation_idx, "files/permutation_idx.torch")
-
-    #     torch.manual_seed(42)
-
-    #     for i in range(self.num_observations):
-    #         num_observation = i + 1
-
-    #         observation = self.get_observation(num_observation)
-    #         noise = gmm.sample().reshape((1, -1)).type(observation.dtype)
-
-    #         observation_and_noise = torch.cat([observation, noise], dim=1)
-
-    #         path = (
-    #             self.path
-    #             / "files"
-    #             / f"num_observation_{num_observation}"
-    #             / "observation_distractors.csv"
-    #         )
-    #         self.dim_data = noise_dim + 8
-    #         self.save_data(path, observation_and_noise[:, permutation_idx])
 
 
 if __name__ == "__main__":

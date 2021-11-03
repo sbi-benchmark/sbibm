@@ -10,6 +10,8 @@ from sbibm.tasks.norefposterior.task import (
     torch_average,
 )
 
+torch.manual_seed(47)
+
 ########### sbibm related ################
 ## testing the actual task
 
@@ -47,7 +49,7 @@ def test_obtain_simulator():
     assert simulator is not None
 
 
-def test_obtain_observe_once():
+def test_observe_once():
 
     task = sbibm.get_task("norefposterior")
 
@@ -81,28 +83,36 @@ def test_simulate_from_thetas():
     assert xs.shape == (nsamples, 400)
 
 
-################################################
-## sbibm compliant API tests as documented in
-## the top-level README.md
-
-@pytest.fixture
-def vanilla_samples():
+def test_no_reference_posterior():
 
     task = sbibm.get_task("norefposterior")
-    prior = task.get_prior()
-    sim = task.get_simulator()
-    nsamples = 10
 
-    thetas = prior(num_samples=nsamples)
-    xs = sim(thetas)
+    with pytest.raises(FileNotFoundError):
+        reference_samples = task.get_reference_posterior_samples(num_observation=1)
 
-    return task, thetas, xs
+################################################
+## sbibm compliant API tests as documented in
+## the top-level README.md of sbibm
+
+# @pytest.fixture
+# def vanilla_samples():
+
+#     task = sbibm.get_task("norefposterior")
+#     prior = task.get_prior()
+#     sim = task.get_simulator()
+#     nsamples = 10
+
+#     thetas = prior(num_samples=nsamples)
+#     xs = sim(thetas)
+
+#     return task, thetas, xs
 
 
-def test_quick_demo_rej_abc(vanilla_samples):
+def test_quick_demo_rej_abc():
 
-    task, thetas, xs = vanilla_samples
     from sbibm.algorithms import rej_abc
+
+    task = sbibm.get_task("norefposterior")
     posterior_samples, _, _ = rej_abc(task=task,
                                       num_samples=50,
                                       num_observation=1,
@@ -111,10 +121,11 @@ def test_quick_demo_rej_abc(vanilla_samples):
     assert posterior_samples != None
 
 
-def test_quick_demo_c2st(vanilla_samples):
+def test_quick_demo_c2st():
 
-    task, thetas, xs = vanilla_samples
     from sbibm.algorithms import rej_abc
+
+    task = sbibm.get_task("norefposterior")
     posterior_samples, _, _ = rej_abc(task=task,
                                       num_samples=50,
                                       num_observation=1,
@@ -129,7 +140,39 @@ def test_quick_demo_c2st(vanilla_samples):
     assert c2st_accuracy < 1.
 
 
-## TODO: demonstrate on how to run a benchmark
+def test_benchmark_metrics_selfobserved():
+
+    from sbibm.algorithms.sbi.snpe import run
+    from sbibm.metrics.ppc import median_distance
+    import torch
+
+    torch.set_num_threads(4)
+    task = sbibm.get_task("norefposterior")
+
+    nobs = 1
+    theta_o = task.get_prior()(num_samples=nobs)
+    sim = task.get_simulator()
+    x_o = sim(theta_o)
+
+    outputs, nsim, logprob_truep = run(task,
+                  observation=x_o,
+                  num_samples = 16,
+                  num_simulations = 64,
+                  neural_net = "mdn",
+                  hidden_features = 4,
+                  simulation_batch_size = 32,
+                  training_batch_size = 32,
+                  num_rounds = 1 # let's do NPE not SNPE (to avoid MCMC)
+                  )
+
+    assert outputs.shape
+    assert outputs.shape[0] > 0
+    assert logprob_truep == None
+
+    predictive_samples = sim(outputs)
+    value = median_distance(predictive_samples, x_o)
+
+    assert value > 0
 
 
 ################################################
