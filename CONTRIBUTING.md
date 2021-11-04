@@ -23,4 +23,4 @@ For docstrings and comments, we use [Google Style](http://google.github.io/style
 
 **[black](https://github.com/psf/black)**: Automatic code formatting for Python. You can run black manually from the console using `black .` in the top directory of the repository, which will format all files.
 
-**[isort](https://github.com/timothycrosley/isort)**: Used to consistently order imports. You can run isort manually from the console using `isort -y` in the top directory.
+**[isort](https://github.com/timothycrosley/isort)**: Used to consistently order imports. You can run isort manually from the console using `isort .` in the top directory.
