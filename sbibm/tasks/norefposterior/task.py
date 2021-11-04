@@ -167,8 +167,10 @@ class norefposterior(Task):
             s1 = parameters[:, [2]].squeeze()  # ** 2
             s2 = parameters[:, [3]].squeeze()  # ** 2
 
-            # TODO: double check if the formulae below make sense
-            # (mostly used as placeholders for now)
+            # Note: checking the covariance_matrix for valid inputs
+            #       (being positive semidefinite) is expense, so
+            #       `S` needs to be PSD compliant
+            #       for the future: consider rotating img for more variability
             S = torch.empty((self.max_axis, self.max_axis, num_samples, 2, 2))
             S[..., 0, 0] = s1 ** 2
             S[..., 0, 1] = s1 * s2
@@ -196,7 +198,11 @@ class norefposterior(Task):
 
             # define the probility distribution of our beamspot
             # on a 2D grid (in batches)
-            data_dist = pdist.MultivariateNormal(m.float(), S.float())
+            data_dist = pdist.MultivariateNormal(m.float(), S.float(),
+                                                 # `S` is constructed positive semidefinite
+                                                 # validation is expensive
+                                                 validate_args = False
+                                                 )
 
             valb = bcast_coordinate_field(
                 self.base_coordinate_field, num_samples
@@ -208,6 +214,8 @@ class norefposterior(Task):
 
             # sample through binomial with fixed prob map
             bdist = pdist.Binomial(total_count=self.flood_samples, probs=img)
+
+            # TODO: should this be a pyro.sample call?
             samples = bdist.sample()
 
             # project on the axes
