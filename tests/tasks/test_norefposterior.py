@@ -2,6 +2,7 @@ import numpy as np
 import pytest
 import torch
 from pyro import distributions as pdist
+from pyro import util as putil
 
 import sbibm
 from sbibm.tasks.norefposterior.task import (
@@ -10,7 +11,7 @@ from sbibm.tasks.norefposterior.task import (
     torch_average,
 )
 
-torch.manual_seed(47)
+putil.set_rng_seed(47)
 
 ########### sbibm related ################
 ## testing the actual task
@@ -152,12 +153,9 @@ def test_quick_demo_c2st():
 
 def test_benchmark_metrics_selfobserved():
 
-    import torch
-
     from sbibm.algorithms.sbi.snpe import run
     from sbibm.metrics.ppc import median_distance
 
-    torch.set_num_threads(4)
     task = sbibm.get_task("norefposterior")
 
     nobs = 1
@@ -190,7 +188,6 @@ def test_benchmark_metrics_selfobserved():
 ################################################
 ## API tests that related the internal task code
 
-
 def test_multivariate_normal_constructs():
 
     m = torch.ones((2,))
@@ -204,7 +201,7 @@ def test_multivariate_normal_constructs():
     assert sample.shape == (2,)
 
     nensemble = 32
-    sample = data_dist.sample_n(nensemble)
+    sample = data_dist.sample((nensemble,))
     assert sample.shape == (nensemble, 2)
 
 
@@ -321,7 +318,6 @@ def test_binomial_api():
     mean = np.average(lims, weights=samples.sum(axis=0).numpy(), axis=0)
     assert np.allclose(mean, 1, atol=1e-1)
 
-
 def test_multivariate_normal_sample_binomial_from_logprob():
 
     batch_size = 8
@@ -333,7 +329,8 @@ def test_multivariate_normal_sample_binomial_from_logprob():
     S = torch.eye(2)
     S_ = torch.broadcast_to(S, (batch_size, 2, 2))
 
-    data_dist = pdist.MultivariateNormal(m_.float(), S_.float())
+    data_dist = pdist.MultivariateNormal(m_.float(), S_.float(),
+                                         validate_args = False)
 
     x = torch.arange(min_axis, max_axis).detach().float()
     y = torch.arange(min_axis, max_axis).detach().float()
@@ -402,3 +399,4 @@ def test_torch_average():
 
     assert m1 > 9.0
     assert m1 < 11.0
+
