@@ -10,17 +10,26 @@ from sbibm.metrics.c2st import c2st
     "task_name,num_observation",
     [
         (task_name, num_observation)
-        for task_name in ["gaussian_linear", "gaussian_linear_uniform", "slcp",]
+        for task_name in [
+            "gaussian_linear",
+            "gaussian_linear_uniform",
+            "slcp",
+        ]
         for num_observation in range(1, 11)
     ],
 )
 def test_posterior(
-    task_name, num_observation, num_samples=10_000,
+    task_name,
+    num_observation,
+    num_samples=10_000,
 ):
     task = sbibm.get_task(task_name)
 
     samples = run_posterior(
-        task=task, num_observation=num_observation, num_samples=num_samples, rerun=True,
+        task=task,
+        num_observation=num_observation,
+        num_samples=num_samples,
+        rerun=True,
     )
 
     reference_samples = task.get_reference_posterior_samples(

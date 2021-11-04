@@ -1,6 +1,7 @@
 import torch
 
 from sbibm.metrics import c2st
+
 from .utils import sample_blobs_same
 
 

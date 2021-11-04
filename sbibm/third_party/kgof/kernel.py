@@ -1,19 +1,22 @@
-
 """Module containing kernel related classes"""
 from __future__ import division
 
-from builtins import str
-from past.utils import old_div
-from builtins import object
+from builtins import object, str
+
 from future.utils import with_metaclass
-__author__ = 'wittawat'
+from past.utils import old_div
+
+__author__ = "wittawat"
 
 from abc import ABCMeta, abstractmethod
+
 import autograd
 import autograd.numpy as np
-#import numpy as np
+
+# import numpy as np
 import sbibm.third_party.kgof.config as config
 import sbibm.third_party.kgof.util as util
+
 
 class Kernel(with_metaclass(ABCMeta, object)):
     """Abstract class for kernels. Inputs to all methods are numpy arrays."""
@@ -48,28 +51,27 @@ class KSTKernel(with_metaclass(ABCMeta, Kernel)):
 
     @abstractmethod
     def gradX_Y(self, X, Y, dim):
-       """
-       Compute the gradient with respect to the dimension dim of X in k(X, Y).
+        """
+        Compute the gradient with respect to the dimension dim of X in k(X, Y).
 
-       X: nx x d
-       Y: ny x d
+        X: nx x d
+        Y: ny x d
 
-       Return a numpy array of size nx x ny.
-       """
-       raise NotImplementedError()
+        Return a numpy array of size nx x ny.
+        """
+        raise NotImplementedError()
 
     @abstractmethod
     def gradY_X(self, X, Y, dim):
-       """
-       Compute the gradient with respect to the dimension dim of Y in k(X, Y).
+        """
+        Compute the gradient with respect to the dimension dim of Y in k(X, Y).
 
-       X: nx x d
-       Y: ny x d
+        X: nx x d
+        Y: ny x d
 
-       Return a numpy array of size nx x ny.
-       """
-       raise NotImplementedError()
-
+        Return a numpy array of size nx x ny.
+        """
+        raise NotImplementedError()
 
     @abstractmethod
     def gradXY_sum(self, X, Y):
@@ -84,7 +86,9 @@ class KSTKernel(with_metaclass(ABCMeta, Kernel)):
         """
         raise NotImplementedError()
 
+
 # end KSTKernel
+
 
 class LinearKSTKernel(with_metaclass(ABCMeta, Kernel)):
     """
@@ -95,30 +99,29 @@ class LinearKSTKernel(with_metaclass(ABCMeta, Kernel)):
 
     @abstractmethod
     def pair_gradX_Y(self, X, Y):
-       """
-       Compute the gradient with respect to X in k(X, Y), evaluated at the
-       specified X and Y.
+        """
+        Compute the gradient with respect to X in k(X, Y), evaluated at the
+        specified X and Y.
 
-       X: n x d
-       Y: n x d
+        X: n x d
+        Y: n x d
 
-       Return a numpy array of size n x d
-       """
-       raise NotImplementedError()
+        Return a numpy array of size n x d
+        """
+        raise NotImplementedError()
 
     @abstractmethod
     def pair_gradY_X(self, X, Y):
-       """
-       Compute the gradient with respect to Y in k(X, Y), evaluated at the
-       specified X and Y.
+        """
+        Compute the gradient with respect to Y in k(X, Y), evaluated at the
+        specified X and Y.
 
-       X: n x d
-       Y: n x d
+        X: n x d
+        Y: n x d
 
-       Return a numpy array of size n x d
-       """
-       raise NotImplementedError()
-
+        Return a numpy array of size n x d
+        """
+        raise NotImplementedError()
 
     @abstractmethod
     def pair_gradXY_sum(self, X, Y):
@@ -132,6 +135,7 @@ class LinearKSTKernel(with_metaclass(ABCMeta, Kernel)):
         Return a one-dimensional length-n numpy array of the derivatives.
         """
         raise NotImplementedError()
+
 
 class DifferentiableKernel(with_metaclass(ABCMeta, Kernel)):
     def gradX_y(self, X, y):
@@ -154,13 +158,16 @@ class DifferentiableKernel(with_metaclass(ABCMeta, Kernel)):
         assert G.shape[1] == X.shape[1]
         return G
 
+
 # end class KSTKernel
+
 
 class KDiagGauss(Kernel):
     """
     A Gaussian kernel with diagonal covariance structure i.e., one Gaussian
     width for each dimension.
     """
+
     def __init__(self, sigma2s):
         """
         sigma2s: a one-dimensional array of length d containing one width
@@ -174,20 +181,22 @@ class KDiagGauss(Kernel):
         width^2) and using the standard Gaussian kernel.
         """
         sigma2s = self.sigma2s
-        Xs = old_div(X,np.sqrt(sigma2s))
-        Ys = old_div(Y,np.sqrt(sigma2s))
+        Xs = old_div(X, np.sqrt(sigma2s))
+        Ys = old_div(Y, np.sqrt(sigma2s))
         k = KGauss(1.0)
         return k.eval(Xs, Ys)
 
     def pair_eval(self, X, Y):
         """Evaluate k(x1, y1), k(x2, y2), ..."""
         sigma2s = self.sigma2s
-        Xs = old_div(X,np.sqrt(sigma2s))
-        Ys = old_div(Y,np.sqrt(sigma2s))
+        Xs = old_div(X, np.sqrt(sigma2s))
+        Ys = old_div(Y, np.sqrt(sigma2s))
         k = KGauss(1.0)
         return k.pair_eval(Xs, Ys)
 
+
 # end class KDiagGauss
+
 
 class KIMQ(DifferentiableKernel, KSTKernel):
     """
@@ -204,27 +213,26 @@ class KIMQ(DifferentiableKernel, KSTKernel):
 
     def __init__(self, b=-0.5, c=1.0):
         if not b < 0:
-            raise ValueError('b has to be negative. Was {}'.format(b))
+            raise ValueError("b has to be negative. Was {}".format(b))
         if not c > 0:
-            raise ValueError('c has to be positive. Was {}'.format(c))
+            raise ValueError("c has to be positive. Was {}".format(c))
         self.b = b
         self.c = c
 
     def eval(self, X, Y):
-        """Evalute the kernel on data X and Y """
+        """Evalute the kernel on data X and Y"""
         b = self.b
         c = self.c
         D2 = util.dist2_matrix(X, Y)
-        K = (c**2 + D2)**b
+        K = (c ** 2 + D2) ** b
         return K
 
     def pair_eval(self, X, Y):
-        """Evaluate k(x1, y1), k(x2, y2), ...
-        """
+        """Evaluate k(x1, y1), k(x2, y2), ..."""
         assert X.shape[0] == Y.shape[0]
         b = self.b
         c = self.c
-        return (c**2 + np.sum((X-Y)**2, 1))**b
+        return (c ** 2 + np.sum((X - Y) ** 2, 1)) ** b
 
     def gradX_Y(self, X, Y, dim):
         """
@@ -245,7 +253,7 @@ class KIMQ(DifferentiableKernel, KSTKernel):
 
         b = self.b
         c = self.c
-        Gdim = ( 2.0*b*(c**2 + D2)**(b-1) )*dim_diff
+        Gdim = (2.0 * b * (c ** 2 + D2) ** (b - 1)) * dim_diff
         assert Gdim.shape[0] == X.shape[0]
         assert Gdim.shape[1] == Y.shape[0]
         return Gdim
@@ -278,12 +286,14 @@ class KIMQ(DifferentiableKernel, KSTKernel):
 
         # d = input dimension
         d = X.shape[1]
-        c2D2 = c**2 + D2
-        T1 = -4.0*b*(b-1)*D2*(c2D2**(b-2) )
-        T2 = -2.0*b*d*c2D2**(b-1)
+        c2D2 = c ** 2 + D2
+        T1 = -4.0 * b * (b - 1) * D2 * (c2D2 ** (b - 2))
+        T2 = -2.0 * b * d * c2D2 ** (b - 1)
         return T1 + T2
 
+
 # end class KIMQ
+
 
 class KGauss(DifferentiableKernel, KSTKernel, LinearKSTKernel):
     """
@@ -293,7 +303,7 @@ class KGauss(DifferentiableKernel, KSTKernel, LinearKSTKernel):
     """
 
     def __init__(self, sigma2):
-        assert sigma2 > 0, 'sigma2 must be > 0. Was %s'%str(sigma2)
+        assert sigma2 > 0, "sigma2 must be > 0. Was %s" % str(sigma2)
         self.sigma2 = sigma2
 
     def eval(self, X, Y):
@@ -309,13 +319,13 @@ class KGauss(DifferentiableKernel, KSTKernel, LinearKSTKernel):
         ------
         K : a n1 x n2 Gram matrix.
         """
-        #(n1, d1) = X.shape
-        #(n2, d2) = Y.shape
-        #assert d1==d2, 'Dimensions of the two inputs must be the same'
-        sumx2 = np.reshape(np.sum(X**2, 1), (-1, 1))
-        sumy2 = np.reshape(np.sum(Y**2, 1), (1, -1))
-        D2 = sumx2 - 2*np.dot(X, Y.T) + sumy2
-        K = np.exp(old_div(-D2,(2.0*self.sigma2)))
+        # (n1, d1) = X.shape
+        # (n2, d2) = Y.shape
+        # assert d1==d2, 'Dimensions of the two inputs must be the same'
+        sumx2 = np.reshape(np.sum(X ** 2, 1), (-1, 1))
+        sumy2 = np.reshape(np.sum(Y ** 2, 1), (1, -1))
+        D2 = sumx2 - 2 * np.dot(X, Y.T) + sumy2
+        K = np.exp(old_div(-D2, (2.0 * self.sigma2)))
         return K
 
     def gradX_Y(self, X, Y, dim):
@@ -330,8 +340,8 @@ class KGauss(DifferentiableKernel, KSTKernel, LinearKSTKernel):
         sigma2 = self.sigma2
         K = self.eval(X, Y)
         Diff = X[:, [dim]] - Y[:, [dim]].T
-        #Diff = np.reshape(X[:, dim], (-1, 1)) - np.reshape(Y[:, dim], (1, -1))
-        G = -K*Diff/sigma2
+        # Diff = np.reshape(X[:, dim], (-1, 1)) - np.reshape(Y[:, dim], (1, -1))
+        G = -K * Diff / sigma2
         return G
 
     def pair_gradX_Y(self, X, Y):
@@ -348,7 +358,7 @@ class KGauss(DifferentiableKernel, KSTKernel, LinearKSTKernel):
         Kvec = self.pair_eval(X, Y)
         # n x d
         Diff = X - Y
-        G = -Kvec[:, np.newaxis]*Diff/sigma2
+        G = -Kvec[:, np.newaxis] * Diff / sigma2
         return G
 
     def gradY_X(self, X, Y, dim):
@@ -363,17 +373,16 @@ class KGauss(DifferentiableKernel, KSTKernel, LinearKSTKernel):
         return -self.gradX_Y(X, Y, dim)
 
     def pair_gradY_X(self, X, Y):
-       """
-       Compute the gradient with respect to Y in k(X, Y), evaluated at the
-       specified X and Y.
+        """
+        Compute the gradient with respect to Y in k(X, Y), evaluated at the
+        specified X and Y.
 
-       X: n x d
-       Y: n x d
+        X: n x d
+        Y: n x d
 
-       Return a numpy array of size n x d
-       """
-       return -self.pair_gradX_Y(X, Y)
-
+        Return a numpy array of size n x d
+        """
+        return -self.pair_gradX_Y(X, Y)
 
     def gradXY_sum(self, X, Y):
         r"""
@@ -387,12 +396,12 @@ class KGauss(DifferentiableKernel, KSTKernel, LinearKSTKernel):
         """
         (n1, d1) = X.shape
         (n2, d2) = Y.shape
-        assert d1==d2, 'Dimensions of the two inputs must be the same'
+        assert d1 == d2, "Dimensions of the two inputs must be the same"
         d = d1
         sigma2 = self.sigma2
-        D2 = np.sum(X**2, 1)[:, np.newaxis] - 2*np.dot(X, Y.T) + np.sum(Y**2, 1)
-        K = np.exp(old_div(-D2,(2.0*sigma2)))
-        G = K/sigma2*(d - old_div(D2,sigma2))
+        D2 = np.sum(X ** 2, 1)[:, np.newaxis] - 2 * np.dot(X, Y.T) + np.sum(Y ** 2, 1)
+        K = np.exp(old_div(-D2, (2.0 * sigma2)))
+        G = K / sigma2 * (d - old_div(D2, sigma2))
         return G
 
     def pair_gradXY_sum(self, X, Y):
@@ -407,11 +416,10 @@ class KGauss(DifferentiableKernel, KSTKernel, LinearKSTKernel):
         """
         d = X.shape[1]
         sigma2 = self.sigma2
-        D2 = np.sum( (X-Y)**2, 1)
-        Kvec = np.exp(old_div(-D2,(2.0*self.sigma2)))
-        G = Kvec/sigma2*(d - old_div(D2,sigma2))
+        D2 = np.sum((X - Y) ** 2, 1)
+        Kvec = np.exp(old_div(-D2, (2.0 * self.sigma2)))
+        G = Kvec / sigma2 * (d - old_div(D2, sigma2))
         return G
-
 
     def pair_eval(self, X, Y):
         """
@@ -427,14 +435,14 @@ class KGauss(DifferentiableKernel, KSTKernel, LinearKSTKernel):
         """
         (n1, d1) = X.shape
         (n2, d2) = Y.shape
-        assert n1==n2, 'Two inputs must have the same number of instances'
-        assert d1==d2, 'Two inputs must have the same dimension'
-        D2 = np.sum( (X-Y)**2, 1)
-        Kvec = np.exp(old_div(-D2,(2.0*self.sigma2)))
+        assert n1 == n2, "Two inputs must have the same number of instances"
+        assert d1 == d2, "Two inputs must have the same dimension"
+        D2 = np.sum((X - Y) ** 2, 1)
+        Kvec = np.exp(old_div(-D2, (2.0 * self.sigma2)))
         return Kvec
 
     def __str__(self):
-        return "KGauss(%.3f)"%self.sigma2
+        return "KGauss(%.3f)" % self.sigma2
 
 
 class KMixGauss(DifferentiableKernel, KSTKernel):
@@ -450,7 +458,7 @@ class KMixGauss(DifferentiableKernel, KSTKernel):
         assert len(sigma2s) > 0
 
         if wts is None:
-            self.wts = wts = np.full(len(sigma2s), 1/len(sigma2s))
+            self.wts = wts = np.full(len(sigma2s), 1 / len(sigma2s))
         else:
             self.wts = wts = np.asarray(wts)
             assert len(wts) == len(sigma2s)
@@ -463,15 +471,16 @@ class KMixGauss(DifferentiableKernel, KSTKernel):
         Y: ny x d
         return nx x ny Gram matrix
         """
-        sumx2 = np.sum(X**2, axis=1)[:, np.newaxis]
-        sumy2 = np.sum(Y**2, axis=1)[np.newaxis, :]
+        sumx2 = np.sum(X ** 2, axis=1)[:, np.newaxis]
+        sumy2 = np.sum(Y ** 2, axis=1)[np.newaxis, :]
         D2 = sumx2 - 2 * np.dot(X, Y.T) + sumy2
         return np.tensordot(
             self.wts,
             np.exp(
-                D2[np.newaxis, :, :]
-                / (-2 * self.sigma2s[:, np.newaxis, np.newaxis])),
-            1)
+                D2[np.newaxis, :, :] / (-2 * self.sigma2s[:, np.newaxis, np.newaxis])
+            ),
+            1,
+        )
 
     def pair_eval(self, X, Y):
         """Evaluate k(x1, y1), k(x2, y2), ...
@@ -482,13 +491,12 @@ class KMixGauss(DifferentiableKernel, KSTKernel):
         """
         n1, d1 = X.shape
         n2, d2 = Y.shape
-        assert n1 == n2, 'Two inputs must have the same number of instances'
-        assert d1 == d2, 'Two inputs must have the same dimension'
-        D2 = np.sum((X - Y)**2, axis=1)
+        assert n1 == n2, "Two inputs must have the same number of instances"
+        assert d1 == d2, "Two inputs must have the same dimension"
+        D2 = np.sum((X - Y) ** 2, axis=1)
         return np.tensordot(
-            self.wts,
-            np.exp(D2[np.newaxis, :] / (-2 * self.sigma2s[:, np.newaxis])),
-            1)
+            self.wts, np.exp(D2[np.newaxis, :] / (-2 * self.sigma2s[:, np.newaxis])), 1
+        )
 
     def gradX_Y(self, X, Y, dim):
         """
@@ -500,9 +508,11 @@ class KMixGauss(DifferentiableKernel, KSTKernel):
         Return a numpy array of size nx x ny.
         """
         diffs = -X[:, [dim]] + Y[:, [dim]].T
-        exps = np.exp(diffs[np.newaxis, :, :] ** 2
-                      / (-2 * self.sigma2s[:, np.newaxis, np.newaxis]))
-        return np.einsum('w,wij,ij->ij', self.wts / self.sigma2s, exps, diffs)
+        exps = np.exp(
+            diffs[np.newaxis, :, :] ** 2
+            / (-2 * self.sigma2s[:, np.newaxis, np.newaxis])
+        )
+        return np.einsum("w,wij,ij->ij", self.wts / self.sigma2s, exps, diffs)
 
     def gradY_X(self, X, Y, dim):
         """
@@ -526,12 +536,13 @@ class KMixGauss(DifferentiableKernel, KSTKernel):
         Return a nx x ny numpy array of the derivatives.
         """
         d = X.shape[1]
-        sumx2 = np.sum(X**2, axis=1)[:, np.newaxis]
-        sumy2 = np.sum(Y**2, axis=1)[np.newaxis, :]
+        sumx2 = np.sum(X ** 2, axis=1)[:, np.newaxis]
+        sumy2 = np.sum(Y ** 2, axis=1)[np.newaxis, :]
         D2 = sumx2 - 2 * np.dot(X, Y.T) + sumy2
-        s = (D2[np.newaxis, :, :] / self.sigma2s[:, np.newaxis, np.newaxis])
-        return np.einsum('w,wij,wij->ij',
-                         self.wts / self.sigma2s, np.exp(s / -2), d - s)
+        s = D2[np.newaxis, :, :] / self.sigma2s[:, np.newaxis, np.newaxis]
+        return np.einsum(
+            "w,wij,wij->ij", self.wts / self.sigma2s, np.exp(s / -2), d - s
+        )
 
 
 class KPoly(DifferentiableKernel, KSTKernel):
@@ -560,7 +571,7 @@ class KPoly(DifferentiableKernel, KSTKernel):
         return nx x ny Gram matrix
         """
         dot = np.dot(X, Y.T)
-        gamma = 1/X.shape[1] if self.gamma is None else self.gamma
+        gamma = 1 / X.shape[1] if self.gamma is None else self.gamma
         return (gamma * dot + self.coef0) ** self.degree
 
     def pair_eval(self, X, Y):
@@ -572,11 +583,11 @@ class KPoly(DifferentiableKernel, KSTKernel):
         """
         n1, d1 = X.shape
         n2, d2 = Y.shape
-        assert n1 == n2, 'Two inputs must have the same number of instances'
-        assert d1 == d2, 'Two inputs must have the same dimension'
+        assert n1 == n2, "Two inputs must have the same number of instances"
+        assert d1 == d2, "Two inputs must have the same dimension"
 
-        dot = np.einsum('id,id->i', X, Y)
-        gamma = 1/d1 if self.gamma is None else self.gamma
+        dot = np.einsum("id,id->i", X, Y)
+        gamma = 1 / d1 if self.gamma is None else self.gamma
         return (gamma * dot + self.coef0) ** self.degree
 
     def gradX_Y(self, X, Y, dim):
@@ -588,15 +599,19 @@ class KPoly(DifferentiableKernel, KSTKernel):
 
         Return a numpy array of size nx x ny.
         """
-        gamma = 1/X.shape[1] if self.gamma is None else self.gamma
+        gamma = 1 / X.shape[1] if self.gamma is None else self.gamma
 
         if self.degree == 1:  # optimization, other expression is valid too
             out = gamma * Y[np.newaxis, :, dim]  # 1 x ny
             return np.repeat(out, X.shape[0], axis=0)
 
         dot = np.dot(X, Y.T)
-        return (self.degree * (gamma * dot + self.coef0) ** (self.degree - 1)
-                * gamma * Y[np.newaxis, :, dim])
+        return (
+            self.degree
+            * (gamma * dot + self.coef0) ** (self.degree - 1)
+            * gamma
+            * Y[np.newaxis, :, dim]
+        )
 
     def gradY_X(self, X, Y, dim):
         """
@@ -607,15 +622,19 @@ class KPoly(DifferentiableKernel, KSTKernel):
 
         Return a numpy array of size nx x ny.
         """
-        gamma = 1/X.shape[1] if self.gamma is None else self.gamma
+        gamma = 1 / X.shape[1] if self.gamma is None else self.gamma
 
         if self.degree == 1:  # optimization, other expression is valid too
             out = gamma * X[:, dim, np.newaxis]  # nx x 1
             return np.repeat(out, Y.shape[0], axis=1)
 
         dot = np.dot(X, Y.T)
-        return (self.degree * (gamma * dot + self.coef0) ** (self.degree - 1)
-                * gamma * X[:, dim, np.newaxis])
+        return (
+            self.degree
+            * (gamma * dot + self.coef0) ** (self.degree - 1)
+            * gamma
+            * X[:, dim, np.newaxis]
+        )
 
     def gradXY_sum(self, X, Y):
         r"""
@@ -627,7 +646,7 @@ class KPoly(DifferentiableKernel, KSTKernel):
 
         Return a nx x ny numpy array of the derivatives.
         """
-        gamma = 1/X.shape[1] if self.gamma is None else self.gamma
+        gamma = 1 / X.shape[1] if self.gamma is None else self.gamma
 
         if self.degree == 1:  # optimization, other expression is valid too
             return np.tile(gamma, (X.shape[0], X.shape[1]))
@@ -636,17 +655,16 @@ class KPoly(DifferentiableKernel, KSTKernel):
         inside = gamma * dot + self.coef0
         to_dminus2 = inside ** (self.degree - 2)
         to_dminus1 = to_dminus2 * inside
-        return (
-            (self.degree * (self.degree-1) * gamma**2) * to_dminus2 * dot
-            + (X.shape[1] * gamma * self.degree) * to_dminus1
-        )
+        return (self.degree * (self.degree - 1) * gamma ** 2) * to_dminus2 * dot + (
+            X.shape[1] * gamma * self.degree
+        ) * to_dminus1
 
 
 class KMixture(KSTKernel, LinearKSTKernel, DifferentiableKernel):
     def __init__(self, ks, wts=None):
         self.ks = ks
         if wts is None:
-            self.wts = np.full(len(ks), 1/len(ks))
+            self.wts = np.full(len(ks), 1 / len(ks))
         else:
             self.wts = np.asarray(wts)
 

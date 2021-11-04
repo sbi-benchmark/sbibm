@@ -77,15 +77,15 @@ NINF = -1e5  # TODO(josipd): Implement computation with negative infinities.
 
 def logsumexp(x, dim):
     """Compute the log-sum-exp in a numerically stable way.
-   Arguments
-   ---------
-   x : :class:`torch:torch.Tensor`
-   dim : int
-       The dimension along wich the operation should be computed.
-   Returns
-   --------
-   :class:`torch:torch.Tensor`
-       The dimension along which the sum is done is not squeezed.
+    Arguments
+    ---------
+    x : :class:`torch:torch.Tensor`
+    dim : int
+        The dimension along wich the operation should be computed.
+    Returns
+    --------
+    :class:`torch:torch.Tensor`
+        The dimension along which the sum is done is not squeezed.
     """
     x_max = torch.max(x, dim, keepdim=True)[0]
     return (
@@ -337,8 +337,7 @@ class MSTFn(Function):
 
 
 class KSmallest(Function):
-    """Return an indicator vector holing the smallest k elements in each row.
-    """
+    """Return an indicator vector holing the smallest k elements in each row."""
 
     @staticmethod
     def forward(ctx, k, matrix):

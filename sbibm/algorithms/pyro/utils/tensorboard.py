@@ -22,7 +22,9 @@ def tb_acf(writer, mcmc, site_name="parameters", num_samples=1000, maxlags=50):
             fig = plt.figure()
             plt.gca().acorr(samples[c, :].squeeze()[:, p].numpy(), maxlags=maxlags)
             writer.add_figure(
-                f"acf/chain {c+1}/parameter {p+1}", fig, close=True,
+                f"acf/chain {c+1}/parameter {p+1}",
+                fig,
+                close=True,
             )
 
 
@@ -39,13 +41,14 @@ def tb_marginals(writer, mcmc, site_name="parameters", num_samples=1000):
     for c in range(samples.shape[0]):
         for p in range(samples.shape[-1]):
             writer.add_histogram(
-                f"marginal/{site_name}/{p+1}", samples[c, :].squeeze()[:, p], c,
+                f"marginal/{site_name}/{p+1}",
+                samples[c, :].squeeze()[:, p],
+                c,
             )
 
 
 def tb_make_hook_fn(writer, site_name="parameters"):
-    """Builds hook function for runtime logging
-    """
+    """Builds hook function for runtime logging"""
 
     def hook_fn(kernel, samples, stage, i):
         """Logging during run

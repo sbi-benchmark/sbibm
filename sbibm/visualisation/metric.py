@@ -23,7 +23,7 @@ def fig_metric(
 
     Args:
         df: Dataframe which at least has columns `algorithm`, `num_simulations` and
-            a column titled accordingly to `metric`. 
+            a column titled accordingly to `metric`.
         metric: Metric to plot, should be a column in `df`.
         title: Title for plot
         title_dx: x-direction offset for title
@@ -137,7 +137,10 @@ def fig_metric(
 
     if title is not None:
         chart = chart.properties(title={"text": [title],}).configure_title(
-            offset=10, orient="top", anchor="middle", dx=title_dx,
+            offset=10,
+            orient="top",
+            anchor="middle",
+            dx=title_dx,
         )
 
     return chart
