@@ -8,7 +8,6 @@ import sbibm
 from sbibm.utils.io import get_ndarray_from_csv
 from sbibm.utils.torch import sample
 
-
 _LIMITS_ = {
     "bernoulli_glm": [[-6.0, +6.0] for _ in range(10)],
     "bernoulli_glm_raw": [[-6.0, +6.0] for _ in range(10)],
@@ -230,12 +229,18 @@ def fig_posterior(
     )
 
     chart = den.pairplot(
-        df, field="sample", scatter_size=scatter_size, bar_opacity=0.4, **keywords,
+        df,
+        field="sample",
+        scatter_size=scatter_size,
+        bar_opacity=0.4,
+        **keywords,
     )
 
     if title is not None:
-        chart = chart.properties(title={"text": [title],}).configure_title(
-            offset=10, orient="top", anchor="middle", dx=title_dx
-        )
+        chart = chart.properties(
+            title={
+                "text": [title],
+            }
+        ).configure_title(offset=10, orient="top", anchor="middle", dx=title_dx)
 
     return chart

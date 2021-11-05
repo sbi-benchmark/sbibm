@@ -4,11 +4,11 @@ from typing import Callable, Optional
 
 import numpy as np
 import torch
-from sbibm.third_party.kgof.kernel import KGauss
-from sbibm.third_party.kgof.goftest import KernelSteinTest, bootstrapper_rademacher
-from sbibm.third_party.kgof.util import meddistance
 
 from sbibm.tasks.task import Task
+from sbibm.third_party.kgof.goftest import KernelSteinTest, bootstrapper_rademacher
+from sbibm.third_party.kgof.kernel import KGauss
+from sbibm.third_party.kgof.util import meddistance
 from sbibm.utils.torch import get_default_device
 
 log = logging.getLogger(__name__)
@@ -114,8 +114,7 @@ def ksd_gaussian_kernel(
 
 class DataWrapped:
     def __init__(self, data):
-        """Wraps `data` such that it can be used with `kgof`
-        """
+        """Wraps `data` such that it can be used with `kgof`"""
         self._data = data
 
     def data(self):
@@ -124,8 +123,7 @@ class DataWrapped:
 
 class UnnormalizedDensityWrapped:
     def __init__(self, log_prob_grad: Callable):
-        """Wraps `log_prob_grad` function such that it can be used with `kgof`
-        """
+        """Wraps `log_prob_grad` function such that it can be used with `kgof`"""
         self.log_prob_grad = log_prob_grad
 
     def grad_log(self, X: np.ndarray) -> np.ndarray:

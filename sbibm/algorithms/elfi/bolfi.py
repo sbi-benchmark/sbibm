@@ -22,7 +22,7 @@ def run(
     num_warmup: int = 1000,
 ) -> (torch.Tensor, int, Optional[torch.Tensor]):
     """Runs BOLFI from elfi package
-     
+
     Args:
         task: Task instance
         num_samples: Number of samples to generate from posterior

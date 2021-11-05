@@ -59,8 +59,8 @@ class GaussianLinearUniform(Task):
         """Get function returning samples from simulator given parameters
 
         Args:
-            max_calls: Maximum number of function calls. Additional calls will 
-                result in SimulationBudgetExceeded exceptions. Defaults to None 
+            max_calls: Maximum number of function calls. Additional calls will
+                result in SimulationBudgetExceeded exceptions. Defaults to None
                 for infinite budget
 
         Return:
@@ -93,7 +93,7 @@ class GaussianLinearUniform(Task):
             num_observation: Observation number
             observation: Instead of passing an observation number, an observation may be
                 passed directly
-        
+
         Returns:
             Samples from reference posterior
         """
@@ -108,7 +108,8 @@ class GaussianLinearUniform(Task):
         reference_posterior_samples = []
 
         sampling_dist = pdist.MultivariateNormal(
-            loc=observation, precision_matrix=self.simulator_params["precision_matrix"],
+            loc=observation,
+            precision_matrix=self.simulator_params["precision_matrix"],
         )
 
         # Reject samples outside of prior bounds
