@@ -79,10 +79,8 @@ def run(
     # Train choice net
     log.info(f"Running Mixed Model NLE")
 
-    pretrained_model_filename = "mm_315_2"
-    path_to_model = (
-        f"/home/janfb/qode/sbibm/sbibm/algorithms/lan/nle_pretrained/{pretrained_model_filename}.p"
-    )
+    pretrained_model_filename = "mm_315_1"
+    path_to_model = f"/home/janfb/qode/sbibm/sbibm/algorithms/lan/nle_pretrained/{pretrained_model_filename}.p"
 
     with open(path_to_model, "rb") as fh:
         mixed_model = pickle.load(fh)
