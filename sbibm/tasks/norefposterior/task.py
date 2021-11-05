@@ -216,7 +216,6 @@ class norefposterior(Task):
             valb = bcast_coordinate_field(
                 self.base_coordinate_field, num_samples
             ).detach()
-            # valb = quadratic_coordinate_field(self.min_axis, self.max_axis, num_samples).detach()
 
             # create images from log probabilities
             img = torch.exp(data_dist.log_prob(valb)).detach()
