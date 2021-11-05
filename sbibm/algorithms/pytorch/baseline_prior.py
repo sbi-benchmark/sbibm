@@ -6,7 +6,11 @@ import sbibm
 from sbibm.tasks.task import Task
 
 
-def run(task: Task, num_samples: int, **kwargs: Any,) -> torch.Tensor:
+def run(
+    task: Task,
+    num_samples: int,
+    **kwargs: Any,
+) -> torch.Tensor:
     """Random samples from prior as baseline
 
     Args:

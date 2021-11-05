@@ -47,10 +47,10 @@ def clip_int(value, minimum, maximum):
 def get_sass_transform(theta, x, expansion_degree=1, sample_weight=None):
     """Return semi-automatic summary statitics function.
 
-    Running weighted linear regressin as in 
+    Running weighted linear regressin as in
     Fearnhead & Prandle 2012: https://arxiv.org/abs/1004.1112
-    
-    Following implementation in 
+
+    Following implementation in
     https://abcpy.readthedocs.io/en/latest/_modules/abcpy/statistics.html#Identity
     and
     https://pythonhosted.org/abcpy/_modules/abcpy/summaryselections.html#Semiautomatic
@@ -89,7 +89,9 @@ def run_lra(
     for parameter_idx in range(theta.shape[1]):
         regression_model = LinearRegression(fit_intercept=True)
         regression_model.fit(
-            X=x, y=theta[:, parameter_idx], sample_weight=sample_weight,
+            X=x,
+            y=theta[:, parameter_idx],
+            sample_weight=sample_weight,
         )
         theta_adjusted[:, parameter_idx] += regression_model.predict(
             observation.reshape(1, -1)

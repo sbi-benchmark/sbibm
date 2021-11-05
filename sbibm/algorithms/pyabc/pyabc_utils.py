@@ -11,12 +11,12 @@ from sbibm.tasks.task import Task
 
 
 class PyAbcSimulator:
-    """Wrapper from sbibm task to pyABC. 
+    """Wrapper from sbibm task to pyABC.
 
     pyABC defines its own priors and they are sampled without batch dimension. This
     wrapper defines a call method that takes a single parameter set from a pyABC prior
     and uses the sbibm task simulator to generate the corresponding data and to return
-    it in pyABC format. 
+    it in pyABC format.
     """
 
     def __init__(self, task):
@@ -151,7 +151,7 @@ def run_pyabc(
     use_last_pop_samples: bool = False,
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     """Run pyabc SMC with fixed budget and return particles and weights.
-    
+
     Return previous population or prior samples if budget is exceeded.
     """
     log = sbibm.get_logger(__name__)

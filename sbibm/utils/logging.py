@@ -6,7 +6,7 @@ def get_logger(
     name: str, level: Optional[int] = logging.INFO, console_logging: bool = True
 ) -> logging.Logger:
     """Gets logger with given name, while setting level and optionally adding handler
-    
+
     Note: Logging to `sys.stdout` for Jupyter as done in this Gist
     https://gist.github.com/joshbode/58fac7ababc700f51e2a9ecdebe563ad
 
@@ -14,7 +14,7 @@ def get_logger(
         name: Name of logger
         level: Log level
         console_logging: Whether or not to log to console
-    
+
     Returns:
         Logger
     """

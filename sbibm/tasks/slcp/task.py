@@ -12,8 +12,7 @@ from sbibm.utils.io import get_tensor_from_csv, save_tensor_to_csv
 
 class SLCP(Task):
     def __init__(self, distractors: bool = False):
-        """SLCP
-        """
+        """SLCP"""
         self.num_data = 4
         self.distractors = distractors
 
@@ -102,7 +101,12 @@ class SLCP(Task):
 
             data_dist = pdist.MultivariateNormal(
                 m.unsqueeze(1).float(), S.unsqueeze(1).float()
-            ).expand((num_samples, self.num_data,))
+            ).expand(
+                (
+                    num_samples,
+                    self.num_data,
+                )
+            )
 
             if not self.distractors:
                 return pyro.sample("data", data_dist)
@@ -123,8 +127,7 @@ class SLCP(Task):
         return Simulator(task=self, simulator=simulator, max_calls=max_calls)
 
     def get_observation(self, num_observation: int) -> torch.Tensor:
-        """Get observed data for a given observation number
-        """
+        """Get observed data for a given observation number"""
         if not self.distractors:
             path = (
                 self.path
@@ -178,8 +181,7 @@ class SLCP(Task):
             )
 
     def unflatten_data(self, data: torch.Tensor) -> torch.Tensor:
-        """Unflattens data into multiple observations
-        """
+        """Unflattens data into multiple observations"""
         if not self.distractors:
             return data.reshape(-1, self.num_data, 2)
         else:
@@ -255,9 +257,14 @@ class SLCP(Task):
         ]
         scale_tril = torch.from_numpy(3 * np.array(cholesky_factors))
 
-        mix = pdist.Categorical(torch.ones(n_noise_comps,))
+        mix = pdist.Categorical(
+            torch.ones(
+                n_noise_comps,
+            )
+        )
         comp = pdist.Independent(
-            pdist.MultivariateStudentT(df=2, loc=loc, scale_tril=scale_tril), 0,
+            pdist.MultivariateStudentT(df=2, loc=loc, scale_tril=scale_tril),
+            0,
         )
         gmm = pdist.MixtureSameFamily(mix, comp)
         torch.save(gmm, "files/gmm.torch")
