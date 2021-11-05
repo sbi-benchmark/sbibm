@@ -1,22 +1,20 @@
 """A module containing convenient methods for general machine learning"""
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
-from __future__ import absolute_import
+from __future__ import absolute_import, division, print_function, unicode_literals
 
-from builtins import zip
-from builtins import int
-from builtins import range
+from builtins import int, range, zip
+
 from future import standard_library
 
 standard_library.install_aliases()
-from past.utils import old_div
 from builtins import object
+
+from past.utils import old_div
 
 __author__ = "wittawat"
 
-import autograd.numpy as np
 import time
+
+import autograd.numpy as np
 
 
 class ContextTimer(object):
@@ -282,6 +280,7 @@ def one_of_K_code(arr):
 def fullprint(*args, **kwargs):
     "https://gist.github.com/ZGainsforth/3a306084013633c52881"
     from pprint import pprint
+
     import numpy
 
     opt = numpy.get_printoptions()

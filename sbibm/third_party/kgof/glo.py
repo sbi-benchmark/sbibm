@@ -5,9 +5,10 @@ from future import standard_library
 standard_library.install_aliases()
 __author__ = "wittawat"
 
-import sbibm.third_party.kgof as kgof
 import os
 import pickle
+
+import sbibm.third_party.kgof as kgof
 
 
 def get_root():

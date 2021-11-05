@@ -1,8 +1,7 @@
 import numpy as np
 import torch
-
-from sklearn.preprocessing import PolynomialFeatures
 from sklearn.linear_model import LinearRegression
+from sklearn.preprocessing import PolynomialFeatures
 from torch.distributions.transformed_distribution import TransformedDistribution
 
 from sbibm.utils.nflows import FlowWrapper

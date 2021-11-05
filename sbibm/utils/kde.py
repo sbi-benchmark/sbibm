@@ -5,6 +5,7 @@ import torch
 from sklearn.model_selection import GridSearchCV
 from sklearn.neighbors import KernelDensity
 from torch import distributions as dist
+
 from sbibm.utils.torch import get_log_abs_det_jacobian
 
 transform_types = Optional[

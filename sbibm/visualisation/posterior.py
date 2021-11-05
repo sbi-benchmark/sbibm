@@ -8,7 +8,6 @@ import sbibm
 from sbibm.utils.io import get_ndarray_from_csv
 from sbibm.utils.torch import sample
 
-
 _LIMITS_ = {
     "bernoulli_glm": [[-6.0, +6.0] for _ in range(10)],
     "bernoulli_glm_raw": [[-6.0, +6.0] for _ in range(10)],

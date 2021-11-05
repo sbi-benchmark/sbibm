@@ -1,12 +1,12 @@
 import logging
-from typing import Callable, Dict, Tuple, Optional
+from typing import Callable, Dict, Optional, Tuple
 
 import numpy as np
 import pyabc
 import torch
-import sbibm
-
 from sbi.inference import MCABC
+
+import sbibm
 from sbibm.tasks.task import Task
 
 

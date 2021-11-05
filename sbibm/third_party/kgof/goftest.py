@@ -3,26 +3,25 @@ Module containing many types of goodness-of-fit test methods.
 """
 from __future__ import division
 
-from builtins import zip
-from builtins import str
-from builtins import range
-from past.utils import old_div
-from builtins import object
+from builtins import object, range, str, zip
+
 from future.utils import with_metaclass
+from past.utils import old_div
 
 __author__ = "wittawat"
 
+import logging
 from abc import ABCMeta, abstractmethod
+
 import autograd
 import autograd.numpy as np
-import sbibm.third_party.kgof.data as data
-import sbibm.third_party.kgof.util as util
-import sbibm.third_party.kgof.kernel as kernel
-import logging
 import matplotlib.pyplot as plt
-
 import scipy
 import scipy.stats as stats
+
+import sbibm.third_party.kgof.data as data
+import sbibm.third_party.kgof.kernel as kernel
+import sbibm.third_party.kgof.util as util
 
 
 class GofTest(with_metaclass(ABCMeta, object)):
