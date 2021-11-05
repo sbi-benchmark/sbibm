@@ -1,3 +1,9 @@
+# v1.0.7
+
+- Code formatting with current versions of black and isort (thanks to @psteinb,
+  #22)
+
+
 # v1.0.6
 
 - Additional fix for PyTorch >= 1.8 compatibility concerning (S)MC-ABC (thanks to @atiyo, #12)
