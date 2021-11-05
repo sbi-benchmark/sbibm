@@ -88,7 +88,16 @@ def quadratic_coordinate_field(min_axis=-16, max_axis=16, batch_size=32):
 
 class norefposterior(Task):
     def __init__(self, min_axis=0, max_axis=200, flood_samples=1 * 1024):
-        """Forward-only simulator (without a reference posterior)"""
+        """Forward-only simulator (without a reference posterior)
+
+        Inference the parameters of a 2D multivariate normal distribution from
+        it's projections onto x and y only
+        (surrogate model for a accelerator physics application)
+
+        Args:
+            min_axis: minimum extent of the multivariate normal
+            max_axis: minimum extent of the multivariate normal
+            flood_samples: number of draws of the binomial wrapping the multivariate normal distribution"""
 
         self.min_axis = min_axis
         self.max_axis = max_axis
