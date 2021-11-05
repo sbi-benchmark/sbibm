@@ -1,14 +1,14 @@
 """Module containing convenient functions for plotting"""
 
-from builtins import range
-from builtins import object
+from builtins import object, range
 
 __author__ = "wittawat"
 
-import sbibm.third_party.kgof.glo as glo
+import autograd.numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
-import autograd.numpy as np
+
+import sbibm.third_party.kgof.glo as glo
 
 
 def get_func_tuples():

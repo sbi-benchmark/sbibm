@@ -1,14 +1,15 @@
 """Module containing kernel related classes"""
 from __future__ import division
 
-from builtins import str
-from past.utils import old_div
-from builtins import object
+from builtins import object, str
+
 from future.utils import with_metaclass
+from past.utils import old_div
 
 __author__ = "wittawat"
 
 from abc import ABCMeta, abstractmethod
+
 import autograd
 import autograd.numpy as np
 

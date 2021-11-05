@@ -1,20 +1,21 @@
 """
 Module containing data structures for representing datasets.
 """
-from __future__ import print_function
-from __future__ import division
+from __future__ import division, print_function
 
-from builtins import range
-from past.utils import old_div
-from builtins import object
+from builtins import object, range
+
 from future.utils import with_metaclass
+from past.utils import old_div
 
 __author__ = "wittawat"
 
 from abc import ABCMeta, abstractmethod
+
 import autograd.numpy as np
-import sbibm.third_party.kgof.util as util
 import scipy.stats as stats
+
+import sbibm.third_party.kgof.util as util
 
 
 class Data(object):

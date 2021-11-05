@@ -3,35 +3,36 @@ varied. What varies will depend on the problem."""
 
 __author__ = "wittawat"
 
-import sbibm.third_party.kgof as kgof
-import sbibm.third_party.kgof.data as data
-import sbibm.third_party.kgof.glo as glo
-import sbibm.third_party.kgof.density as density
-import sbibm.third_party.kgof.goftest as gof
-import sbibm.third_party.kgof.intertst as tgof
-import sbibm.third_party.kgof.mmd as mgof
-import sbibm.third_party.kgof.util as util
-import sbibm.third_party.kgof.kernel as kernel
+import logging
+import math
+import os
+import sys
+import time
+
+# import numpy as np
+import autograd.numpy as np
 
 # need independent_jobs package
 # https://github.com/karlnapf/independent-jobs
 # The independent_jobs and kgof have to be in the global search path (.bashrc)
 import independent_jobs as inj
-from independent_jobs.jobs.IndependentJob import IndependentJob
-from independent_jobs.results.SingleResult import SingleResult
 from independent_jobs.aggregators.SingleResultAggregator import SingleResultAggregator
 from independent_jobs.engines.BatchClusterParameters import BatchClusterParameters
 from independent_jobs.engines.SerialComputationEngine import SerialComputationEngine
 from independent_jobs.engines.SlurmComputationEngine import SlurmComputationEngine
+from independent_jobs.jobs.IndependentJob import IndependentJob
+from independent_jobs.results.SingleResult import SingleResult
 from independent_jobs.tools.Log import logger
-import logging
-import math
 
-# import numpy as np
-import autograd.numpy as np
-import os
-import sys
-import time
+import sbibm.third_party.kgof as kgof
+import sbibm.third_party.kgof.data as data
+import sbibm.third_party.kgof.density as density
+import sbibm.third_party.kgof.glo as glo
+import sbibm.third_party.kgof.goftest as gof
+import sbibm.third_party.kgof.intertst as tgof
+import sbibm.third_party.kgof.kernel as kernel
+import sbibm.third_party.kgof.mmd as mgof
+import sbibm.third_party.kgof.util as util
 
 """
 All the job functions return a dictionary with the following keys:
@@ -539,29 +540,31 @@ class Ex2Job(IndependentJob):
 
 # This import is needed so that pickle knows about the class Ex2Job.
 # pickle is used when collecting the results from the submitted jobs.
-from sbibm.third_party.kgof.ex.ex2_prob_params import Ex2Job
-from sbibm.third_party.kgof.ex.ex2_prob_params import job_fssdJ1q_med
-from sbibm.third_party.kgof.ex.ex2_prob_params import job_fssdJ5q_med
-from sbibm.third_party.kgof.ex.ex2_prob_params import job_fssdJ1q_opt
-from sbibm.third_party.kgof.ex.ex2_prob_params import job_fssdJ5q_opt
-from sbibm.third_party.kgof.ex.ex2_prob_params import job_fssdJ10q_opt
-from sbibm.third_party.kgof.ex.ex2_prob_params import job_fssdJ5p_opt
-from sbibm.third_party.kgof.ex.ex2_prob_params import job_fssdJ10p_opt
-from sbibm.third_party.kgof.ex.ex2_prob_params import job_fssdJ1q_imq_optv
-from sbibm.third_party.kgof.ex.ex2_prob_params import job_fssdJ5q_imq_optv
-from sbibm.third_party.kgof.ex.ex2_prob_params import job_fssdJ5q_imqb1_optv
-from sbibm.third_party.kgof.ex.ex2_prob_params import job_fssdJ5q_imqb2_optv
-from sbibm.third_party.kgof.ex.ex2_prob_params import job_fssdJ5q_imqb3_optv
-from sbibm.third_party.kgof.ex.ex2_prob_params import job_fssdJ1q_imq_opt
-from sbibm.third_party.kgof.ex.ex2_prob_params import job_fssdJ5q_imq_opt
-from sbibm.third_party.kgof.ex.ex2_prob_params import job_fssdJ1q_imq_optbv
-from sbibm.third_party.kgof.ex.ex2_prob_params import job_fssdJ5q_imq_optbv
-from sbibm.third_party.kgof.ex.ex2_prob_params import job_me_opt
-from sbibm.third_party.kgof.ex.ex2_prob_params import job_kstein_med
-from sbibm.third_party.kgof.ex.ex2_prob_params import job_kstein_imq
-from sbibm.third_party.kgof.ex.ex2_prob_params import job_lin_kstein_med
-from sbibm.third_party.kgof.ex.ex2_prob_params import job_mmd_med
-from sbibm.third_party.kgof.ex.ex2_prob_params import job_mmd_opt
+from sbibm.third_party.kgof.ex.ex2_prob_params import (
+    Ex2Job,
+    job_fssdJ1q_imq_opt,
+    job_fssdJ1q_imq_optbv,
+    job_fssdJ1q_imq_optv,
+    job_fssdJ1q_med,
+    job_fssdJ1q_opt,
+    job_fssdJ5p_opt,
+    job_fssdJ5q_imq_opt,
+    job_fssdJ5q_imq_optbv,
+    job_fssdJ5q_imq_optv,
+    job_fssdJ5q_imqb1_optv,
+    job_fssdJ5q_imqb2_optv,
+    job_fssdJ5q_imqb3_optv,
+    job_fssdJ5q_med,
+    job_fssdJ5q_opt,
+    job_fssdJ10p_opt,
+    job_fssdJ10q_opt,
+    job_kstein_imq,
+    job_kstein_med,
+    job_lin_kstein_med,
+    job_me_opt,
+    job_mmd_med,
+    job_mmd_opt,
+)
 
 # --- experimental setting -----
 ex = 2

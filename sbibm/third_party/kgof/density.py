@@ -4,21 +4,22 @@ functions.
 """
 from __future__ import division
 
-from builtins import range
-from past.utils import old_div
-from builtins import object
+from builtins import object, range
+
 from future.utils import with_metaclass
+from past.utils import old_div
 
 __author__ = "wittawat"
 
-from abc import ABCMeta, abstractmethod
-import autograd
-import autograd.numpy as np
-import sbibm.third_party.kgof.data as data
-import scipy.stats as stats
-
 # import warnings
 import logging
+from abc import ABCMeta, abstractmethod
+
+import autograd
+import autograd.numpy as np
+import scipy.stats as stats
+
+import sbibm.third_party.kgof.data as data
 
 
 def warn_bounded_domain(self):

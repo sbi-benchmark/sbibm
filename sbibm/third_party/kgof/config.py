@@ -3,8 +3,9 @@ This file defines global configuration of the project.
 Casual usage of the package should not need to change this. 
 """
 
-import sbibm.third_party.kgof.glo as glo
 import os
+
+import sbibm.third_party.kgof.glo as glo
 
 expr_configs = {
     # Full path to the directory to store temporary files when running

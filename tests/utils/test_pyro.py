@@ -2,7 +2,6 @@ import pytest
 import torch
 
 import sbibm
-
 from sbibm.utils.torch import get_log_abs_det_jacobian
 
 

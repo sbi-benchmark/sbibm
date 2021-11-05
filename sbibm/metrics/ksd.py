@@ -4,11 +4,11 @@ from typing import Callable, Optional
 
 import numpy as np
 import torch
-from sbibm.third_party.kgof.kernel import KGauss
-from sbibm.third_party.kgof.goftest import KernelSteinTest, bootstrapper_rademacher
-from sbibm.third_party.kgof.util import meddistance
 
 from sbibm.tasks.task import Task
+from sbibm.third_party.kgof.goftest import KernelSteinTest, bootstrapper_rademacher
+from sbibm.third_party.kgof.kernel import KGauss
+from sbibm.third_party.kgof.util import meddistance
 from sbibm.utils.torch import get_default_device
 
 log = logging.getLogger(__name__)
