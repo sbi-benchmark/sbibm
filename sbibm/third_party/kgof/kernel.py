@@ -23,7 +23,7 @@ class Kernel(with_metaclass(ABCMeta, object)):
 
     @abstractmethod
     def eval(self, X, Y):
-        """
+        r"""
         Evaluate the kernel on data X and Y
         X: nx x d where each row represents one point
         Y: ny x d
@@ -33,7 +33,7 @@ class Kernel(with_metaclass(ABCMeta, object)):
 
     @abstractmethod
     def pair_eval(self, X, Y):
-        """Evaluate k(x1, y1), k(x2, y2), ...
+        r"""Evaluate k(x1, y1), k(x2, y2), ...
 
         X: n x d where each row represents one point
         Y: n x d
@@ -43,7 +43,7 @@ class Kernel(with_metaclass(ABCMeta, object)):
 
 
 class KSTKernel(with_metaclass(ABCMeta, Kernel)):
-    """
+    r"""
     Interface specifiying methods a kernel has to implement to be used with
     the Kernelized Stein discrepancy test of Chwialkowski et al., 2016 and
     Liu et al., 2016 (ICML 2016 papers) See goftest.KernelSteinTest.
@@ -51,7 +51,7 @@ class KSTKernel(with_metaclass(ABCMeta, Kernel)):
 
     @abstractmethod
     def gradX_Y(self, X, Y, dim):
-        """
+        r"""
         Compute the gradient with respect to the dimension dim of X in k(X, Y).
 
         X: nx x d
@@ -63,7 +63,7 @@ class KSTKernel(with_metaclass(ABCMeta, Kernel)):
 
     @abstractmethod
     def gradY_X(self, X, Y, dim):
-        """
+        r"""
         Compute the gradient with respect to the dimension dim of Y in k(X, Y).
 
         X: nx x d
@@ -75,7 +75,7 @@ class KSTKernel(with_metaclass(ABCMeta, Kernel)):
 
     @abstractmethod
     def gradXY_sum(self, X, Y):
-        """
+        r"""
         Compute \sum_{i=1}^d \frac{\partial^2 k(x, Y)}{\partial x_i \partial y_i}
         evaluated at each x_i in X, and y_i in Y.
 
@@ -91,7 +91,7 @@ class KSTKernel(with_metaclass(ABCMeta, Kernel)):
 
 
 class LinearKSTKernel(with_metaclass(ABCMeta, Kernel)):
-    """
+    r"""
     Interface specifiying methods a kernel has to implement to be used with
     the linear-time version of Kernelized Stein discrepancy test of
     Liu et al., 2016 (ICML 2016).
@@ -99,7 +99,7 @@ class LinearKSTKernel(with_metaclass(ABCMeta, Kernel)):
 
     @abstractmethod
     def pair_gradX_Y(self, X, Y):
-        """
+        r"""
         Compute the gradient with respect to X in k(X, Y), evaluated at the
         specified X and Y.
 
@@ -112,7 +112,7 @@ class LinearKSTKernel(with_metaclass(ABCMeta, Kernel)):
 
     @abstractmethod
     def pair_gradY_X(self, X, Y):
-        """
+        r"""
         Compute the gradient with respect to Y in k(X, Y), evaluated at the
         specified X and Y.
 
@@ -125,7 +125,7 @@ class LinearKSTKernel(with_metaclass(ABCMeta, Kernel)):
 
     @abstractmethod
     def pair_gradXY_sum(self, X, Y):
-        """
+        r"""
         Compute \sum_{i=1}^d \frac{\partial^2 k(X, Y)}{\partial x_i \partial y_i}
         evaluated at each x_i in X, and y_i in Y.
 
@@ -139,7 +139,7 @@ class LinearKSTKernel(with_metaclass(ABCMeta, Kernel)):
 
 class DifferentiableKernel(with_metaclass(ABCMeta, Kernel)):
     def gradX_y(self, X, y):
-        """
+        r"""
         Compute the gradient with respect to X (the first argument of the
         kernel). Base class provides a default autograd implementation for convenience.
         Subclasses should override if this does not work.
@@ -163,7 +163,7 @@ class DifferentiableKernel(with_metaclass(ABCMeta, Kernel)):
 
 
 class KDiagGauss(Kernel):
-    """
+    r"""
     A Gaussian kernel with diagonal covariance structure i.e., one Gaussian
     width for each dimension.
     """
@@ -199,7 +199,7 @@ class KDiagGauss(Kernel):
 
 
 class KIMQ(DifferentiableKernel, KSTKernel):
-    """
+    r"""
     The inverse multiquadric (IMQ) kernel studied in
 
     Measure Sample Quality with Kernels
@@ -220,7 +220,7 @@ class KIMQ(DifferentiableKernel, KSTKernel):
         self.c = c
 
     def eval(self, X, Y):
-        """Evalute the kernel on data X and Y"""
+        r"""Evalute the kernel on data X and Y"""
         b = self.b
         c = self.c
         D2 = util.dist2_matrix(X, Y)
@@ -228,14 +228,14 @@ class KIMQ(DifferentiableKernel, KSTKernel):
         return K
 
     def pair_eval(self, X, Y):
-        """Evaluate k(x1, y1), k(x2, y2), ..."""
+        r"""Evaluate k(x1, y1), k(x2, y2), ..."""
         assert X.shape[0] == Y.shape[0]
         b = self.b
         c = self.c
         return (c ** 2 + np.sum((X - Y) ** 2, 1)) ** b
 
     def gradX_Y(self, X, Y, dim):
-        """
+        r"""
         Compute the gradient with respect to the dimension dim of X in k(X, Y).
 
         X: nx x d
@@ -259,7 +259,7 @@ class KIMQ(DifferentiableKernel, KSTKernel):
         return Gdim
 
     def gradY_X(self, X, Y, dim):
-        """
+        r"""
         Compute the gradient with respect to the dimension dim of Y in k(X, Y).
 
         X: nx x d
@@ -270,7 +270,7 @@ class KIMQ(DifferentiableKernel, KSTKernel):
         return -self.gradX_Y(X, Y, dim)
 
     def gradXY_sum(self, X, Y):
-        """
+        r"""
         Compute
         \sum_{i=1}^d \frac{\partial^2 k(X, Y)}{\partial x_i \partial y_i}
         evaluated at each x_i in X, and y_i in Y.
@@ -296,7 +296,7 @@ class KIMQ(DifferentiableKernel, KSTKernel):
 
 
 class KGauss(DifferentiableKernel, KSTKernel, LinearKSTKernel):
-    """
+    r"""
     The standard isotropic Gaussian kernel.
     Parameterization is the same as in the density of the standard normal
     distribution. sigma2 is analogous to the variance.
@@ -307,7 +307,7 @@ class KGauss(DifferentiableKernel, KSTKernel, LinearKSTKernel):
         self.sigma2 = sigma2
 
     def eval(self, X, Y):
-        """
+        r"""
         Evaluate the Gaussian kernel on the two 2d numpy arrays.
 
         Parameters
@@ -329,7 +329,7 @@ class KGauss(DifferentiableKernel, KSTKernel, LinearKSTKernel):
         return K
 
     def gradX_Y(self, X, Y, dim):
-        """
+        r"""
         Compute the gradient with respect to the dimension dim of X in k(X, Y).
 
         X: nx x d
@@ -345,7 +345,7 @@ class KGauss(DifferentiableKernel, KSTKernel, LinearKSTKernel):
         return G
 
     def pair_gradX_Y(self, X, Y):
-        """
+        r"""
         Compute the gradient with respect to X in k(X, Y), evaluated at the
         specified X and Y.
 
@@ -405,7 +405,7 @@ class KGauss(DifferentiableKernel, KSTKernel, LinearKSTKernel):
         return G
 
     def pair_gradXY_sum(self, X, Y):
-        """
+        r"""
         Compute \sum_{i=1}^d \frac{\partial^2 k(X, Y)}{\partial x_i \partial y_i}
         evaluated at each x_i in X, and y_i in Y.
 
@@ -422,7 +422,7 @@ class KGauss(DifferentiableKernel, KSTKernel, LinearKSTKernel):
         return G
 
     def pair_eval(self, X, Y):
-        """
+        r"""
         Evaluate k(x1, y1), k(x2, y2), ...
 
         Parameters
@@ -447,7 +447,7 @@ class KGauss(DifferentiableKernel, KSTKernel, LinearKSTKernel):
 
 class KMixGauss(DifferentiableKernel, KSTKernel):
     def __init__(self, sigma2s, wts=None):
-        """
+        r"""
         Mixture of isotropic Gaussian kernels:
           sum wts[i] * exp(- ||x - y||^2 / (2 * sigma2s[i]))
 
@@ -465,7 +465,7 @@ class KMixGauss(DifferentiableKernel, KSTKernel):
             assert all(w >= 0 for w in wts)
 
     def eval(self, X, Y):
-        """
+        r"""
         Evaluate the kernel on data X and Y
         X: nx x d where each row represents one point
         Y: ny x d
@@ -483,7 +483,7 @@ class KMixGauss(DifferentiableKernel, KSTKernel):
         )
 
     def pair_eval(self, X, Y):
-        """Evaluate k(x1, y1), k(x2, y2), ...
+        r"""Evaluate k(x1, y1), k(x2, y2), ...
 
         X: n x d where each row represents one point
         Y: n x d
@@ -499,7 +499,7 @@ class KMixGauss(DifferentiableKernel, KSTKernel):
         )
 
     def gradX_Y(self, X, Y, dim):
-        """
+        r"""
         Compute the gradient with respect to the dimension dim of X in k(X, Y).
 
         X: nx x d
@@ -515,7 +515,7 @@ class KMixGauss(DifferentiableKernel, KSTKernel):
         return np.einsum("w,wij,ij->ij", self.wts / self.sigma2s, exps, diffs)
 
     def gradY_X(self, X, Y, dim):
-        """
+        r"""
         Compute the gradient with respect to the dimension dim of Y in k(X, Y).
 
         X: nx x d
@@ -547,7 +547,7 @@ class KMixGauss(DifferentiableKernel, KSTKernel):
 
 class KPoly(DifferentiableKernel, KSTKernel):
     def __init__(self, degree=3, gamma=None, coef0=1):
-        """
+        r"""
         Polynomial kernel
           (gamma X^T Y + coef0)^degree
 
@@ -564,7 +564,7 @@ class KPoly(DifferentiableKernel, KSTKernel):
             raise ValueError("KPoly needs integral degree")
 
     def eval(self, X, Y):
-        """
+        r"""
         Evaluate the kernel on data X and Y
         X: nx x d where each row represents one point
         Y: ny x d
@@ -575,7 +575,7 @@ class KPoly(DifferentiableKernel, KSTKernel):
         return (gamma * dot + self.coef0) ** self.degree
 
     def pair_eval(self, X, Y):
-        """Evaluate k(x1, y1), k(x2, y2), ...
+        r"""Evaluate k(x1, y1), k(x2, y2), ...
 
         X: n x d where each row represents one point
         Y: n x d
@@ -591,7 +591,7 @@ class KPoly(DifferentiableKernel, KSTKernel):
         return (gamma * dot + self.coef0) ** self.degree
 
     def gradX_Y(self, X, Y, dim):
-        """
+        r"""
         Compute the gradient with respect to the dimension dim of X in k(X, Y).
 
         X: nx x d
@@ -614,7 +614,7 @@ class KPoly(DifferentiableKernel, KSTKernel):
         )
 
     def gradY_X(self, X, Y, dim):
-        """
+        r"""
         Compute the gradient with respect to the dimension dim of Y in k(X, Y).
 
         X: nx x d
@@ -669,7 +669,7 @@ class KMixture(KSTKernel, LinearKSTKernel, DifferentiableKernel):
             self.wts = np.asarray(wts)
 
     def eval(self, X, Y):
-        """
+        r"""
         Evaluate the kernel on data X and Y
         X: nx x d where each row represents one point
         Y: ny x d
@@ -678,7 +678,7 @@ class KMixture(KSTKernel, LinearKSTKernel, DifferentiableKernel):
         return sum(w * k.eval(X, Y) for w, k in zip(self.wts, self.ks))
 
     def pair_eval(self, X, Y):
-        """Evaluate k(x1, y1), k(x2, y2), ...
+        r"""Evaluate k(x1, y1), k(x2, y2), ...
 
         X: n x d where each row represents one point
         Y: n x d
@@ -687,7 +687,7 @@ class KMixture(KSTKernel, LinearKSTKernel, DifferentiableKernel):
         return sum(w * k.pair_eval(X, Y) for w, k in zip(self.wts, self.ks))
 
     def gradX_Y(self, X, Y, dim):
-        """
+        r"""
         Compute the gradient with respect to the dimension dim of X in k(X, Y).
 
         X: nx x d
@@ -698,7 +698,7 @@ class KMixture(KSTKernel, LinearKSTKernel, DifferentiableKernel):
         return sum(w * k.gradX_Y(X, Y, dim) for w, k in zip(self.wts, self.ks))
 
     def gradY_X(self, X, Y, dim):
-        """
+        r"""
         Compute the gradient with respect to the dimension dim of Y in k(X, Y).
 
         X: nx x d
@@ -721,7 +721,7 @@ class KMixture(KSTKernel, LinearKSTKernel, DifferentiableKernel):
         return sum(w * k.gradXY_sum(X, Y) for w, k in zip(self.wts, self.ks))
 
     def pair_gradX_Y(self, X, Y):
-        """
+        r"""
         Compute the gradient with respect to X in k(X, Y), evaluated at the
         specified X and Y.
 
@@ -733,7 +733,7 @@ class KMixture(KSTKernel, LinearKSTKernel, DifferentiableKernel):
         return sum(w * k.pair_gradX_Y(X, Y) for w, k in zip(self.wts, self.ks))
 
     def pair_gradY_X(self, X, Y):
-        """
+        r"""
         Compute the gradient with respect to Y in k(X, Y), evaluated at the
         specified X and Y.
 
@@ -757,7 +757,7 @@ class KMixture(KSTKernel, LinearKSTKernel, DifferentiableKernel):
         return sum(w * k.pair_gradXY_sum(X, Y) for w, k in zip(self.wts, self.ks))
 
     def gradX_y(self, X, y):
-        """
+        r"""
         Compute the gradient with respect to X (the first argument of the
         kernel). Base class provides a default autograd implementation for convenience.
         Subclasses should override if this does not work.
