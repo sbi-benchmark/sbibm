@@ -105,9 +105,9 @@ class norefposterior(Task):
         dim_data = 2 * self.max_axis
         name_display = "norefposterior"
 
-        # TODO: not clear what purpose these serve
         # Observation seeds to use when generating ground truth
-        # Avoiding extremely spiked posteriors, e.g., 1000006, 1000007, ...
+        # used to generate the frozen observations (only done once)
+        # in case we were to regenerate them
         observation_seeds = [
             1000000,  # observation 1
             1000001,  # observation 2
