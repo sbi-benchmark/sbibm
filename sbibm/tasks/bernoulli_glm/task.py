@@ -14,8 +14,7 @@ from sbibm.utils.torch import get_default_device
 
 class BernoulliGLM(Task):
     def __init__(self, summary="sufficient"):
-        """Bernoulli GLM
-        """
+        """Bernoulli GLM"""
         self.summary = summary
         if self.summary == "sufficient":
             dim_data = 10
@@ -67,8 +66,8 @@ class BernoulliGLM(Task):
         """Get function returning samples from simulator given parameters
 
         Args:
-            max_calls: Maximum number of function calls. Additional calls will 
-                result in SimulationBudgetExceeded exceptions. Defaults to None 
+            max_calls: Maximum number of function calls. Additional calls will
+                result in SimulationBudgetExceeded exceptions. Defaults to None
                 for infinite budget
 
         Return:
@@ -116,8 +115,7 @@ class BernoulliGLM(Task):
         return Simulator(task=self, simulator=simulator, max_calls=max_calls)
 
     def get_observation(self, num_observation: int) -> torch.Tensor:
-        """Get observed data for a given observation number
-        """
+        """Get observed data for a given observation number"""
         if not self.raw:
             path = (
                 self.path
@@ -146,7 +144,9 @@ class BernoulliGLM(Task):
             return data.reshape(-1, self.dim_data)
 
     def _sample_reference_posterior(
-        self, num_samples: int, num_observation: Optional[int] = None,
+        self,
+        num_samples: int,
+        num_observation: Optional[int] = None,
     ) -> torch.Tensor:
         from pypolyagamma import PyPolyaGamma
         from tqdm import tqdm

@@ -16,8 +16,7 @@ def fig_correlation(
     keywords: Dict[str, Any] = {},
     style: Dict[str, Any] = {},
 ):
-    """Plots correlation matrices
-    """
+    """Plots correlation matrices"""
     keywords["sparse"] = True
     keywords["limits"] = [0.0, 1.0]
     keywords["font_size"] = 14
@@ -60,9 +59,11 @@ def fig_correlation(
     chart = den.correlation_matrix(df, metrics=metrics, **keywords)
 
     if title is not None:
-        chart = chart.properties(title={"text": [title],}).configure_title(
-            offset=10, orient="top", anchor="middle", dx=title_dx
-        )
+        chart = chart.properties(
+            title={
+                "text": [title],
+            }
+        ).configure_title(offset=10, orient="top", anchor="middle", dx=title_dx)
 
     if config == "manuscript":
         chart = chart.configure_text(font="Inter")

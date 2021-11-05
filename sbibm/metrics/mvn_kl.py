@@ -1,7 +1,11 @@
 import torch
 
 
-def mvn_kl_pq(X: torch.Tensor, Y: torch.Tensor, z_score: bool = True,) -> torch.Tensor:
+def mvn_kl_pq(
+    X: torch.Tensor,
+    Y: torch.Tensor,
+    z_score: bool = True,
+) -> torch.Tensor:
     """KL(p||q) between Multivariate Normal distributions
 
     X and Y are both sets of samples, the mean and covariance of which is estimated

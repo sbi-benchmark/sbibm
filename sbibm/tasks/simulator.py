@@ -8,14 +8,17 @@ from sbibm.utils.exceptions import SimulationBudgetExceeded
 
 class Simulator:
     def __init__(
-        self, task: Task, simulator: Callable, max_calls: Optional[int] = None,
+        self,
+        task: Task,
+        simulator: Callable,
+        max_calls: Optional[int] = None,
     ):
         """Simulator
 
         Each task defines a simulator and passes it into this class, which wraps it.
         When a simulator is called with parameters, the `__call__` method of this
-        class is invoked. 
-        
+        class is invoked.
+
         `__call__` simply forwards the parameters to the simulator function, while
         checking parameter dimensions and increasing an internal counter. The internal
         counter ensures that a simulator can only be called a certain maximum number

@@ -230,12 +230,18 @@ def fig_posterior(
     )
 
     chart = den.pairplot(
-        df, field="sample", scatter_size=scatter_size, bar_opacity=0.4, **keywords,
+        df,
+        field="sample",
+        scatter_size=scatter_size,
+        bar_opacity=0.4,
+        **keywords,
     )
 
     if title is not None:
-        chart = chart.properties(title={"text": [title],}).configure_title(
-            offset=10, orient="top", anchor="middle", dx=title_dx
-        )
+        chart = chart.properties(
+            title={
+                "text": [title],
+            }
+        ).configure_title(offset=10, orient="top", anchor="middle", dx=title_dx)
 
     return chart

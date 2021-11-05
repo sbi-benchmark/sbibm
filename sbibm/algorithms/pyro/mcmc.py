@@ -43,7 +43,7 @@ def run(
     Produces `num_samples` while accounting for warmup (burn-in) and thinning.
 
     Note that the actual number of simulations is not controlled for with MCMC since
-    algorithms are only used as a reference method in the benchmark. 
+    algorithms are only used as a reference method in the benchmark.
 
     MCMC is run on the potential function, which returns the unnormalized
     negative log posterior probability. Note that this requires a tractable likelihood.
