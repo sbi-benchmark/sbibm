@@ -5,6 +5,9 @@ from typing import Any, Dict, Optional, Tuple
 import torch
 from sbi import inference as inference
 from sbi.utils.get_nn_models import likelihood_nn
+from sbi.inference.posteriors.likelihood_based_posterior import (
+    PotentialFunctionProvider,
+)
 
 from sbibm.algorithms.sbi.utils import (
     wrap_posterior,
@@ -12,6 +15,7 @@ from sbibm.algorithms.sbi.utils import (
     wrap_simulator_fn,
 )
 from sbibm.tasks.task import Task
+from sbibm.algorithms.lan.utils import run_mcmc
 
 
 def run(
@@ -32,11 +36,17 @@ def run(
         "thin": 10,
         "warmup_steps": 100,
         "init_strategy": "sir",
-        "sir_batch_size": 1000,
-        "sir_num_batches": 100,
+        "sir_batch_size": 100,
+        "sir_num_batches": 1000,
     },
     z_score_x: bool = True,
     z_score_theta: bool = True,
+    validation_fraction: float = 0.1,
+    stop_after_epochs: int = 20,
+    num_transforms: int = 1,
+    num_bins: int = 10,
+    l_lower_bound: float = 1e-7,
+    use_pretrained: bool = False,
 ) -> Tuple[torch.Tensor, int, Optional[torch.Tensor]]:
     """Runs (S)NLE from `sbi`
 
@@ -88,14 +98,17 @@ def run(
 
     transforms = task._get_transforms(automatic_transforms_enabled)["parameters"]
     if automatic_transforms_enabled:
-        prior = wrap_prior_dist(prior, transforms)
-        simulator = wrap_simulator_fn(simulator, transforms)
+        prior_transformed = wrap_prior_dist(prior, transforms)
+        simulator_transformed = wrap_simulator_fn(simulator, transforms)
 
+    # Load pretrained network.
     density_estimator_fun = likelihood_nn(
         model=neural_net.lower(),
         hidden_features=hidden_features,
         z_score_x=z_score_x,
         z_score_theta=z_score_theta,
+        num_transforms=num_transforms,
+        num_bins=num_bins,
     )
     inference_method = inference.SNLE_A(
         density_estimator=density_estimator_fun,
@@ -104,7 +117,9 @@ def run(
 
     posteriors = []
     proposal = prior
-    mcmc_parameters["warmup_steps"] = 25
+    num_trials = observation.shape[1]
+    # sbi needs the trials in first dimension.
+    observation_sbi = observation.reshape(num_trials, 1)
 
     for r in range(num_rounds):
         theta, x = inference.simulate_for_sbi(
@@ -121,22 +136,41 @@ def run(
             retrain_from_scratch_each_round=False,
             discard_prior_samples=False,
             show_train_summary=True,
+            validation_fraction=validation_fraction,
+            stop_after_epochs=stop_after_epochs,
         )
         if r > 1:
             mcmc_parameters["init_strategy"] = "latest_sample"
         posterior = inference_method.build_posterior(
-            density_estimator, mcmc_method=mcmc_method, mcmc_parameters=mcmc_parameters
+            density_estimator,
+            mcmc_method=mcmc_method,
+            mcmc_parameters=mcmc_parameters,
         )
         # Copy hyperparameters, e.g., mcmc_init_samples for "latest_sample" strategy.
         if r > 0:
             posterior.copy_hyperparameters_from(posteriors[-1])
-        proposal = posterior.set_default_x(observation)
+        proposal = posterior.set_default_x(observation_sbi)
         posteriors.append(posterior)
 
-    posterior = wrap_posterior(posteriors[-1], transforms)
+    potential_fn_snl = PotentialFunctionProvider()
+    # Call to initialize.
+    # Use transformed prior for MCMC.
+    potential_fn_snl(
+        prior_transformed,
+        density_estimator,
+        observation_sbi,
+        mcmc_method,
+        transforms,
+        l_lower_bound,
+    )
 
-    assert simulator.num_simulations == num_simulations
+    # Run MCMC in transformed space.
+    samples = run_mcmc(
+        prior=prior_transformed,
+        potential_fn=potential_fn_snl.posterior_potential,
+        mcmc_parameters=mcmc_parameters,
+        num_samples=num_samples,
+    )
 
-    samples = posterior.sample((num_samples,)).detach()
-
-    return samples, simulator.num_simulations, None
+    # Return untransformed samples.
+    return transforms.inv(samples), simulator.num_simulations, None

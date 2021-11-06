@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
-from sbi.utils.plot import pairplot
+from sbi.analysis import pairplot
 from sklearn.utils import check_random_state
 
 

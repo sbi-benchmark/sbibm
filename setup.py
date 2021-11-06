@@ -29,11 +29,13 @@ REQUIRED = [
     "pandas>=1.0.0",
     "pyabc>=0.10.8",
     "pyabcranger>=0.0.48",
-    "sbi>=0.14.2",
+    "sbi @ git+https://github.com/mackelab/sbi@ddm#egg=sbi",
     "pyro-ppl",
     "scikit-learn",
     "torch>=1.5.1",
     "tqdm",
+    "tensorflow",
+    "keras",
 ]
 
 EXTRAS = {
