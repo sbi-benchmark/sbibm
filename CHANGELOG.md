@@ -1,7 +1,11 @@
 # v1.0.7
 
+- `sbibm` now depends on `torch>=1.8`
 - Code formatting with current versions of black and isort (thanks to @psteinb,
   #22)
+- Name attribute for Bernoulli GLM Raw and SLCP Distractors fixed (thanks to
+  @atiyo, #17) for pointing this out
+- Adopted PyTorch >= 1.8 usage of log abs det jacobian, got rid of helpers (#27)
 
 
 # v1.0.6
