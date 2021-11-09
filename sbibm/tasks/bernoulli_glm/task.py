@@ -18,11 +18,13 @@ class BernoulliGLM(Task):
         self.summary = summary
         if self.summary == "sufficient":
             dim_data = 10
+            name = "bernoulli_glm"
             name_display = "Bernoulli GLM"
             self.raw = False
         elif self.summary == "raw":
             dim_data = 100
             self.raw = True
+            name = "bernoulli_glm_raw"
             name_display = "Bernoulli GLM Raw"
         else:
             raise NotImplementedError
@@ -30,7 +32,7 @@ class BernoulliGLM(Task):
         super().__init__(
             dim_parameters=10,
             dim_data=dim_data,
-            name=Path(__file__).parent.name,
+            name=name,
             name_display=name_display,
             num_simulations=[1000, 10000, 100000, 1000000],
             num_posterior_samples=10000,
