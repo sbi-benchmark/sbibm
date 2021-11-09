@@ -17,7 +17,7 @@ from torch.utils import data
 from torch.utils.data.sampler import SubsetRandomSampler
 from tqdm import tqdm  # noqa
 
-from sbibm.utils.torch import get_default_device, get_log_abs_det_jacobian
+from sbibm.utils.torch import get_default_device
 
 
 def get_flow(
@@ -329,8 +329,8 @@ class FlowWrapper:
     def log_prob(self, parameters_constrained):
         parameters_unconstrained = self.transform(parameters_constrained)
         log_probs = self.flow.log_prob(parameters_unconstrained)
-        log_probs += get_log_abs_det_jacobian(
-            self.transform, parameters_constrained, parameters_unconstrained
+        log_probs += self.transform.log_abs_det_jacobian(
+            parameters_constrained, parameters_unconstrained
         )
         return log_probs
 

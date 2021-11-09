@@ -194,7 +194,7 @@ class Task:
                     log_probs.append(
                         log_prob_fn({"parameters": parameters[i, :].reshape(1, -1)})
                     )
-                return torch.stack(log_probs)
+                return torch.cat(log_probs)
 
         def log_prob_experimental(parameters):
             return log_prob_fn({"parameters": parameters})
