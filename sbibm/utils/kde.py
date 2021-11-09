@@ -6,7 +6,6 @@ from sklearn.model_selection import GridSearchCV
 from sklearn.neighbors import KernelDensity
 from torch import distributions as dist
 
-
 transform_types = Optional[
     Union[
         torch.distributions.transforms.Transform,
