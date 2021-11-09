@@ -102,7 +102,9 @@ def get_log_prob_fn(
         # Reinterpret batch dimensions of transform to get log abs det jac summed over
         # parameter dimensions.
         if not isinstance(transforms[name], IndependentTransform):
-            transforms[name] = IndependentTransform(transforms[name], reinterpreted_batch_ndims=1)
+            transforms[name] = IndependentTransform(
+                transforms[name], reinterpreted_batch_ndims=1
+            )
 
     if implementation == "pyro":
         trace_prob_evaluator = TraceEinsumEvaluator(

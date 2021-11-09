@@ -108,8 +108,8 @@ def test_log_prob_grad_fn(jit_compile, batch_size, implementation):
 
 # Test with tasks with different parameter dimensions and bounded support.
 @pytest.mark.parametrize(
-     "task_name", ["gaussian_linear_uniform", "gaussian_linear", "gaussian_mixture"]
-     )
+    "task_name", ["gaussian_linear_uniform", "gaussian_linear", "gaussian_mixture"]
+)
 def test_transforms(task_name):
     task = sbibm.get_task(task_name)
 
