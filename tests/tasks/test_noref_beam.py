@@ -6,7 +6,7 @@ from pyro import util as putil
 
 import sbibm
 from sbibm.tasks.noref_beam.task import (
-    noref_beam,
+    NorefBeam,
     quadratic_coordinate_field,
     torch_average,
 )
@@ -19,7 +19,7 @@ putil.set_rng_seed(47)
 
 def test_task_constructs():
 
-    t = noref_beam()
+    t = NorefBeam()
 
     assert t
 
@@ -43,9 +43,7 @@ def test_obtain_task_modified():
 
 def test_obtain_prior():
 
-    task = sbibm.get_task(
-        "noref_beam"
-    )  # See sbibm.get_available_tasks() for all tasks
+    task = sbibm.get_task("noref_beam")  # See sbibm.get_available_tasks() for all tasks
     prior = task.get_prior()
 
     assert prior is not None
@@ -188,6 +186,7 @@ def test_benchmark_metrics_selfobserved():
 ################################################
 ## API tests that related the internal task code
 
+
 def test_multivariate_normal_constructs():
 
     m = torch.ones((2,))
@@ -318,6 +317,7 @@ def test_binomial_api():
     mean = np.average(lims, weights=samples.sum(axis=0).numpy(), axis=0)
     assert np.allclose(mean, 1, atol=1e-1)
 
+
 def test_multivariate_normal_sample_binomial_from_logprob():
 
     batch_size = 8
@@ -329,8 +329,7 @@ def test_multivariate_normal_sample_binomial_from_logprob():
     S = torch.eye(2)
     S_ = torch.broadcast_to(S, (batch_size, 2, 2))
 
-    data_dist = pdist.MultivariateNormal(m_.float(), S_.float(),
-                                         validate_args = False)
+    data_dist = pdist.MultivariateNormal(m_.float(), S_.float(), validate_args=False)
 
     x = torch.arange(min_axis, max_axis).detach().float()
     y = torch.arange(min_axis, max_axis).detach().float()
@@ -399,4 +398,3 @@ def test_torch_average():
 
     assert m1 > 9.0
     assert m1 < 11.0
-

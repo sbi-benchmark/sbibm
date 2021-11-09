@@ -77,7 +77,7 @@ def quadratic_coordinate_field(min_axis=-16, max_axis=16, batch_size=32):
     # valr[0,1] = (-16,-15),
     # valr[0,2] = (-16,-14)
 
-    # broadcast to <batchsize> doublicates
+    # broadcast to <batchsize> doublIcates
     valr_ = torch.broadcast_to(valr, (batch_size, *valr.shape)).detach()
 
     # move axis from position 2 to front
@@ -86,18 +86,21 @@ def quadratic_coordinate_field(min_axis=-16, max_axis=16, batch_size=32):
     return value
 
 
-class noref_beam(Task):
-    def __init__(self, min_axis=0, max_axis=200, flood_samples=1 * 1024):
+class NorefBeam(Task):
+    def __init__(
+        self, min_axis: int = 0, max_axis: int = 200, flood_samples: int = 1 * 1024
+    ):
         """Forward-only simulator (without a reference posterior)
 
-        Inference the parameters of a 2D multivariate normal distribution from
-        it's projections onto x and y only
+        Inference the parameters of a 2D multivariate normal
+        distribution from it's projections onto x and y only
         (surrogate model for a accelerator physics application)
 
-        Args:
-            min_axis: minimum extent of the multivariate normal
-            max_axis: minimum extent of the multivariate normal
-            flood_samples: number of draws of the binomial wrapping the multivariate normal distribution"""
+        Args: min_axis: minimum extent of the multivariate normal
+        max_axis: minimum extent of the multivariate normal
+        flood_samples: number of draws of the binomial wrapping the
+        multivariate normal distribution
+        """
 
         self.min_axis = min_axis
         self.max_axis = max_axis
@@ -145,7 +148,7 @@ class noref_beam(Task):
         ).detach()
 
     def get_prior(self) -> Callable:
-        def prior(num_samples=1):
+        def prior(num_samples: int = 1):
             return pyro.sample("parameters", self.prior_dist.expand_by([num_samples]))
 
         return prior
@@ -207,11 +210,13 @@ class noref_beam(Task):
 
             # define the probility distribution of our beamspot
             # on a 2D grid (in batches)
-            data_dist = pdist.MultivariateNormal(m.float(), S.float(),
-                                                 # `S` is constructed positive semidefinite
-                                                 # validation is expensive
-                                                 validate_args = False
-                                                 )
+            data_dist = pdist.MultivariateNormal(
+                m.float(),
+                S.float(),
+                # `S` is constructed positive semidefinite
+                # validation is expensive
+                validate_args=False,
+            )
 
             valb = bcast_coordinate_field(
                 self.base_coordinate_field, num_samples
