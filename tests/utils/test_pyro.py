@@ -2,7 +2,6 @@ import pytest
 import torch
 
 import sbibm
-from sbibm.utils.torch import get_log_abs_det_jacobian
 
 
 @pytest.mark.parametrize(
@@ -107,8 +106,12 @@ def test_log_prob_grad_fn(jit_compile, batch_size, implementation):
     assert torch.allclose(grads, analytical_grad)
 
 
-def test_transforms():
-    task = sbibm.get_task("gaussian_linear_uniform")
+# Test with tasks with different parameter dimensions and bounded support.
+@pytest.mark.parametrize(
+     "task_name", ["gaussian_linear_uniform", "gaussian_linear", "gaussian_mixture"]
+     )
+def test_transforms(task_name):
+    task = sbibm.get_task(task_name)
 
     observation = task.get_observation(num_observation=1)
     true_parameters = task.get_true_parameters(num_observation=1)
@@ -131,8 +134,8 @@ def test_transforms():
 
     # through change of variables, we can recover the original log prob
     # ladj(x,y) -> log |dy/dx| -> ladj(untransformed, transformed)
-    log_prob_3 = log_prob_2 + get_log_abs_det_jacobian(
-        transforms, parameters_constrained, parameters_unconstrained
+    log_prob_3 = log_prob_2 + transforms.log_abs_det_jacobian(
+        parameters_constrained, parameters_unconstrained
     )
 
     assert torch.allclose(log_prob_1, log_prob_3)
