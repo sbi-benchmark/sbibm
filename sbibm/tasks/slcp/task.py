@@ -18,9 +18,11 @@ class SLCP(Task):
 
         if not self.distractors:
             dim_data = 2 * self.num_data
+            name = "slcp"
             name_display = "SLCP"
         else:
             dim_data = 100
+            name = "slcp_distractors"
             name_display = "SLCP Distractors"
 
         # Observation seeds to use when generating ground truth
@@ -41,7 +43,7 @@ class SLCP(Task):
         super().__init__(
             dim_parameters=5,
             dim_data=dim_data,
-            name=Path(__file__).parent.name,
+            name=name,
             name_display=name_display,
             num_observations=10,
             num_posterior_samples=10000,
