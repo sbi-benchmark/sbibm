@@ -3,10 +3,10 @@ import time
 from typing import Any
 
 import torch
+from sbi.utils import get_kde
 
 import sbibm
 from sbibm.tasks.task import Task
-from sbibm.utils.kde import get_kde
 from sbibm.utils.nflows import get_flow, train_flow
 from sbibm.utils.torch import choice
 
