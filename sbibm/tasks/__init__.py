@@ -63,10 +63,10 @@ def get_task(task_name: str, *args: Any, **kwargs: Any) -> Task:
 
         return TwoMoons(*args, **kwargs)
 
-    elif task_name == "norefposterior":
-        from sbibm.tasks.norefposterior.task import norefposterior
+    elif task_name == "noref_beam":
+        from sbibm.tasks.noref_beam.task import noref_beam
 
-        return norefposterior(*args, **kwargs)
+        return noref_beam(*args, **kwargs)
 
     else:
         raise NotImplementedError()

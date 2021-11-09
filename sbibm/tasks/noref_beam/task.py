@@ -86,7 +86,7 @@ def quadratic_coordinate_field(min_axis=-16, max_axis=16, batch_size=32):
     return value
 
 
-class norefposterior(Task):
+class noref_beam(Task):
     def __init__(self, min_axis=0, max_axis=200, flood_samples=1 * 1024):
         """Forward-only simulator (without a reference posterior)
 
@@ -103,7 +103,7 @@ class norefposterior(Task):
         self.max_axis = max_axis
         self.flood_samples = flood_samples
         dim_data = 2 * self.max_axis
-        name_display = "norefposterior"
+        name_display = "noref_beam"
 
         # Observation seeds to use when generating ground truth
         # used to generate the frozen observations (only done once)
@@ -240,10 +240,10 @@ if __name__ == "__main__":
 
     log = get_logger(__file__)
     log.warning(
-        "[norefposterior] producing observations may result in errors/exceptions thrown!"
+        "[noref_beam] producing observations may result in errors/exceptions thrown!"
     )
     ## run this to generate the `files` infrastructure in this folder
-    ## repo/sbibm/sbibm/tasks/norefposterior/files
+    ## repo/sbibm/sbibm/tasks/noref_beam/files
     ## ├── num_observation_1
     ## ├── num_observation_10
     ## ├── num_observation_2
@@ -254,7 +254,7 @@ if __name__ == "__main__":
     ## ├── num_observation_7
     ## ├── num_observation_8
     ## └── num_observation_9
-    task = norefposterior()
+    task = noref_beam()
 
     task._setup()
     ## note: the folders mentioned above

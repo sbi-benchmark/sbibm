@@ -5,8 +5,8 @@ from pyro import distributions as pdist
 from pyro import util as putil
 
 import sbibm
-from sbibm.tasks.norefposterior.task import (
-    norefposterior,
+from sbibm.tasks.noref_beam.task import (
+    noref_beam,
     quadratic_coordinate_field,
     torch_average,
 )
@@ -19,21 +19,21 @@ putil.set_rng_seed(47)
 
 def test_task_constructs():
 
-    t = norefposterior()
+    t = noref_beam()
 
     assert t
 
 
 def test_obtain_task():
 
-    task = sbibm.get_task("norefposterior")
+    task = sbibm.get_task("noref_beam")
 
     assert task is not None
 
 
 def test_obtain_task_modified():
 
-    task = sbibm.get_task("norefposterior", min_axis=0, max_axis=20, flood_samples=64)
+    task = sbibm.get_task("noref_beam", min_axis=0, max_axis=20, flood_samples=64)
 
     assert task is not None
     assert task.flood_samples == 64
@@ -44,7 +44,7 @@ def test_obtain_task_modified():
 def test_obtain_prior():
 
     task = sbibm.get_task(
-        "norefposterior"
+        "noref_beam"
     )  # See sbibm.get_available_tasks() for all tasks
     prior = task.get_prior()
 
@@ -53,7 +53,7 @@ def test_obtain_prior():
 
 def test_obtain_simulator():
 
-    task = sbibm.get_task("norefposterior")
+    task = sbibm.get_task("noref_beam")
 
     simulator = task.get_simulator()
 
@@ -62,7 +62,7 @@ def test_obtain_simulator():
 
 def test_observe_once():
 
-    task = sbibm.get_task("norefposterior")
+    task = sbibm.get_task("noref_beam")
 
     x_o = task.get_observation(num_observation=1)
 
@@ -72,7 +72,7 @@ def test_observe_once():
 
 def test_obtain_prior_samples():
 
-    task = sbibm.get_task("norefposterior")
+    task = sbibm.get_task("noref_beam")
     prior = task.get_prior()
     nsamples = 10
 
@@ -83,7 +83,7 @@ def test_obtain_prior_samples():
 
 def test_simulate_from_thetas():
 
-    task = sbibm.get_task("norefposterior")
+    task = sbibm.get_task("noref_beam")
     prior = task.get_prior()
     sim = task.get_simulator()
     nsamples = 10
@@ -96,7 +96,7 @@ def test_simulate_from_thetas():
 
 def test_no_reference_posterior():
 
-    task = sbibm.get_task("norefposterior")
+    task = sbibm.get_task("noref_beam")
 
     with pytest.raises(FileNotFoundError):
         reference_samples = task.get_reference_posterior_samples(num_observation=1)
@@ -109,7 +109,7 @@ def test_no_reference_posterior():
 # @pytest.fixture
 # def vanilla_samples():
 
-#     task = sbibm.get_task("norefposterior")
+#     task = sbibm.get_task("noref_beam")
 #     prior = task.get_prior()
 #     sim = task.get_simulator()
 #     nsamples = 10
@@ -124,7 +124,7 @@ def test_quick_demo_rej_abc():
 
     from sbibm.algorithms import rej_abc
 
-    task = sbibm.get_task("norefposterior")
+    task = sbibm.get_task("noref_beam")
     posterior_samples, _, _ = rej_abc(
         task=task, num_samples=50, num_observation=1, num_simulations=500
     )
@@ -136,7 +136,7 @@ def test_quick_demo_c2st():
 
     from sbibm.algorithms import rej_abc
 
-    task = sbibm.get_task("norefposterior")
+    task = sbibm.get_task("noref_beam")
     posterior_samples, _, _ = rej_abc(
         task=task, num_samples=50, num_observation=1, num_simulations=500
     )
@@ -156,7 +156,7 @@ def test_benchmark_metrics_selfobserved():
     from sbibm.algorithms.sbi.snpe import run
     from sbibm.metrics.ppc import median_distance
 
-    task = sbibm.get_task("norefposterior")
+    task = sbibm.get_task("noref_beam")
 
     nobs = 1
     theta_o = task.get_prior()(num_samples=nobs)
