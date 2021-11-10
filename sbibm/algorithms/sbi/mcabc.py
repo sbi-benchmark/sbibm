@@ -91,7 +91,7 @@ def run(
         quantile=quantile,
         return_summary=True,
         kde=kde,
-        kde_kwargs={} if run_kde else {"kde_bandwidth": kde_bandwidth},
+        kde_kwargs={"bandwidth": kde_bandwidth} if kde else {},
         lra=lra,
         sass=sass,
         sass_expansion_degree=sass_feature_expansion_degree,
