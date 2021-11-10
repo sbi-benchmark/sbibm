@@ -58,6 +58,7 @@ class SLCP(Task):
             "high": torch.tensor([+3.0 for _ in range(self.dim_parameters)]),
         }
         self.prior_dist = pdist.Uniform(**self.prior_params).to_event(1)
+        self.prior_dist.set_default_validate_args(False)
 
     def get_prior(self) -> Callable:
         def prior(num_samples=1):

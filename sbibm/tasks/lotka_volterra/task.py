@@ -81,6 +81,7 @@ class LotkaVolterra(Task):
             "scale": torch.tensor([sigma_p, sigma_p, sigma_p, sigma_p]),
         }
         self.prior_dist = pdist.LogNormal(**self.prior_params).to_event(1)
+        self.prior_dist.set_default_validate_args(False)
 
         self.u0 = torch.tensor([30.0, 1.0])
         self.tspan = torch.tensor([0.0, days])
