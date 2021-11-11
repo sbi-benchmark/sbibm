@@ -93,6 +93,13 @@ def quadratic_coordinate_field(min_axis=-16, max_axis=16, batch_size=32):
     #| |
     #------- dimensions of max_axis - min_axis, 3-(-3)
 
+    given size_axis=max_axis-min_axis, at every point of the image width=size_axis times height=size_axis
+    we store the (x,y) coordinate of a regular grid
+    so we get:
+    valr[0,0] = (-16,-16),
+    valr[0,1] = (-16,-15),
+    valr[0,2] = (-16,-14)
+
     Args:
         min_axis: minimum extent of coordinate field
         max_axis: minimum extent of coordinate field
@@ -100,13 +107,6 @@ def quadratic_coordinate_field(min_axis=-16, max_axis=16, batch_size=32):
     """
 
     valr = base_coordinate_field(min_axis, max_axis)
-
-    # at every point of the image w=size_axis x w=size_axis
-    # we store the (x,y) coordinate of a regular grid
-    # so we get:
-    # valr[0,0] = (-16,-16),
-    # valr[0,1] = (-16,-15),
-    # valr[0,2] = (-16,-14)
 
     # broadcast to <batchsize> doublIcates
     valr_ = torch.broadcast_to(valr, (batch_size, *valr.shape)).detach()
@@ -128,9 +128,9 @@ class NorefBeam(Task):
         (surrogate model for a accelerator physics application)
 
         Args:
-        min_axis: minimum extent of the multivariate normal
-        max_axis: minimum extent of the multivariate normal
-        flood_samples: number of draws of the binomial wrapping the
+            min_axis: minimum extent of the multivariate normal
+            max_axis: minimum extent of the multivariate normal
+            flood_samples: number of draws of the binomial wrapping the
         multivariate normal distribution
         """
 
