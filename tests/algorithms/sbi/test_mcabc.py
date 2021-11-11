@@ -18,8 +18,8 @@ from sbibm.metrics.c2st import c2st
 )
 def test_run_posterior_interface(
     task_name,
-    num_simulations=1_000,
-    num_samples=50,
+    num_simulations=100,
+    num_samples=5,
 ):
     task = sbibm.get_task(task_name)
 
@@ -29,4 +29,6 @@ def test_run_posterior_interface(
         num_observation=3,
         num_samples=num_samples,
     )
+
+    # we are not interested in testing for correctness
     assert len(samples.shape) > 0
