@@ -12,6 +12,16 @@ from sbibm.utils.io import get_tensor_from_csv, save_tensor_to_csv
 
 
 def torch_average(a, weights=None, axis=0):
+    """
+    emulates np.average interface minimally for pytorch
+    (see
+    https://numpy.org/doc/stable/reference/generated/numpy.average.html#numpy-average)
+
+    Args:
+        a : array/tensor to containing data to average
+        weights : An array of weights associated with the values in a. Each value in a contributes to the average according to its associated weight.
+        axis : Axis or axes along which to average a. The default, axis=0.
+    """
 
     if isinstance(weights, type(None)):
         return a.mean(axis=axis)
@@ -25,6 +35,7 @@ def base_coordinate_field(min_axis=-16, max_axis=16):
     """returns a torch tensor that contains the coordinates of a regular
     grid between <min_axis> and <max_axis> broadcasted/cloned
     <batchsize> times, i.e.
+
     >>> arr = quadratic_coordinate_field(-3,3)
     >>> arr.shape
     (6,6,2)
@@ -44,7 +55,22 @@ def base_coordinate_field(min_axis=-16, max_axis=16):
 
 
 def bcast_coordinate_field(base_field, num_samples):
+    """utility function that replicates the torch.Tensor <base_field> by <num_samples>
+    and moves the last axis to the front
 
+    example:
+
+    >>> arr = torch.from_numpy([[1,2,3],[4,5,6]])
+    >>> arr.shape
+    (2,3)
+    >>> barr = bcast_coordinate_field(arr, 4)
+    >>> barr.shape
+    (3,2,4)
+
+    Args:
+        base_field: the torch tensor to replicate
+        num_samples: number of replicates to produce
+    """
     # boadcast to <num_samples> doublicates
     valr_ = torch.broadcast_to(base_field, (num_samples, *base_field.shape)).detach()
 
@@ -66,6 +92,11 @@ def quadratic_coordinate_field(min_axis=-16, max_axis=16, batch_size=32):
     #^ ^
     #| |
     #------- dimensions of max_axis - min_axis, 3-(-3)
+
+    Args:
+        min_axis: minimum extent of coordinate field
+        max_axis: minimum extent of coordinate field
+        batch_size: number of replicas to produce
     """
 
     valr = base_coordinate_field(min_axis, max_axis)
@@ -96,7 +127,8 @@ class NorefBeam(Task):
         distribution from it's projections onto x and y only
         (surrogate model for a accelerator physics application)
 
-        Args: min_axis: minimum extent of the multivariate normal
+        Args:
+        min_axis: minimum extent of the multivariate normal
         max_axis: minimum extent of the multivariate normal
         flood_samples: number of draws of the binomial wrapping the
         multivariate normal distribution
@@ -166,6 +198,10 @@ class NorefBeam(Task):
         """
 
         def simulator(parameters):
+            """
+            Args:
+                parameters: theta parameters coming in (can be batched)
+            """
             num_samples = parameters.shape[0]
 
             m_ = torch.stack(

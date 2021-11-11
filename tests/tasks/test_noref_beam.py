@@ -7,6 +7,7 @@ from pyro import util as putil
 import sbibm
 from sbibm.tasks.noref_beam.task import (
     NorefBeam,
+    bcast_coordinate_field,
     quadratic_coordinate_field,
     torch_average,
 )
@@ -398,3 +399,12 @@ def test_torch_average():
 
     assert m1 > 9.0
     assert m1 < 11.0
+
+
+def test_bcast_coordinate_field():
+
+    m_ = torch.arange(12).reshape(4, 3).float()
+    assert m_.shape == (4, 3)
+    arr = bcast_coordinate_field(m_, 2)
+
+    assert arr.shape == (3, 4, 2)
