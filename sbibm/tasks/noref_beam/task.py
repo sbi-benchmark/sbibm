@@ -265,7 +265,7 @@ class NorefBeam(Task):
             bdist = pdist.Binomial(total_count=self.flood_samples, probs=img)
 
             # TODO: should this be a pyro.sample call?
-            samples = bdist.sample()
+            samples = pyro.sample("data", bdist)
 
             # project on the axes
             first = torch.sum(samples, axis=0)
