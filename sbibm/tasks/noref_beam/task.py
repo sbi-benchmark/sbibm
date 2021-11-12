@@ -1,0 +1,301 @@
+from pathlib import Path
+from typing import Any, Callable, Dict, Optional
+
+import pyro
+import torch
+from pyro import distributions as pdist
+
+from sbibm import get_logger
+from sbibm.tasks.simulator import Simulator
+from sbibm.tasks.task import Task
+from sbibm.utils.io import get_tensor_from_csv, save_tensor_to_csv
+
+
+def torch_average(a, weights=None, axis=0):
+    """
+    emulates np.average interface minimally for pytorch
+    (see
+    https://numpy.org/doc/stable/reference/generated/numpy.average.html#numpy-average)
+
+    Args:
+        a : array/tensor to containing data to average
+        weights : An array of weights associated with the values in a. Each value in a contributes to the average according to its associated weight.
+        axis : Axis or axes along which to average a. The default, axis=0.
+    """
+
+    if isinstance(weights, type(None)):
+        return a.mean(axis=axis)
+    else:
+        assert weights.sum() > 0, f"received all 0 weights tensor"
+        value = torch.sum(a * weights, axis=axis) / torch.sum(weights, axis=axis)
+        return value
+
+
+def base_coordinate_field(min_axis=-16, max_axis=16):
+    """returns a torch tensor that contains the coordinates of a regular
+    grid between <min_axis> and <max_axis> broadcasted/cloned
+    <batchsize> times, i.e.
+
+    >>> arr = quadratic_coordinate_field(-3,3)
+    >>> arr.shape
+    (6,6,2)
+     ^^^---- dimensions of max_axis - min_axis, 3-(-3)
+    """
+    size_axis = max_axis - min_axis
+
+    x = torch.arange(min_axis, max_axis).detach().float()
+    y = torch.arange(min_axis, max_axis).detach().float()
+
+    xx, yy = torch.meshgrid(x, y)
+    val = torch.swapaxes(torch.stack((xx.flatten(), yy.flatten())), 1, 0).float()
+
+    value = val.reshape(size_axis, size_axis, 2)
+
+    return value
+
+
+def bcast_coordinate_field(base_field, num_samples):
+    """utility function that replicates the torch.Tensor <base_field> by <num_samples>
+    and moves the last axis to the front
+
+    example:
+
+    >>> arr = torch.from_numpy([[1,2,3],[4,5,6]])
+    >>> arr.shape
+    (2,3)
+    >>> barr = bcast_coordinate_field(arr, 4)
+    >>> barr.shape
+    (3,2,4)
+
+    Args:
+        base_field: the torch tensor to replicate
+        num_samples: number of replicates to produce
+    """
+    # boadcast to <num_samples> doublicates
+    valr_ = torch.broadcast_to(base_field, (num_samples, *base_field.shape)).detach()
+
+    # move axis from position 2 to front
+    value = torch.swapaxes(valr_, 2, 0)
+
+    return value
+
+
+def quadratic_coordinate_field(min_axis=-16, max_axis=16, batch_size=32):
+    """returns a torch tensor that contains the coordinates of a regular
+    grid between <min_axis> and <max_axis> broadcasted/cloned
+    <batchsize> times, i.e.
+    >>> arr = quadratic_coordinate_field(-3,3,4)
+    >>> arr.shape
+    #    --- batch_size
+    #    v
+    (6,6,4,2)
+    #^ ^
+    #| |
+    #------- dimensions of max_axis - min_axis, 3-(-3)
+
+    given size_axis=max_axis-min_axis, at every point of the image width=size_axis times height=size_axis
+    we store the (x,y) coordinate of a regular grid
+    so we get:
+    valr[0,0] = (-16,-16),
+    valr[0,1] = (-16,-15),
+    valr[0,2] = (-16,-14)
+
+    Args:
+        min_axis: minimum extent of coordinate field
+        max_axis: minimum extent of coordinate field
+        batch_size: number of replicas to produce
+    """
+
+    valr = base_coordinate_field(min_axis, max_axis)
+
+    # broadcast to <batchsize> doublIcates
+    valr_ = torch.broadcast_to(valr, (batch_size, *valr.shape)).detach()
+
+    # move axis from position 2 to front
+    value = torch.swapaxes(valr_, 2, 0)
+
+    return value
+
+
+class NorefBeam(Task):
+    def __init__(
+        self, min_axis: int = 0, max_axis: int = 200, flood_samples: int = 1 * 1024
+    ):
+        """Forward-only simulator (without a reference posterior)
+
+        Inference the parameters of a 2D multivariate normal
+        distribution from it's projections onto x and y only
+        (surrogate model for a accelerator physics application)
+
+        Args:
+            min_axis: minimum extent of the multivariate normal
+            max_axis: minimum extent of the multivariate normal
+            flood_samples: number of draws of the binomial wrapping the
+        multivariate normal distribution
+        """
+
+        self.min_axis = min_axis
+        self.max_axis = max_axis
+        self.flood_samples = flood_samples
+        dim_data = 2 * self.max_axis
+        name_display = "noref_beam"
+
+        # Observation seeds to use when generating ground truth
+        # used to generate the frozen observations (only done once)
+        # in case we were to regenerate them
+        observation_seeds = [
+            1000000,  # observation 1
+            1000001,  # observation 2
+            1000002,  # observation 3
+            1000003,  # observation 4
+            1000004,  # observation 5
+            1000005,  # observation 6
+            1000010,  # observation 7
+            1000012,  # observation 8
+            1000008,  # observation 9
+            1000009,  # observation 10
+        ]
+
+        super().__init__(
+            dim_parameters=4,
+            dim_data=dim_data,
+            name=Path(__file__).parent.name,
+            name_display=name_display,
+            num_observations=10,
+            num_posterior_samples=10000,
+            num_reference_posterior_samples=10000,
+            num_simulations=[1000, 10000, 100000, 1000000],
+            path=Path(__file__).parent.absolute(),
+            observation_seeds=observation_seeds,
+        )
+
+        self.prior_params = {
+            "low": torch.tensor([20, 20, 5, 5]).float(),
+            "high": torch.tensor([80, 80, 15, 15]).float(),
+        }
+        self.prior_dist = pdist.Uniform(**self.prior_params).to_event(1)
+
+        self.base_coordinate_field = base_coordinate_field(
+            self.min_axis, self.max_axis
+        ).detach()
+
+    def get_prior(self) -> Callable:
+        def prior(num_samples: int = 1):
+            return pyro.sample("parameters", self.prior_dist.expand_by([num_samples]))
+
+        return prior
+
+    def get_simulator(self, max_calls: Optional[int] = None) -> Simulator:
+        """Get function returning samples from simulator given parameters
+
+        Args:
+            max_calls: Maximum number of function calls. Additional calls will
+                result in SimulationBudgetExceeded exceptions. Defaults to None
+                for infinite budget
+
+        Return:
+            Simulator callable
+        """
+
+        def simulator(parameters):
+            """
+            Args:
+                parameters: theta parameters coming in (can be batched)
+            """
+            num_samples = parameters.shape[0]
+
+            m_ = torch.stack(
+                (parameters[:, [0]].squeeze(), parameters[:, [1]].squeeze())
+            ).T
+            if m_.dim() == 1:
+                m_.unsqueeze_(0)
+
+            m = torch.broadcast_to(m_, (self.max_axis, self.max_axis, *m_.shape))
+
+            s1 = parameters[:, [2]].squeeze()  # ** 2
+            s2 = parameters[:, [3]].squeeze()  # ** 2
+
+            # Note: checking the covariance_matrix for valid inputs
+            #       (being positive semidefinite) is expense, so
+            #       `S` needs to be PSD compliant
+            #       for the future: consider rotating img for more variability
+            S = torch.empty((self.max_axis, self.max_axis, num_samples, 2, 2))
+            S[..., 0, 0] = s1 ** 2
+            S[..., 0, 1] = s1 * s2
+            S[..., 1, 0] = 0.0  # s1 * s2
+            S[..., 1, 1] = s2 ** 2
+
+            # Add eps to diagonal to ensure PSD
+            eps = 0.000001
+            S[..., 0, 0] += eps
+            S[..., 1, 1] += eps
+
+            assert S.shape == (
+                self.max_axis,
+                self.max_axis,
+                num_samples,
+                2,
+                2,
+            ), f"{name_display} :: cov matrix {S.shape} != expectation"
+            assert m.shape == (
+                self.max_axis,
+                self.max_axis,
+                num_samples,
+                2,
+            ), f"{name_display} :: mean vector {m.shape} != expectation"
+
+            # define the probility distribution of our beamspot
+            # on a 2D grid (in batches)
+            data_dist = pdist.MultivariateNormal(
+                m.float(),
+                S.float(),
+                # `S` is constructed positive semidefinite
+                # validation is expensive
+                validate_args=False,
+            )
+
+            valb = bcast_coordinate_field(
+                self.base_coordinate_field, num_samples
+            ).detach()
+
+            # create images from log probabilities
+            img = torch.exp(data_dist.log_prob(valb)).detach()
+
+            # sample through binomial with fixed prob map
+            bdist = pdist.Binomial(total_count=self.flood_samples, probs=img)
+
+            # TODO: should this be a pyro.sample call?
+            samples = pyro.sample("data", bdist)
+
+            # project on the axes
+            first = torch.sum(samples, axis=0)
+            second = torch.sum(samples, axis=1)
+
+            # concatenate and return
+            return torch.cat([first, second], axis=-1)
+
+        return Simulator(task=self, simulator=simulator, max_calls=max_calls)
+
+
+if __name__ == "__main__":
+
+    log = get_logger(__file__)
+    log.warning(
+        "[noref_beam] producing observations may result in errors/exceptions thrown!"
+    )
+    ## run this to generate the `files` infrastructure in this folder
+    ## repo/sbibm/sbibm/tasks/noref_beam/files
+    ## ├── num_observation_1
+    ## ├── num_observation_10
+    ## ├── num_observation_2
+    ## ├── num_observation_3
+    ## ├── num_observation_4
+    ## ├── num_observation_5
+    ## ├── num_observation_6
+    ## ├── num_observation_7
+    ## ├── num_observation_8
+    ## └── num_observation_9
+    task = noref_beam()
+
+    task._setup()
+    ## note: the folders mentioned above
