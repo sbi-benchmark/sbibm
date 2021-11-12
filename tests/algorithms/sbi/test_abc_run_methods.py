@@ -9,7 +9,7 @@ from sbibm.metrics.c2st import c2st
 
 @pytest.mark.parametrize(
     "task_name",
-    [tn for tn in ["gaussian_linear", "two_moons"]],
+    ["gaussian_linear", "two_moons"],
 )
 @pytest.mark.parametrize("run_method", (run_mcabc, run_smcabc))
 def test_run_posterior_interface(
