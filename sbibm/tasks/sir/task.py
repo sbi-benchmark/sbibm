@@ -85,6 +85,7 @@ class SIR(Task):
             "scale": torch.tensor([0.5, 0.2]),
         }
         self.prior_dist = pdist.LogNormal(**self.prior_params).to_event(1)
+        self.prior_dist.set_default_validate_args(False)
 
         self.u0 = torch.tensor([N - I0 - R0, I0, R0])
         self.tspan = torch.tensor([0.0, days])

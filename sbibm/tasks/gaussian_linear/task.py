@@ -42,6 +42,7 @@ class GaussianLinear(Task):
         }
 
         self.prior_dist = pdist.MultivariateNormal(**self.prior_params)
+        self.prior_dist.set_default_validate_args(False)
 
         self.simulator_params = {
             "precision_matrix": torch.inverse(

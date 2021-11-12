@@ -42,6 +42,7 @@ class GaussianLinearUniform(Task):
         }
 
         self.prior_dist = pdist.Uniform(**self.prior_params).to_event(1)
+        self.prior_dist.set_default_validate_args(False)
 
         self.simulator_params = {
             "precision_matrix": torch.inverse(

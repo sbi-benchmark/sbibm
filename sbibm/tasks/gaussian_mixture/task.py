@@ -42,6 +42,7 @@ class GaussianMixture(Task):
         }
 
         self.prior_dist = pdist.Uniform(**self.prior_params).to_event(1)
+        self.prior_dist.set_default_validate_args(False)
 
         self.simulator_params = {
             "mixture_locs_factor": torch.tensor([1.0, 1.0]),

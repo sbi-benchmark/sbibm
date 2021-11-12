@@ -50,6 +50,7 @@ class TwoMoons(Task):
             "high": +prior_bound * torch.ones((self.dim_parameters,)),
         }
         self.prior_dist = pdist.Uniform(**self.prior_params).to_event(1)
+        self.prior_dist.set_default_validate_args(False)
 
         self.simulator_params = {
             "a_low": -math.pi / 2.0,

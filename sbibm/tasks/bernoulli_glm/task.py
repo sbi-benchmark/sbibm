@@ -57,6 +57,7 @@ class BernoulliGLM(Task):
 
         self.prior_params = {"loc": torch.zeros((M + 1,)), "precision_matrix": Binv}
         self.prior_dist = pdist.MultivariateNormal(**self.prior_params)
+        self.prior_dist.set_default_validate_args(False)
 
     def get_prior(self) -> Callable:
         def prior(num_samples=1):
