@@ -39,6 +39,7 @@ def run(
     z_score_x: bool = True,
     z_score_theta: bool = True,
     variant: str = "B",
+    max_num_epochs: Optional[int] = None,
 ) -> Tuple[torch.Tensor, int, Optional[torch.Tensor]]:
     """Runs (S)NRE from `sbi`
 
@@ -60,6 +61,7 @@ def run(
         z_score_x: Whether to z-score x
         z_score_theta: Whether to z-score theta
         variant: Can be used to switch between SNRE-A (AALR) and -B (SRE)
+        max_num_epochs: Maximum number of epochs
 
     Returns:
         Samples from posterior, number of simulator calls, log probability of true params if computable
@@ -131,6 +133,7 @@ def run(
             retrain_from_scratch_each_round=False,
             discard_prior_samples=False,
             show_train_summary=True,
+            max_num_epochs=max_num_epochs,
             **inference_method_kwargs,
         )
         if r > 1:

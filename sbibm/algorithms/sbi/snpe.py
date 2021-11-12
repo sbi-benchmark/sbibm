@@ -29,7 +29,8 @@ def run(
     automatic_transforms_enabled: bool = False,
     z_score_x: bool = True,
     z_score_theta: bool = True,
-) -> Tuple[torch.Tensor, int, Optional[torch.Tensor]]:
+    max_num_epochs: Optional[int] = None,
+  ) -> Tuple[torch.Tensor, int, Optional[torch.Tensor]]:
     """Runs (S)NPE from `sbi`
 
     Args:
@@ -47,6 +48,7 @@ def run(
         automatic_transforms_enabled: Whether to enable automatic transforms
         z_score_x: Whether to z-score x
         z_score_theta: Whether to z-score theta
+        max_num_epochs: Maximum number of epochs
 
     Returns:
         Samples from posterior, number of simulator calls, log probability of true params if computable
@@ -111,6 +113,7 @@ def run(
             discard_prior_samples=False,
             use_combined_loss=False,
             show_train_summary=True,
+            max_num_epochs=max_num_epochs,
         )
         posterior = inference_method.build_posterior(
             density_estimator, sample_with_mcmc=False
