@@ -1,5 +1,6 @@
 import re
 
+import pyro
 import pytest
 import torch
 
@@ -7,8 +8,7 @@ from sbibm import get_available_tasks, get_task
 from sbibm.algorithms.sbi.snpe import run
 from sbibm.metrics.ppc import median_distance
 
-# maybe use the pyro facilities
-torch.manual_seed(47)
+pyro.util.set_rng_seed(47)
 
 # ################################################
 # ## demonstrate on how to run a minimal benchmark

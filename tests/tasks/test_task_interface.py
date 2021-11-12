@@ -1,12 +1,12 @@
 import re
 
+import pyro
 import pytest
 import torch
 
 from sbibm import get_available_tasks, get_task
 
-# maybe use the pyro facilities
-torch.manual_seed(47)
+pyro.util.set_rng_seed(47)
 
 all_tasks = set(get_available_tasks())
 julia_tasks = set([tn for tn in get_available_tasks() if re.search("lotka|sir", tn)])

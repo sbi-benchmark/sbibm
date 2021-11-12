@@ -1,5 +1,6 @@
 import re
 
+import pyro
 import pytest
 import torch
 
@@ -7,8 +8,7 @@ from sbibm import get_available_tasks, get_task
 from sbibm.algorithms import rej_abc
 from sbibm.metrics import c2st
 
-# maybe use the pyro facilities
-torch.manual_seed(47)
+pyro.util.set_rng_seed(47)
 
 task_list = [tn for tn in get_available_tasks() if not re.search("noref|lotka|sir", tn)]
 
