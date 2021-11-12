@@ -30,6 +30,7 @@ def test_npe_posterior(
         num_samples=num_samples,
         num_rounds=1,
         neural_net="mdn",
+        max_num_epochs=30,
     )
 
     reference_samples = task.get_reference_posterior_samples(
