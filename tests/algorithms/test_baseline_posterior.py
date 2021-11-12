@@ -1,5 +1,3 @@
-import random
-
 import pytest
 import torch
 
@@ -17,7 +15,7 @@ from sbibm.metrics.c2st import c2st
             "gaussian_linear_uniform",
             "slcp",
         ]
-        for num_observation in range(1, 11)
+        for num_observation in [1, 2]
     ],
 )
 def test_posterior(
