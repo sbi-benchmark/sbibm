@@ -110,7 +110,7 @@ def run(
         # LPTP can only be returned with KDE posterior.
         if num_observation is not None:
             true_parameters = task.get_true_parameters(num_observation=num_observation)
-            log_prob_true_parameters = kde_posterior.log_prob(true_parameters.squeeze())
+            log_prob_true_parameters = kde_posterior.log_prob(true_parameters)
             return samples, simulator.num_simulations, log_prob_true_parameters
     else:
         samples = output

@@ -23,7 +23,7 @@ def test_run_posterior_interface(
 ):
     task = sbibm.get_task(task_name)
 
-    samples = run_posterior(
+    samples, _, _ = run_posterior(
         task=task,
         num_simulations=num_simulations,
         num_observation=3,
