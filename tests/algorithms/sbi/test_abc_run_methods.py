@@ -7,10 +7,7 @@ from sbibm.algorithms.sbi.smcabc import run as run_smcabc
 from sbibm.metrics.c2st import c2st
 
 
-@pytest.mark.parametrize(
-    "task_name",
-    ["gaussian_linear", "two_moons"],
-)
+@pytest.mark.parametrize("task_name", ("gaussian_linear", "two_moons"))
 @pytest.mark.parametrize("run_method", (run_mcabc, run_smcabc))
 def test_run_posterior_interface(
     task_name,
