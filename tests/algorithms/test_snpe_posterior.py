@@ -14,13 +14,12 @@ from sbibm.metrics.c2st import c2st
         for task_name in [
             "gaussian_linear",
             "gaussian_linear_uniform",
-            "slcp",
         ]
         for num_observation in [1, 3]
     ],
 )
 def test_npe_posterior(
-    task_name, num_observation, num_simulations=2_500, num_samples=50
+    task_name, num_observation, num_simulations=2_000, num_samples=100
 ):
     task = sbibm.get_task(task_name)
 
@@ -45,3 +44,4 @@ def test_npe_posterior(
 
     assert acc > 0.5
     assert acc < 1.0
+    assert acc > 0.6
