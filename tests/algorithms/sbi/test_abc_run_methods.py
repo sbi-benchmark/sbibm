@@ -28,4 +28,4 @@ def test_run_posterior_interface(
     )
 
     # we are not interested in testing for correctness
-    assert len(samples.shape) > 0
+    assert samples.shape == torch.Size([num_samples, task.dim_parameters])
