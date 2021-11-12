@@ -1,9 +1,10 @@
+import pyro
 import pytest
 import torch
 
 from sbibm.tasks.two_moons.task import TwoMoons
 
-torch.manual_seed(47)
+pyro.util.set_rng_seed(47)
 
 ## a test suite that can be used for task internal code
 
