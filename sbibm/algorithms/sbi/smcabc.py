@@ -154,7 +154,7 @@ def run(
     # Return samples from kde or raw samples.
     if kde:
         kde_posterior = output
-        samples = kde_posterior.sample(num_simulations)
+        samples = kde_posterior.sample(num_samples)
 
         # LPTP can only be returned with KDE posterior.
         if num_observation is not None:
