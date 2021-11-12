@@ -140,7 +140,7 @@ def run(
         sass_expansion_degree=sass_feature_expansion_degree,
         kde=kde,
         kde_sample_weights=kde_sample_weights,
-        kde_kwargs={} if kde_bandwidth is None else dict(kde_bandwidth=kde_bandwidth),
+        kde_kwargs=dict(bandwidth=kde_bandwidth) if kde_bandwidth else {},
     )
 
     if save_summary:
@@ -159,7 +159,7 @@ def run(
         # LPTP can only be returned with KDE posterior.
         if num_observation is not None:
             true_parameters = task.get_true_parameters(num_observation=num_observation)
-            log_prob_true_parameters = kde_posterior.log_prob(true_parameters.squeeze())
+            log_prob_true_parameters = kde_posterior.log_prob(true_parameters)
             return samples, simulator.num_simulations, log_prob_true_parameters
     else:
         samples = output
