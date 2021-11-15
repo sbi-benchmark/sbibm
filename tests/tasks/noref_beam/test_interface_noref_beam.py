@@ -6,7 +6,7 @@ from pyro import util as putil
 
 import sbibm
 from sbibm.algorithms import rej_abc
-from sbibm.algorithms.sbi.snpe import run_snpe
+from sbibm.algorithms.sbi.snpe import run as run_snpe
 from sbibm.metrics import c2st
 from sbibm.metrics.ppc import median_distance
 
