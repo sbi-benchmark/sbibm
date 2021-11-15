@@ -18,7 +18,7 @@ from sbibm.metrics.c2st import c2st
         for num_observation in [1, 3]
     ],
 )
-def test_lpe_posterior(
+def test_nle_posterior(
     task_name, num_observation, num_simulations=2_000, num_samples=100
 ):
     task = sbibm.get_task(task_name)
