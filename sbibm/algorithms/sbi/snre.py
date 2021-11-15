@@ -117,6 +117,7 @@ def run(
     posteriors = []
     proposal = prior
     mcmc_parameters["warmup_steps"] = 25
+    mcmc_parameters["enable_transform"] = False  # NOTE: Disable `sbi` auto-transforms, since `sbibm` does its own
 
     for r in range(num_rounds):
         theta, x = inference.simulate_for_sbi(
