@@ -295,7 +295,7 @@ if __name__ == "__main__":
     ## ├── num_observation_7
     ## ├── num_observation_8
     ## └── num_observation_9
-    task = noref_beam()
+    task = NorefBeam()
 
     task._setup()
     ## note: the folders mentioned above
