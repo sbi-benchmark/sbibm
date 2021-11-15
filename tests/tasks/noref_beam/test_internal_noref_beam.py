@@ -161,6 +161,29 @@ def test_binomial_api():
     assert np.allclose(mean, 1, atol=1e-1)
 
 
+def test_binomial_api_on_batched_images():
+
+    img = torch.tensor(
+        [
+            [[0.05, 0.1, 0.05], [0.1, 0.4, 0.1], [0.05, 0.1, 0.05]],
+            [[0.05, 0.2, 0.05], [0.0, 0.4, 0.0], [0.05, 0.2, 0.05]],
+        ]
+    )
+
+    assert img.shape == (2, 3, 3)
+    assert img[0, ...].sum() == 1.0
+    assert img.sum() == 1.0 * img.shape[0]
+
+    bdist = pdist.Binomial(total_count=1024, probs=img)
+    samples = bdist.sample()
+    assert samples.shape == img.shape
+    assert samples.max() < 1024 * 0.5
+
+    # lims = np.arange(3)
+    # mean = np.average(lims, weights=samples.sum(axis=0).numpy(), axis=0)
+    # assert np.allclose(mean, 1, atol=1e-1)
+
+
 def test_multivariate_normal_sample_binomial_from_logprob():
 
     batch_size = 8
@@ -250,3 +273,34 @@ def test_bcast_coordinate_field():
     arr = bcast_coordinate_field(m_, 2)
 
     assert arr.shape == (3, 4, 2)
+
+
+def test_simulation_output():
+
+    t = NorefBeam()
+
+    simulator = t.get_simulator()
+
+    assert simulator is not None
+
+    params = torch.tensor([[75.6423, 26.1341, 7.7327, 10.0449]])
+
+    assert params.shape == (1, 4)
+
+    x_t = simulator(params)
+
+    assert x_t.shape == (1, 400)
+
+    left_ = x_t[0, :200]
+
+    lims = torch.arange(0, left_.shape[0]).float()
+    assert lims.shape == (200,)
+    left_m = torch_average(lims, weights=left_)
+
+    assert left_m < 2.05 * params[0, 0]
+    assert left_m > 1.95 * params[0, 0]
+
+    right_ = x_t[0, 200:]
+    right_m = torch_average(lims, weights=right_)
+    assert right_m < 30
+    assert right_m > 20
