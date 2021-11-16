@@ -165,7 +165,7 @@ class TwoMoons(Task):
         *args,
         **kwargs: Any,
     ) -> Dict[str, Any]:
-        return {"parameters": torch.distributions.transforms.identity_transform}
+        return {"parameters": torch.distributions.transforms.IndependentTransform(torch.distributions.transforms.identity_transform, 1) }
 
     def _get_log_prob_fn(
         self,

@@ -81,6 +81,7 @@ def get_log_prob_fn(
     model_trace = poutine.trace(model).get_trace(*model_args, **model_kwargs)
 
     has_enumerable_sites = False
+    needs_independent_transform = True
     for name, node in model_trace.iter_stochastic_nodes():
         fn = node["fn"]
 
@@ -99,12 +100,6 @@ def get_log_prob_fn(
             transforms[name] = biject_to(fn.support).inv
         else:
             transforms[name] = dist.transforms.identity_transform
-        # Reinterpret batch dimensions of transform to get log abs det jac summed over
-        # parameter dimensions.
-        if not isinstance(transforms[name], IndependentTransform):
-            transforms[name] = IndependentTransform(
-                transforms[name], reinterpreted_batch_ndims=1
-            )
 
     if implementation == "pyro":
         trace_prob_evaluator = TraceEinsumEvaluator(

@@ -101,3 +101,17 @@ def test_reference_posterior_not_called(task_name):
         reference_samples = task.get_reference_posterior_samples(num_observation=1)
 
     assert task is not None
+
+
+@pytest.mark.parametrize("task_name", [tn for tn in (all_tasks - julia_tasks)])
+def test_transforms_shapes(task_name, batch_size=5):
+    task = get_task(task_name)
+    prior = task.get_prior()
+    samples = prior(num_samples=batch_size)
+
+    transforms = task._get_transforms(True)["parameters"]
+
+    ladj_shape = transforms.log_abs_det_jacobian(transforms(samples), samples).shape
+    assert ladj_shape == torch.Size([batch_size])
+
+    assert transforms is not None
