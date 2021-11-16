@@ -1,14 +1,11 @@
 # v1.0.7
 
 - `sbibm` now depends on `torch>=1.8`
-- Tests for task's API (thanks to @psteinb, #30)
-- (S)MC-ABC API (thanks to @psteinb, #29)
-- Code formatting with current versions of black and isort (thanks to @psteinb,
-  #22)
-- Name attribute for Bernoulli GLM Raw and SLCP Distractors fixed (thanks to
-  @atiyo, #17) for pointing this out
-- Adopted PyTorch >= 1.8 usage of log abs det jacobian, got rid of helpers (#27)
+- Tests for task's and (S)MC-ABC interfaces (thanks to @psteinb, #30, #29)
 - Additional metrics (#11)
+- Name attribute for Bernoulli GLM Raw and SLCP Distractors fixed (thanks to @atiyo for pointing this out, #17)
+- Adopted `sbi` v0.17.2 (thanks to @DongxiaW for poiting out a compatability problem, #27, #31, #32, #39)
+- Code formatting with current versions of black and isort (thanks to @psteinb, #22)
 
 
 # v1.0.6
