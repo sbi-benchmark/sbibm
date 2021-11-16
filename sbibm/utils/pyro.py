@@ -81,7 +81,6 @@ def get_log_prob_fn(
     model_trace = poutine.trace(model).get_trace(*model_args, **model_kwargs)
 
     has_enumerable_sites = False
-    needs_independent_transform = True
     for name, node in model_trace.iter_stochastic_nodes():
         fn = node["fn"]
 
