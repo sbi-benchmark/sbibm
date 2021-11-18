@@ -155,7 +155,7 @@ We host results and the code for reproducing the experiments of the manuscript i
 
 ## Support
 
-`sbi` has been developed in the context of the [ADIMEM grant](https://fit.uni-tuebingen.de/Project/Details?id=9199), project A. ADIMEM is a BMBF grant awarded to groups at the Technical University of Munich, University of Tübingen and Research Center caesar of the Max Planck Gesellschaft.
+We acknowledge support by the BMBF through the [ADIMEM grant](https://fit.uni-tuebingen.de/Project/Details?id=9199).
 
 
 ## Citation
