@@ -153,6 +153,11 @@ fig = fig_posterior(task_name="two_moons", observation=1, samples=[algorithm_sam
 We host results and the code for reproducing the experiments of the manuscript in a seperate repository at [github.com/sbi-benchmark/results](https://github.com/sbi-benchmark/results/tree/main/benchmarking_sbi): This includes the pipeline to reproduce the manuscripts' experiments as well as dataframes for new comparisons.
 
 
+## Support
+
+`sbi` has been developed in the context of the [ADIMEM grant](https://fit.uni-tuebingen.de/Project/Details?id=9199), project A. ADIMEM is a BMBF grant awarded to groups at the Technical University of Munich, University of Tübingen and Research Center caesar of the Max Planck Gesellschaft.
+
+
 ## Citation
 
 The manuscript is [available through PMLR](http://proceedings.mlr.press/v130/lueckmann21a.html):
