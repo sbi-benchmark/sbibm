@@ -74,7 +74,7 @@ prior = task.get_prior()
 simulator = task.get_simulator()
 ```
 
-If we call `prior()` we get a single draw from the prior distribution. `num_samples` can be provided as an optional argument. The following would generate 100 samples from the simulator: 
+If we call `prior()` we get a single draw from the prior distribution. `num_samples` can be provided as an optional argument. The following would generate 100 samples from the simulator:
 ```python
 thetas = prior(num_samples=100)
 xs = simulator(thetas)
@@ -100,7 +100,7 @@ task.name                   # name: slcp
 task.name_display           # name_display: SLCP
 ```
 
-Finally, if you want to have a look at the source code of the task, take a look in `sbibm/tasks/slcp/task.py`. If you wanted to implement a new task, we would recommend modelling them after the existing ones. You will see that each task has a private `_setup` method that was used to generate the reference posterior samples. 
+Finally, if you want to have a look at the source code of the task, take a look in `sbibm/tasks/slcp/task.py`. If you wanted to implement a new task, we would recommend modelling them after the existing ones. You will see that each task has a private `_setup` method that was used to generate the reference posterior samples.
 
 
 ## Algorithms
@@ -153,29 +153,29 @@ fig = fig_posterior(task_name="two_moons", observation=1, samples=[algorithm_sam
 We host results and the code for reproducing the experiments of the manuscript in a seperate repository at [github.com/sbi-benchmark/results](https://github.com/sbi-benchmark/results/tree/main/benchmarking_sbi): This includes the pipeline to reproduce the manuscripts' experiments as well as dataframes for new comparisons.
 
 
-## Support
-
-We acknowledge support by the BMBF through the [ADIMEM grant](https://fit.uni-tuebingen.de/Project/Details?id=9199).
-
-
 ## Citation
 
 The manuscript is [available through PMLR](http://proceedings.mlr.press/v130/lueckmann21a.html):
 
 ```bibtex
- @InProceedings{lueckmann2021benchmarking, 
+ @InProceedings{lueckmann2021benchmarking,
   title     = {Benchmarking Simulation-Based Inference},
-  author    = {Lueckmann, Jan-Matthis and Boelts, Jan and Greenberg, David and Goncalves, Pedro and Macke, Jakob}, 
-  booktitle = {Proceedings of The 24th International Conference on Artificial Intelligence and Statistics}, 
-  pages     = {343--351}, 
-  year      = {2021}, 
-  editor    = {Banerjee, Arindam and Fukumizu, Kenji}, 
-  volume    = {130}, 
-  series    = {Proceedings of Machine Learning Research}, 
-  month     = {13--15 Apr}, 
+  author    = {Lueckmann, Jan-Matthis and Boelts, Jan and Greenberg, David and Goncalves, Pedro and Macke, Jakob},
+  booktitle = {Proceedings of The 24th International Conference on Artificial Intelligence and Statistics},
+  pages     = {343--351},
+  year      = {2021},
+  editor    = {Banerjee, Arindam and Fukumizu, Kenji},
+  volume    = {130},
+  series    = {Proceedings of Machine Learning Research},
+  month     = {13--15 Apr},
   publisher = {PMLR}
 }  
 ```
+
+
+## Support
+
+We acknowledge support by the [ADIMEM grant](https://fit.uni-tuebingen.de/Project/Details?id=9199), project A. ADIMEM is a BMBF grant awarded to groups at the Technical University of Munich, University of Tübingen and Research Center caesar of the Max Planck Gesellschaft.
 
 
 ## License
