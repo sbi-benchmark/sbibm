@@ -424,25 +424,30 @@ def test_simulation_output():
 
     assert x_t.shape == (batch_size, 400)
 
-    left_ = x_t[0, :200]
+    lims = torch.arange(t.min_axis, t.max_axis, t.step_width).float()
+    nsteps = t.nsteps
+    assert nsteps == 200
+    assert lims.shape == (nsteps,)
 
-    lims = torch.arange(0, left_.shape[0]).float()
-    assert lims.shape == (200,)
+    for s in range(batch_size):
+        left_ = x_t[s, :nsteps]
+        right_ = x_t[s, nsteps:]
 
-    left_argx = torch.argmax(left_)
+        left_argx = torch.argmax(left_)
+        assert left_argx < 2.5 * params[s, 0]
+        assert left_argx > 1.5 * params[s, 0]
 
-    assert left_argx < 2.1 * params[0, 0]
-    assert left_argx > 1.9 * params[0, 0]
+        right_argx = torch.argmax(right_)
+        assert right_argx < 2.5 * params[s, 1]
+        assert right_argx > 1.5 * params[s, 1]
 
-    left_m = torch_average(lims, weights=left_)
+        left_m = torch_average(lims, weights=left_)
+        assert left_m < 1.1 * params[s, 0]
+        assert left_m > 0.9 * params[s, 0]
 
-    assert left_m < 1.1 * params[0, 0]
-    assert left_m > 0.9 * params[0, 0]
-
-    right_ = x_t[0, 200:]
-    right_m = torch_average(lims, weights=right_)
-    assert right_m < 30
-    assert right_m > 20
+        right_m = torch_average(lims, weights=right_)
+        assert right_m < 1.1 * params[s, 1]
+        assert right_m > 0.9 * params[s, 1]
 
 
 def test_pyro_batching():

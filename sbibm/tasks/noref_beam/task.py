@@ -147,7 +147,7 @@ class NorefBeam(Task):
         self.min_axis = min_axis
         self.max_axis = max_axis
         self.step_width = step_width
-        self.nsteps = (max_axis - min_axis) * (1 / step_width)
+        self.nsteps = int((max_axis - min_axis) * (1 / step_width))
         self.flood_samples = flood_samples
         dim_data = 2 * self.nsteps
         name_display = "noref_beam"
