@@ -87,16 +87,20 @@ def test_benchmark_metrics_selfobserved():
     assert value > 0
 
 
-def test_benchmark_metrics_selfobserved_autotransform():
+def test_benchmark_metrics_selfobserved_three():
 
     task = sbibm.get_task("noref_beam")
 
-    nobs = 1
+    nobs = 3
     theta_o = task.get_prior()(num_samples=nobs)
+
+    assert theta_o.shape == (nobs, 4)
+
     sim = task.get_simulator()
     x_o = sim(theta_o)
 
     assert x_o.shape[-1] == 400
+    assert x_o.shape[0] == nobs
     assert task.dim_data == 400
 
     outputs, nsim, logprob_truep = run_snpe(
@@ -108,7 +112,6 @@ def test_benchmark_metrics_selfobserved_autotransform():
         hidden_features=4,
         simulation_batch_size=32,
         training_batch_size=32,
-        automatic_transforms_enabled=True,
         num_rounds=1,  # let's do NPE not SNPE (to avoid MCMC)
         max_num_epochs=30,
     )
@@ -121,3 +124,39 @@ def test_benchmark_metrics_selfobserved_autotransform():
     value = median_distance(predictive_samples, x_o)
 
     assert value > 0
+
+
+# def test_benchmark_metrics_selfobserved_autotransform():
+
+#     task = sbibm.get_task("noref_beam")
+
+#     nobs = 1
+#     theta_o = task.get_prior()(num_samples=nobs)
+#     sim = task.get_simulator()
+#     x_o = sim(theta_o)
+
+#     assert x_o.shape[-1] == 400
+#     assert task.dim_data == 400
+
+#     outputs, nsim, logprob_truep = run_snpe(
+#         task,
+#         observation=x_o,
+#         num_samples=16,
+#         num_simulations=64,
+#         neural_net="mdn",
+#         hidden_features=4,
+#         simulation_batch_size=32,
+#         training_batch_size=32,
+#         automatic_transforms_enabled=True,
+#         num_rounds=1,  # let's do NPE not SNPE (to avoid MCMC)
+#         max_num_epochs=30,
+#     )
+
+#     assert outputs.shape
+#     assert outputs.shape[0] > 0
+#     assert logprob_truep == None
+
+#     predictive_samples = sim(outputs)
+#     value = median_distance(predictive_samples, x_o)
+
+#     assert value > 0
