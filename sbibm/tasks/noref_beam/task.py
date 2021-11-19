@@ -274,9 +274,12 @@ class NorefBeam(Task):
             # TODO: should this be a pyro.sample call?
             samples = pyro.sample("data", bdist)
 
+            assert (
+                len(samples.shape) >= 3
+            ), f"{self.name_display} :: pyro samples do not offer expected shape {samples.shape}, theta {parameters.shape}"
             # project on the axes
-            first = torch.sum(samples, axis=1)  # along y, onto x
-            second = torch.sum(samples, axis=2)  # along x, onto y
+            first = torch.sum(samples, axis=-2)  # along y, onto x
+            second = torch.sum(samples, axis=-1)  # along x, onto y
 
             # concatenate and return
             value = torch.cat([first, second], axis=-1)
