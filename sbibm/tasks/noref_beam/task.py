@@ -213,6 +213,12 @@ class NorefBeam(Task):
             """
             Args:
                 parameters: theta parameters coming in (can be batched)
+
+            Details:
+                parameters[0]: mean position of "beam" in x
+                parameters[1]: mean position of "beam" in y
+                parameters[2]: variance of "beam" in x
+                parameters[3]: variance of "beam" in y
             """
             batch_size = parameters.shape[0]
 
@@ -233,9 +239,7 @@ class NorefBeam(Task):
             #       (being positive semidefinite) is expensive, so
             #       `S` needs to be PSD compliant
             #       for the future: consider rotating img for more variability
-            S = torch.empty(
-                (batch_size, num_dim, num_dim)
-            )  # self.max_axis, self.max_axis,
+            S = torch.empty((batch_size, num_dim, num_dim))
             S[..., 0, 0] = s1 ** 2
             S[..., 0, 1] = s1 * s2
             S[..., 1, 0] = 0.0  # s1 * s2
@@ -245,28 +249,6 @@ class NorefBeam(Task):
             eps = 0.000001
             S[..., 0, 0] += eps
             S[..., 1, 1] += eps
-
-            expectation = (
-                # self.max_axis,
-                # self.max_axis,
-                batch_size,
-                num_dim,
-                num_dim,
-            )
-
-            assert (
-                S.shape == expectation
-            ), f"{self.name_display} :: cov matrix {S.shape} != {expectation}"
-
-            expectation = (
-                # self.max_axis,
-                # self.max_axis,
-                batch_size,
-                num_dim,
-            )
-            assert (
-                m.shape == expectation
-            ), f"{self.name_display} :: mean vector {m.shape} != {expectation}"
 
             # define the probility distribution of our beamspot
             # on a 2D grid (in batches)
