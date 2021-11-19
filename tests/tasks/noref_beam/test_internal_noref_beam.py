@@ -11,8 +11,8 @@ from sbibm.metrics import c2st
 from sbibm.metrics.ppc import median_distance
 from sbibm.tasks.noref_beam.task import (
     NorefBeam,
+    base_coordinate_field,
     bcast_coordinate_field,
-    quadratic_coordinate_field,
     torch_average,
 )
 
@@ -47,17 +47,46 @@ def test_multivariate_normal_constructs():
     assert sample.shape == (nensemble, 2)
 
 
-def test_multivariate_normal_constructs_asbatch():
+def test_multivariate_normal_shapes():
+
+    m = torch.ones((2,))
+    S = torch.eye(2)
+
+    data_dist = pdist.MultivariateNormal(m.float(), S.float())
+
+    event_dim = data_dist.event_dim
+    assert event_dim > 0
+
+    totshape = data_dist.shape()
+    assert len(totshape) > 0
+    assert totshape[0] > 0
+    assert totshape[0] > event_dim
+
+    sample = data_dist.sample()
+    assert sample.shape == (2,)
+    assert sample.shape == totshape
+
+
+@pytest.fixture
+def batched_mvn():
 
     batch_size = 8
-    m = torch.ones((2,))
-    m_ = torch.broadcast_to(m, (batch_size, 2))
+    # m = torch.ones((2,))
+    # m_ = torch.broadcast_to(m, (batch_size, 2))
+    m_ = torch.arange(0, 2 * batch_size).reshape((batch_size, 2)).float()
     S = torch.eye(2)
     S_ = torch.broadcast_to(S, (batch_size, 2, 2))
 
-    data_dist = pdist.MultivariateNormal(m_.float(), S_.float())
+    value = pdist.MultivariateNormal(m_.float(), S_.float())
+    return value
 
+
+def test_multivariate_normal_constructs_asbatch(batched_mvn):
+
+    data_dist = batched_mvn
     assert data_dist
+    batch_size = data_dist.loc.shape[0]
+    assert batch_size == 8
 
     sample = data_dist.sample()
     assert sample.shape == (batch_size, 2)
@@ -67,29 +96,83 @@ def test_multivariate_normal_constructs_asbatch():
     assert sample.shape == (nensemble, batch_size, 2)
 
 
-def test_multivariate_normal_constructs_asbatch_onrange():
+def test_multivariate_normal_constructs_asbatch_onrange(batched_mvn):
 
-    batch_size = 8
-    m_ = torch.arange(0, 2 * batch_size).reshape((batch_size, 2)).float()
+    data_dist = batched_mvn
+    batch_size = data_dist.loc.shape[0]
+    assert batch_size == data_dist.batch_shape[0]
+    assert data_dist.batch_shape[1:] == ()
+    assert data_dist.event_shape == (2,)
 
-    S = torch.eye(2)
-    S_ = torch.broadcast_to(S, (batch_size, 2, 2))
+    m_ = data_dist.loc
 
-    data_dist = pdist.MultivariateNormal(m_.float(), S_.float())
-
-    assert data_dist
-
+    ## single batch sample
     sample = data_dist.sample()
     assert sample.shape == (batch_size, 2)
+    lp = data_dist.log_prob(sample)
+    assert len(lp.shape) > 0
+    assert lp.shape == data_dist.batch_shape
 
+    ## multiple batches sample
     nensemble = 1024
+    # http://pyro.ai/examples/tensor_shapes.html#Examples
     samples = data_dist.sample((nensemble,))
     assert samples.shape == (nensemble, batch_size, 2)
 
     m_hat = samples.mean(axis=0)
-
     assert torch.allclose(m_hat[0, :], m_[0, :], atol=75e-2)
     assert torch.allclose(m_hat, m_, atol=2e-1)
+
+    lp = data_dist.log_prob(samples)
+    assert len(lp.shape) > 0
+    assert lp.shape == (nensemble, *data_dist.batch_shape)
+
+
+def test_multivariate_normal_logprob_onfield(batched_mvn):
+
+    data_dist = batched_mvn
+    batch_size = data_dist.loc.shape[0]
+    m_ = data_dist.loc
+    assert data_dist
+
+    dim_size = 100
+    field = base_coordinate_field(0, dim_size)
+    bfield = bcast_coordinate_field(field, batch_size, swap_to_front=False)
+
+    with pytest.raises(ValueError) as ve:
+        # this fails, because of
+        # ValueError: Value is not broadcastable with batch_shape+event_shape: torch.Size([8, 100, 100, 2]) vs torch.Size([8, 2]).
+        elp = torch.exp(data_dist.log_prob(bfield))
+
+    bfield = bcast_coordinate_field(field, batch_size)
+    assert bfield.shape == (dim_size, dim_size, batch_size, 2)
+    #                          same as m_.shape ^^^^^^^^^^  ^
+    assert bfield.shape[-2:] == m_.shape
+
+    elp = torch.exp(data_dist.log_prob(bfield))
+    assert elp.shape[0] != batch_size
+    assert elp.shape == (dim_size, dim_size, batch_size)
+
+    img = torch.moveaxis(elp, -1, 0)
+    assert img.shape == (batch_size, dim_size, dim_size)
+
+    first = img.sum(axis=1)
+    second = img.sum(axis=2)
+
+    assert first.shape == second.shape
+    assert first.shape == (batch_size, dim_size)
+
+    first_amax = torch.argmax(first, axis=-1)
+    assert first_amax.shape == (batch_size,)
+    assert torch.allclose(
+        first_amax.float(), m_[:, 0]
+    )  # we projected along y onto x (mean in x, i.e. dim at 1)
+
+    second_amax = torch.argmax(second, axis=-1)
+    assert second_amax.shape == (batch_size,)
+    assert torch.allclose(
+        second_amax.float(), m_[:, 1]
+    )  # we projected along x onto y (mean in y, i.e. dim at 0)
 
 
 def test_prepare_coordinates():
@@ -131,19 +214,48 @@ def test_prepare_coordinates():
     assert torch.allclose(valb[:, :, 0, :], valb[:, :, 1, :])
 
 
-def test_quadratic_coordinate_field():
+def test_base_coordinate_field():
 
     batch_size = 8
     max_axis = batch_size * 2
     min_axis = -max_axis
     size_axis = max_axis - min_axis
 
-    arr = quadratic_coordinate_field(min_axis, max_axis, batch_size)
+    arr = base_coordinate_field(min_axis, max_axis)
 
-    assert arr.shape == (size_axis, size_axis, batch_size, 2)
-    assert torch.allclose(arr[:, :, 0, :], arr[:, :, 1, :])
-    assert torch.allclose(arr[:, :, 0, :], arr[:, :, -1, :])
-    assert torch.allclose(arr[:, :, batch_size // 2, :], arr[:, :, -1, :])
+    assert arr.shape == (size_axis, size_axis, 2)
+    assert np.allclose(arr[0, 0, :], np.ones(2) * min_axis)
+    assert np.allclose(arr[-1, -1, :], np.ones(2) * (max_axis - 1))
+
+
+def test_base_coordinate_field_halfstep():
+
+    batch_size = 8
+    max_axis = batch_size * 2
+    min_axis = -max_axis
+    size_axis = max_axis - min_axis
+    nsteps = int(size_axis / 0.5)
+
+    arr = base_coordinate_field(min_axis, max_axis, 0.5)
+
+    assert arr.shape == (nsteps, nsteps, 2)
+    assert np.allclose(arr[0, 0, :], np.ones(2) * min_axis)
+    assert np.allclose(arr[-1, -1, :], np.ones(2) * (max_axis - 0.5))
+
+
+def test_base_coordinate_field_doublestep():
+
+    batch_size = 8
+    max_axis = batch_size * 2
+    min_axis = -max_axis
+    size_axis = max_axis - min_axis
+    nsteps = int(size_axis / 2.0)
+
+    arr = base_coordinate_field(min_axis, max_axis, 2.0)
+
+    assert arr.shape == (nsteps, nsteps, 2)
+    assert np.allclose(arr[0, 0, :], np.ones(2) * min_axis)
+    assert np.allclose(arr[-1, -1, :], np.ones(2) * (max_axis - 2.0))
 
 
 def test_binomial_api():
@@ -172,16 +284,17 @@ def test_binomial_api_on_batched_images():
 
     assert img.shape == (2, 3, 3)
     assert img[0, ...].sum() == 1.0
-    assert img.sum() == 1.0 * img.shape[0]
+    assert np.isclose(img.sum().item(), 1.0 * img.shape[0])
 
     bdist = pdist.Binomial(total_count=1024, probs=img)
     samples = bdist.sample()
     assert samples.shape == img.shape
     assert samples.max() < 1024 * 0.5
 
-    # lims = np.arange(3)
-    # mean = np.average(lims, weights=samples.sum(axis=0).numpy(), axis=0)
-    # assert np.allclose(mean, 1, atol=1e-1)
+    img_ = torch.swapaxes(img, 2, 0)
+    bdist = pdist.Binomial(total_count=1024, probs=img_)
+    samples = bdist.sample()
+    assert samples.shape == img_.shape
 
 
 def test_multivariate_normal_sample_binomial_from_logprob():
@@ -275,6 +388,19 @@ def test_bcast_coordinate_field():
     assert arr.shape == (3, 4, 2)
 
 
+def test_bcast_coordinate_field_swaptofront():
+
+    m_ = torch.arange(12).reshape(4, 3).float()
+    assert m_.shape == (4, 3)
+    nbatches = 8
+
+    arr = bcast_coordinate_field(m_, nbatches)
+    assert arr.shape == (3, 4, nbatches)
+
+    arr = bcast_coordinate_field(m_, nbatches, swap_to_front=False)
+    assert arr.shape == (nbatches, 4, 3)
+
+
 def test_simulation_output():
 
     t = NorefBeam()
@@ -283,24 +409,53 @@ def test_simulation_output():
 
     assert simulator is not None
 
-    params = torch.tensor([[75.6423, 26.1341, 7.7327, 10.0449]])
+    params = torch.tensor(
+        [
+            [75.6423, 26.1341, 7.7327, 10.0449],
+            [66.01, 50.02, 15.03, 20.04],
+            [44.05, 70.06, 25.07, 2.08],
+        ]
+    )
 
-    assert params.shape == (1, 4)
+    batch_size = params.shape[0]
+    assert params.shape == (batch_size, 4)
 
     x_t = simulator(params)
 
-    assert x_t.shape == (1, 400)
+    assert x_t.shape == (batch_size, 400)
 
     left_ = x_t[0, :200]
 
     lims = torch.arange(0, left_.shape[0]).float()
     assert lims.shape == (200,)
+
+    left_argx = torch.argmax(left_)
+
+    assert left_argx < 2.1 * params[0, 0]
+    assert left_argx > 1.9 * params[0, 0]
+
     left_m = torch_average(lims, weights=left_)
 
-    assert left_m < 2.05 * params[0, 0]
-    assert left_m > 1.95 * params[0, 0]
+    assert left_m < 1.1 * params[0, 0]
+    assert left_m > 0.9 * params[0, 0]
 
     right_ = x_t[0, 200:]
     right_m = torch_average(lims, weights=right_)
     assert right_m < 30
     assert right_m > 20
+
+
+def test_pyro_batching():
+
+    d1 = pdist.Bernoulli(0.5)
+
+    assert d1.batch_shape == ()
+
+    d1_ = pdist.Bernoulli(0.5 * torch.ones(3))
+    assert d1_.batch_shape == (3,)
+
+    d2 = pdist.Bernoulli(0.1 * torch.ones(3, 4))
+    assert d2.batch_shape == (3, 4)
+
+    d2_ = pdist.Bernoulli(torch.tensor([0.1, 0.2, 0.3, 0.4])).expand([3, 4])
+    assert d2_.batch_shape == (3, 4)

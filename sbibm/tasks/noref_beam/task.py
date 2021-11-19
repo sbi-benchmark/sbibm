@@ -31,10 +31,10 @@ def torch_average(a, weights=None, axis=0):
         return value
 
 
-def base_coordinate_field(min_axis=-16, max_axis=16):
+def base_coordinate_field(min_axis=-16, max_axis=16, step_width=1.0):
     """returns a torch tensor that contains the coordinates of a regular
-    grid between <min_axis> and <max_axis> broadcasted/cloned
-    <batchsize> times, i.e.
+    grid between <min_axis> and <max_axis> (at <step_width> from min to max),
+    this tensor is broadcasted/cloned <batchsize> times, i.e.
 
     >>> arr = quadratic_coordinate_field(-3,3)
     >>> arr.shape
@@ -42,19 +42,20 @@ def base_coordinate_field(min_axis=-16, max_axis=16):
      ^^^---- dimensions of max_axis - min_axis, 3-(-3)
     """
     size_axis = max_axis - min_axis
+    nsteps = int(size_axis / step_width)
 
-    x = torch.arange(min_axis, max_axis).detach().float()
-    y = torch.arange(min_axis, max_axis).detach().float()
+    x = torch.arange(min_axis, max_axis, step_width).detach().float()
+    y = torch.arange(min_axis, max_axis, step_width).detach().float()
 
     xx, yy = torch.meshgrid(x, y)
     val = torch.swapaxes(torch.stack((xx.flatten(), yy.flatten())), 1, 0).float()
 
-    value = val.reshape(size_axis, size_axis, 2)
+    value = val.reshape(nsteps, nsteps, 2)
 
     return value
 
 
-def bcast_coordinate_field(base_field, num_samples):
+def bcast_coordinate_field(base_field, num_samples, swap_to_front=True):
     """utility function that replicates the torch.Tensor <base_field> by <num_samples>
     and moves the last axis to the front
 
@@ -70,12 +71,16 @@ def bcast_coordinate_field(base_field, num_samples):
     Args:
         base_field: the torch tensor to replicate
         num_samples: number of replicates to produce
+        swap_to_front: whether to swap the batch axes from the front to the back
     """
     # boadcast to <num_samples> doublicates
     valr_ = torch.broadcast_to(base_field, (num_samples, *base_field.shape)).detach()
 
     # move axis from position 2 to front
-    value = torch.swapaxes(valr_, 2, 0)
+    if swap_to_front:
+        value = torch.swapaxes(valr_, 2, 0)
+    else:
+        value = valr_
 
     return value
 
@@ -119,7 +124,11 @@ def quadratic_coordinate_field(min_axis=-16, max_axis=16, batch_size=32):
 
 class NorefBeam(Task):
     def __init__(
-        self, min_axis: int = 0, max_axis: int = 200, flood_samples: int = 1 * 1024
+        self,
+        min_axis: int = 0,
+        max_axis: int = 100,
+        step_width: float = 0.5,
+        flood_samples: int = 1 * 1024,
     ):
         """Forward-only simulator (without a reference posterior)
 
@@ -130,14 +139,17 @@ class NorefBeam(Task):
         Args:
             min_axis: minimum extent of the multivariate normal
             max_axis: minimum extent of the multivariate normal
+            step_width:
             flood_samples: number of draws of the binomial wrapping the
         multivariate normal distribution
         """
 
         self.min_axis = min_axis
         self.max_axis = max_axis
+        self.step_width = step_width
+        self.nsteps = (max_axis - min_axis) * (1 / step_width)
         self.flood_samples = flood_samples
-        dim_data = 2 * self.max_axis
+        dim_data = 2 * self.nsteps
         name_display = "noref_beam"
 
         # Observation seeds to use when generating ground truth
@@ -176,7 +188,7 @@ class NorefBeam(Task):
         self.prior_dist = pdist.Uniform(**self.prior_params).to_event(1)
 
         self.base_coordinate_field = base_coordinate_field(
-            self.min_axis, self.max_axis
+            self.min_axis, self.max_axis, self.step_width
         ).detach()
 
     def get_prior(self) -> Callable:
@@ -202,7 +214,7 @@ class NorefBeam(Task):
             Args:
                 parameters: theta parameters coming in (can be batched)
             """
-            num_samples = parameters.shape[0]
+            batch_size = parameters.shape[0]
 
             m_ = torch.stack(
                 (parameters[:, [0]].squeeze(), parameters[:, [1]].squeeze())
@@ -210,16 +222,20 @@ class NorefBeam(Task):
             if m_.dim() == 1:
                 m_.unsqueeze_(0)
 
-            m = torch.broadcast_to(m_, (self.max_axis, self.max_axis, *m_.shape))
+            num_dim = m_.shape[-1]
+            # m = torch.broadcast_to(m_, (self.max_axis, self.max_axis, *m_.shape))
+            m = m_
 
             s1 = parameters[:, [2]].squeeze()  # ** 2
             s2 = parameters[:, [3]].squeeze()  # ** 2
 
             # Note: checking the covariance_matrix for valid inputs
-            #       (being positive semidefinite) is expense, so
+            #       (being positive semidefinite) is expensive, so
             #       `S` needs to be PSD compliant
             #       for the future: consider rotating img for more variability
-            S = torch.empty((self.max_axis, self.max_axis, num_samples, 2, 2))
+            S = torch.empty(
+                (batch_size, num_dim, num_dim)
+            )  # self.max_axis, self.max_axis,
             S[..., 0, 0] = s1 ** 2
             S[..., 0, 1] = s1 * s2
             S[..., 1, 0] = 0.0  # s1 * s2
@@ -230,19 +246,27 @@ class NorefBeam(Task):
             S[..., 0, 0] += eps
             S[..., 1, 1] += eps
 
-            assert S.shape == (
-                self.max_axis,
-                self.max_axis,
-                num_samples,
-                2,
-                2,
-            ), f"{name_display} :: cov matrix {S.shape} != expectation"
-            assert m.shape == (
-                self.max_axis,
-                self.max_axis,
-                num_samples,
-                2,
-            ), f"{name_display} :: mean vector {m.shape} != expectation"
+            expectation = (
+                # self.max_axis,
+                # self.max_axis,
+                batch_size,
+                num_dim,
+                num_dim,
+            )
+
+            assert (
+                S.shape == expectation
+            ), f"{self.name_display} :: cov matrix {S.shape} != {expectation}"
+
+            expectation = (
+                # self.max_axis,
+                # self.max_axis,
+                batch_size,
+                num_dim,
+            )
+            assert (
+                m.shape == expectation
+            ), f"{self.name_display} :: mean vector {m.shape} != {expectation}"
 
             # define the probility distribution of our beamspot
             # on a 2D grid (in batches)
@@ -250,16 +274,17 @@ class NorefBeam(Task):
                 m.float(),
                 S.float(),
                 # `S` is constructed positive semidefinite
-                # validation is expensive
+                # validation is expensive, so ditch it
                 validate_args=False,
             )
 
             valb = bcast_coordinate_field(
-                self.base_coordinate_field, num_samples
+                self.base_coordinate_field, batch_size
             ).detach()
 
             # create images from log probabilities
-            img = torch.exp(data_dist.log_prob(valb)).detach()
+            img_ = torch.exp(data_dist.log_prob(valb)).detach()
+            img = torch.moveaxis(img_, -1, 0)
 
             # sample through binomial with fixed prob map
             bdist = pdist.Binomial(total_count=self.flood_samples, probs=img)
@@ -268,11 +293,12 @@ class NorefBeam(Task):
             samples = pyro.sample("data", bdist)
 
             # project on the axes
-            first = torch.sum(samples, axis=0)
-            second = torch.sum(samples, axis=1)
+            first = torch.sum(samples, axis=1)  # along y, onto x
+            second = torch.sum(samples, axis=2)  # along x, onto y
 
             # concatenate and return
-            return torch.cat([first, second], axis=-1)
+            value = torch.cat([first, second], axis=-1)
+            return value
 
         return Simulator(task=self, simulator=simulator, max_calls=max_calls)
 
