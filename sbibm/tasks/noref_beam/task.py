@@ -197,6 +197,26 @@ class NorefBeam(Task):
 
         return prior
 
+    def _get_transforms(
+        self,
+        *args,
+        **kwargs: Any,
+    ) -> Dict[str, Any]:
+        """
+        This method (as used in the base class) tries to automatically
+        construct transformations into unbounded parameter space by inspecting
+        the pyro model of this task. Since the output of the task is not equal
+        to a sample from a `pyro.sample`-call but rather a reduced version of it
+        (due to the `torch.sum` statements in `simulator`) this automatic
+        construction cannot work. We therefor override the base class
+        behavior by always running the identity_transform.
+        """
+        return {
+            "parameters": torch.distributions.transforms.IndependentTransform(
+                torch.distributions.transforms.identity_transform, 1
+            )
+        }
+
     def get_simulator(self, max_calls: Optional[int] = None) -> Simulator:
         """Get function returning samples from simulator given parameters
 
