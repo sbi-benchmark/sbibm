@@ -53,6 +53,28 @@ def test_retrieve_observation_from_task(task_name):
 
 
 @pytest.mark.parametrize("task_name", [tn for tn in (all_tasks - julia_tasks)])
+def test_describe_theta(task_name):
+
+    task = get_task(task_name)
+
+    labels = task.get_labels_parameters()
+
+    assert isinstance(labels, list)
+    assert len(labels) == task.get_true_parameters(num_observation=1).shape[-1]
+
+
+@pytest.mark.parametrize("task_name", [tn for tn in (all_tasks - julia_tasks)])
+def test_describe_x(task_name):
+
+    task = get_task(task_name)
+
+    labels = task.get_labels_data()
+
+    assert isinstance(labels, list)
+    assert len(labels) == task.get_observation(num_observation=1).shape[-1]
+
+
+@pytest.mark.parametrize("task_name", [tn for tn in (all_tasks - julia_tasks)])
 def test_obtain_prior_samples_from_task(task_name):
 
     task = get_task(task_name)
