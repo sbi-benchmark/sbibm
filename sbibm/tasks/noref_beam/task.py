@@ -182,7 +182,7 @@ class NorefBeam(Task):
         )
 
         self.prior_params = {
-            "low": torch.tensor([20, 20, 5, 5]).float(),
+            "low": torch.tensor([20, 20, 1, 1]).float(),
             "high": torch.tensor([80, 80, 15, 15]).float(),
         }
         self.prior_dist = pdist.Uniform(**self.prior_params).to_event(1)
