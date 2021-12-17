@@ -155,18 +155,7 @@ class NorefBeam(Task):
         # Observation seeds to use when generating ground truth
         # used to generate the frozen observations (only done once)
         # in case we were to regenerate them
-        observation_seeds = [
-            1000000,  # observation 1
-            1000001,  # observation 2
-            1000002,  # observation 3
-            1000003,  # observation 4
-            1000004,  # observation 5
-            1000005,  # observation 6
-            1000010,  # observation 7
-            1000012,  # observation 8
-            1000008,  # observation 9
-            1000009,  # observation 10
-        ]
+        observation_seeds = list(range(100000, 100000 + 20))
 
         super().__init__(
             dim_parameters=4,
