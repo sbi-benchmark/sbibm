@@ -1,6 +1,7 @@
 # v1.0.8 (next release)
 
 -  Added tests for `get_labels_parameters` and `get_labels_data` (thanks to @psteinb, #39)
+-  Two Moons Likelihood for `log=False` fixed (thanks to @michaeldeistler, #41)
 
 
 # v1.0.7
