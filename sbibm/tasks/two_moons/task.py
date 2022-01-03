@@ -156,7 +156,7 @@ class TwoMoons(Task):
         )
 
         if len(torch.where(u < 0.0)[0]) > 0:
-            L[torch.where(u < 0.0)[0]] = -torch.tensor(math.inf) if log else 0.0
+            L[torch.where(u < 0.0)[0]] = -torch.tensor(math.inf)
 
         return L if log else torch.exp(L)
 
