@@ -159,25 +159,8 @@ def run(
     assert not (num_observation is None and observation is None)
     assert not (num_observation is not None and observation is not None)
 
-    log = logging.getLogger(__name__)
-
-    posterior = build_posterior(
-        task,
-        num_samples,
-        num_simulations,
-        num_observation,
-        observation,
-        num_rounds,
-        neural_net,
-        hidden_features,
-        simulation_batch_size,
-        training_batch_size,
-        num_atoms,
-        automatic_transforms_enabled,
-        z_score_x,
-        z_score_theta,
-        max_num_epochs,
-    )
+    inkwargs = locals()
+    posterior = build_posterior(**inkwargs)
 
     samples = posterior.sample((num_samples,)).detach()
 

@@ -198,36 +198,13 @@ def run(
     assert not (num_observation is None and observation is None)
     assert not (num_observation is not None and observation is not None)
 
+    inkwargs = locals()
+
     log = sbibm.get_logger(__name__)
     smc_papers = dict(A="Toni 2010", B="Sisson et al. 2007", C="Beaumont et al. 2009")
     log.info(f"Building SMC-ABC Posterior as in {smc_papers[algorithm_variant]}.")
 
-    output, summary = build_posterior(
-        task,
-        num_samples,
-        num_simulations,
-        num_observation,
-        observation,
-        population_size,
-        distance,
-        epsilon_decay,
-        distance_based_decay,
-        ess_min,
-        initial_round_factor,
-        batch_size,
-        kernel,
-        kernel_variance_scale,
-        use_last_pop_samples,
-        algorithm_variant,
-        save_summary,
-        sass,
-        sass_fraction,
-        sass_feature_expansion_degree,
-        lra,
-        lra_sample_weights,
-        kde_bandwidth,
-        kde_sample_weights,
-    )
+    output, summary = build_posterior(**inkwargs)
 
     # Return samples from kde or raw samples.
     if kde:

@@ -147,28 +147,12 @@ def run(
     assert not (num_observation is not None and observation is not None)
 
     assert not (num_top_samples is None and quantile is None and eps is None)
+    inkwargs = locals()
 
     log = sbibm.get_logger(__name__)
     log.info(f"Running REJ-ABC")
 
-    output, summary = build_posterior(
-        task,
-        num_samples,
-        num_simulations,
-        num_observation,
-        observation,
-        num_top_samples,
-        quantile,
-        eps,
-        distance,
-        batch_size,
-        save_distances,
-        kde_bandwidth,
-        sass,
-        sass_fraction,
-        sass_feature_expansion_degree,
-        lra,
-    )
+    output, summary = build_posterior(**inkwargs)
 
     if kde:
         kde_posterior = output
