@@ -13,25 +13,7 @@ from sbibm.algorithms.sbi.utils import (
 )
 from sbibm.tasks.task import Task
 
-
-def run(
-    task: Task,
-    num_samples: int,
-    num_simulations: int,
-    num_observation: Optional[int] = None,
-    observation: Optional[torch.Tensor] = None,
-    num_rounds: int = 10,
-    neural_net: str = "nsf",
-    hidden_features: int = 50,
-    simulation_batch_size: int = 1000,
-    training_batch_size: int = 10000,
-    num_atoms: int = 10,
-    automatic_transforms_enabled: bool = False,
-    z_score_x: bool = True,
-    z_score_theta: bool = True,
-    max_num_epochs: Optional[int] = None,
-  ) -> Tuple[torch.Tensor, int, Optional[torch.Tensor]]:
-    """Runs (S)NPE from `sbi`
+__DOCSTRING__ = """Runs (S)NPE from `sbi`
 
     Args:
         task: Task instance
@@ -49,9 +31,32 @@ def run(
         z_score_x: Whether to z-score x
         z_score_theta: Whether to z-score theta
         max_num_epochs: Maximum number of epochs
+    """
+
+
+def build_posterior(
+    task: Task,
+    num_samples: int,
+    num_simulations: int,
+    num_observation: Optional[int] = None,
+    observation: Optional[torch.Tensor] = None,
+    num_rounds: int = 10,
+    neural_net: str = "nsf",
+    hidden_features: int = 50,
+    simulation_batch_size: int = 1000,
+    training_batch_size: int = 10000,
+    num_atoms: int = 10,
+    automatic_transforms_enabled: bool = False,
+    z_score_x: bool = True,
+    z_score_theta: bool = True,
+    max_num_epochs: Optional[int] = None,
+) -> Tuple[torch.Tensor, None]:
+    f"""
+    build_posterior method creating the inferred posterior object
+    {__DOCSTRING__}
 
     Returns:
-        Samples from posterior, number of simulator calls, log probability of true params if computable
+        Trained posterior
     """
     assert not (num_observation is None and observation is None)
     assert not (num_observation is not None and observation is not None)
@@ -124,6 +129,55 @@ def run(
     posterior = wrap_posterior(posteriors[-1], transforms)
 
     assert simulator.num_simulations == num_simulations
+
+    return posterior, None
+
+
+def run(
+    task: Task,
+    num_samples: int,
+    num_simulations: int,
+    num_observation: Optional[int] = None,
+    observation: Optional[torch.Tensor] = None,
+    num_rounds: int = 10,
+    neural_net: str = "nsf",
+    hidden_features: int = 50,
+    simulation_batch_size: int = 1000,
+    training_batch_size: int = 10000,
+    num_atoms: int = 10,
+    automatic_transforms_enabled: bool = False,
+    z_score_x: bool = True,
+    z_score_theta: bool = True,
+    max_num_epochs: Optional[int] = None,
+) -> Tuple[torch.Tensor, int, Optional[torch.Tensor]]:
+    f"""
+    {__DOCSTRING__}
+
+    Returns:
+        Samples from posterior, number of simulator calls, log probability of true params if computable
+    """
+    assert not (num_observation is None and observation is None)
+    assert not (num_observation is not None and observation is not None)
+
+    log = logging.getLogger(__name__)
+
+    posterior = build_posterior(
+        task,
+        num_samples,
+        num_simulations,
+        num_observation,
+        observation,
+        num_rounds,
+        neural_net,
+        hidden_features,
+        simulation_batch_size,
+        training_batch_size,
+        num_atoms,
+        automatic_transforms_enabled,
+        z_score_x,
+        z_score_theta,
+        max_num_epochs,
+    )
 
     samples = posterior.sample((num_samples,)).detach()
 
