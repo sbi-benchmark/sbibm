@@ -464,3 +464,25 @@ def test_pyro_batching():
 
     d2_ = pdist.Bernoulli(torch.tensor([0.1, 0.2, 0.3, 0.4])).expand([3, 4])
     assert d2_.batch_shape == (3, 4)
+
+
+def test_infer_prior_support():
+
+    t = NorefBeam()
+
+    assert hasattr(t, "get_prior")
+
+    p = t.get_prior_dist()
+    print(type(p), p)
+
+    assert hasattr(p, "support")
+
+    # this could be one way to create transformations
+    # for the prior to live in unbounded space
+    from torch.distributions import biject_to
+
+    obs = biject_to(p.support).inv
+    # see also https://pytorch.org/docs/stable/distributions.html#module-torch.distributions.constraint_registry
+    assert obs is not None
+
+    print(obs)
