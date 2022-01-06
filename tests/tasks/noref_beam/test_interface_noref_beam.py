@@ -160,11 +160,12 @@ def test_benchmark_metrics_snle_multiobservations():
     assert x_o.shape[0] == nobs
     assert task.dim_data == 400
 
+    nsamples_gen = 16
     # remind me in case this behavior changes
     outputs, nsim, logprob_truep = run_snle(
         task,
         observation=x_o,
-        num_samples=8,
+        num_samples=nsamples_gen,
         num_simulations=64,
         simulation_batch_size=32,
         training_batch_size=32,
@@ -179,9 +180,17 @@ def test_benchmark_metrics_snle_multiobservations():
 
     assert outputs.shape
     assert outputs.shape[0] > 0
+    assert outputs.shape == (nsamples_gen, theta_o.shape[-1])
     assert logprob_truep == None
 
     predictive_samples = sim(outputs)
-    value = median_distance(predictive_samples, x_o)
+
+    assert predictive_samples.shape != x_o.shape
+
+    obs = predictive_samples[0 : x_o.shape[0], ...]
+
+    assert obs.shape == x_o.shape
+
+    value = median_distance(obs, x_o)
 
     assert value > 0
