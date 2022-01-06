@@ -139,7 +139,7 @@ class NorefBeam(Task):
         Args:
             min_axis: minimum extent of the multivariate normal
             max_axis: minimum extent of the multivariate normal
-            step_width:
+            step_width: number of steps to take between min_axis and max_axis
             flood_samples: number of draws of the binomial wrapping the
         multivariate normal distribution
         """
@@ -186,25 +186,36 @@ class NorefBeam(Task):
 
         return prior
 
-    def _get_transforms(
-        self,
-        *args,
-        **kwargs: Any,
-    ) -> Dict[str, Any]:
-        """
-        This method (as used in the base class) tries to automatically
-        construct transformations into unbounded parameter space by inspecting
-        the pyro model of this task. Since the output of the task is not equal
-        to a sample from a `pyro.sample`-call but rather a reduced version of it
-        (due to the `torch.sum` statements in `simulator`) this automatic
-        construction cannot work. We therefor override the base class
-        behavior by always running the identity_transform.
-        """
-        return {
-            "parameters": torch.distributions.transforms.IndependentTransform(
-                torch.distributions.transforms.identity_transform, 1
-            )
-        }
+    # def _get_transforms(
+    #     self,
+    #     *args,
+    #     **kwargs: Any,
+    # ) -> Dict[str, Any]:
+    #     """
+    #     This method (as used in the base class) tries to automatically
+    #     construct transformations into unbounded parameter space by inspecting
+    #     the pyro model of this task. Since the output of the task is not equal
+    #     to a sample from a `pyro.sample`-call but rather a reduced version of it
+    #     (due to the `torch.sum` statements in `simulator`) this automatic
+    #     construction cannot work. We therefor override the base class
+    #     behavior by always running the identity_transform.
+    #     """
+    #     value = {
+    #         "parameters": torch.distributions.transforms.IndependentTransform(
+    #             torch.distributions.transforms.identity_transform, 1
+    #         )
+    #     }
+    #     # would be good to see the code below, so that the prior is transformed
+    #     # to unbounded space as mentioned in the docstring above
+    #     # value = {
+    #     #     "parameters": _InverseTransform(
+    #     #         IndependentTransform(
+    #     #             ComposeTransform(SigmoidTransform(), AffineTransform()), 1
+    #     #         )
+    #     #     )
+    #     # }
+
+    #     return value
 
     def get_simulator(self, max_calls: Optional[int] = None) -> Simulator:
         """Get function returning samples from simulator given parameters
@@ -283,15 +294,24 @@ class NorefBeam(Task):
             # TODO: should this be a pyro.sample call?
             samples = pyro.sample("data", bdist)
 
-            assert (
-                len(samples.shape) >= 3
-            ), f"{self.name_display} :: pyro samples do not offer expected shape {samples.shape}, theta {parameters.shape}"
-            # project on the axes
-            first = torch.sum(samples, axis=-2)  # along y, onto x
-            second = torch.sum(samples, axis=-1)  # along x, onto y
+            value = None
+            if len(samples.shape) >= 3 and samples.shape == (
+                batch_size,
+                self.nsteps,
+                self.nsteps,
+            ):
+                # only needed if samples has shape like beam knife-edge scan
+                # if pyro model is traced, output of pyro.sample will be different
 
-            # concatenate and return
-            value = torch.cat([first, second], axis=-1)
+                # project on the axes
+                first = torch.sum(samples, axis=-2)  # along y, onto x
+                second = torch.sum(samples, axis=-1)  # along x, onto y
+
+                # concatenate and return
+                value = torch.cat([first, second], axis=-1)
+            else:
+                # if pyro model is traced, samples has shape [batch_size, 2*self.nsteps]
+                value = samples
             return value
 
         return Simulator(task=self, simulator=simulator, max_calls=max_calls)
