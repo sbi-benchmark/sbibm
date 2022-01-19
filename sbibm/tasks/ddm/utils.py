@@ -9,7 +9,7 @@ import logging
 from numba import jit
 from torch import Tensor, nn
 from sbi.utils.torchutils import atleast_2d, ensure_theta_batched
-from sbi.mcmc import sir, SliceSamplerVectorized
+from sbi.samplers.mcmc import SliceSamplerVectorized, sir
 from sbi.utils import tensor2numpy
 from torch.distributions import Bernoulli, Distribution, TransformedDistribution
 from torch import Tensor, optim
@@ -191,6 +191,158 @@ class DDMJulia:
                     end
                 """
             )
+
+
+class WeibullDDM:
+    """Implementation of the DDM with collapsing decision boundaries as used
+    in Fengler et al. 2021.
+    """
+
+    def __init__(
+        self,
+        dt: float = 0.001,
+        num_trials: int = 1,
+        dim_parameters: int = 5,
+        seed: int = -1,
+        tmax: int = 20,
+    ) -> None:
+        """Wrapping DDM simulation and likelihood computation from Julia.
+
+        Based on Julia package DiffModels.jl
+
+        https://github.com/DrugowitschLab/DiffModels.jl
+
+        Calculates likelihoods via Navarro and Fuss 2009.
+        """
+
+        self.dt = dt
+        self.num_trials = num_trials
+        self.seed = seed
+        self.tmax = tmax
+
+        self.jl = Julia(
+            compiled_modules=False,
+            sysimage=find_sysimage(),
+            runtime="julia",
+        )
+        self.jl.eval("using DiffModels")
+        self.jl.eval("using Random")
+
+        self.simulate = self.jl.eval(
+            f"""
+                function simulate_fullDDM(v, bu, bl, ndt, alpha, beta; dt={self.dt}, num_trials={self.num_trials}, seed={self.seed})
+                    num_parameters = size(v)[1]
+                    rt = fill(NaN, (num_parameters, num_trials))
+                    c = fill(NaN, (num_parameters, num_trials))
+                    t = range(0, {self.tmax}, step=dt)
+
+                    # seeding
+                    if seed > 0
+                        Random.seed!(seed)
+                    end
+
+                    for i=1:num_parameters
+                        for j=1:num_trials
+                            # Weibull fun for collapsing bound.
+                            b = bu[i] * exp.(- t.^alpha[i] / beta[i])
+                            # time derivative of bound.
+                            bg = -bu[i] * exp.(-t.^alpha[i] / beta[i]) .* alpha[i] .* t.^(alpha[i]-1) ./ beta[i]
+                            upper = VarBound(b, bg, dt)
+                            # lower bound
+                            b = bl[i] * exp.(- t.^alpha[i] / beta[i])
+                            # time derivative of bound.
+                            bg = -bl[i] * exp.(-t.^alpha[i] / beta[i]) .* alpha[i] .* t.^(alpha[i]-1) ./ beta[i]
+                            lower = VarBound(b, bg, dt)
+                            bound = VarAsymBounds(upper, lower)
+                            drift = ConstDrift(v[i], dt)
+                            s = sampler(drift, bound)
+
+                            # Simulate DDM.
+                            rt[i, j], cj = rand(s)
+                            c[i, j] = cj ? 1.0 : 0.0
+                        end
+                    end
+                    return rt, c
+                end
+            """
+        )
+
+
+class LinearCollapseDDM:
+    """Implementation of the DDM with linearly collapsing decision boundaries as used
+    in Fengler et al. 2021.
+    """
+
+    def __init__(
+        self,
+        dt: float = 0.001,
+        num_trials: int = 1,
+        dim_parameters: int = 4,
+        seed: int = -1,
+        tmax: int = 20,
+    ) -> None:
+        """Wrapping DDM simulation and likelihood computation from Julia.
+
+        Based on Julia package DiffModels.jl
+
+        https://github.com/DrugowitschLab/DiffModels.jl
+
+        Calculates likelihoods via Navarro and Fuss 2009.
+        """
+
+        self.dt = dt
+        self.num_trials = num_trials
+        self.seed = seed
+        self.tmax = tmax
+
+        self.jl = Julia(
+            compiled_modules=False,
+            sysimage=find_sysimage(),
+            runtime="julia",
+        )
+        self.jl.eval("using DiffModels")
+        self.jl.eval("using Random")
+
+        self.simulate = self.jl.eval(
+            f"""
+                function simulate(v, bu, bl, gamma; dt={self.dt}, num_trials={self.num_trials}, seed={self.seed})
+                    num_parameters = size(v)[1]
+                    rt = fill(NaN, (num_parameters, num_trials))
+                    c = fill(NaN, (num_parameters, num_trials))
+                    t = range(0, {self.tmax}, step=dt)
+
+                    # seeding
+                    if seed > 0
+                        Random.seed!(seed)
+                    end
+
+                    for i=1:num_parameters
+                        for j=1:num_trials
+                            # Linear collapsing bound.
+                            b = bu[i] .+ t .* gamma[i]
+                            # b = bu[i] .- (t .* sin(gamma[i]) / cos(gamma[i]))
+                            # time derivative of bound.
+                            bg = fill(gamma[i], length(t))
+                            # bg = fill(-sin(gamma[i]) / cos(gamma[i]), length(t))
+                            upper = VarBound(b, bg, dt)
+
+                            # lower bound
+                            b = bl[i] .+ t .* gamma[i]
+                            # b = bl[i] .- (t .* sin(gamma[i]) / cos(gamma[i]))
+                            lower = VarBound(b, bg, dt)
+                            bound = VarAsymBounds(upper, lower)
+                            drift = ConstDrift(v[i], dt)
+                            s = sampler(drift, bound)
+
+                            # Simulate DDM.
+                            rt[i, j], cj = rand(s)
+                            c[i, j] = cj ? 1.0 : 0.0
+                        end
+                    end
+                    return rt, c
+                end
+            """
+        )
 
 
 class FullDDMJulia:
