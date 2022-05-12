@@ -48,14 +48,20 @@ class SynthLikNet(nn.Module):
                 thetas[i, :].reshape(1, -1).repeat(self.num_simulations_per_step, 1)
             )
 
-            # Estimate mean and covariance of MVN
+            # Estimate mean
             m = torch.mean(xs, dim=0)
+
+            # estimate covariance using unbiased sample variance
             xm = xs - m
-            S = torch.matmul(xm.T, xm) / xs.shape[0]
+            S = torch.matmul(xm.T, xm) / (xs.shape[0] - 1)
             S = S + self.diag_eps * torch.eye(xs.shape[1])
 
-            # Score
-            dist = torch.distributions.MultivariateNormal(loc=m, covariance_matrix=S)
+            # Score observations
+            dist = torch.distributions.MultivariateNormal(
+                loc=m,
+                covariance_matrix=S,
+                validate_args=False,  # to discard expensive check for psd'ness
+            )
             log_probs.append(dist.log_prob(observation[i, :].reshape(1, -1)))
 
         return torch.cat(log_probs)
