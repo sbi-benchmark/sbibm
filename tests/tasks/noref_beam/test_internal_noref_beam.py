@@ -3,6 +3,12 @@ import pytest
 import torch
 from pyro import distributions as pdist
 from pyro import util as putil
+from torch.distributions.transforms import (
+    AffineTransform,
+    ComposeTransform,
+    IndependentTransform,
+    SigmoidTransform,
+)
 
 import sbibm
 from sbibm.algorithms import rej_abc
@@ -466,23 +472,29 @@ def test_pyro_batching():
     assert d2_.batch_shape == (3, 4)
 
 
-def test_infer_prior_support():
+def test_automated_transforms_to_unbounded_space():
 
     t = NorefBeam()
 
-    assert hasattr(t, "get_prior")
+    assert hasattr(t, "_get_transforms")
 
     p = t.get_prior_dist()
-    print(type(p), p)
+    assert p.support
+    print(type(p), type(p.support), p.support)
 
-    assert hasattr(p, "support")
+    obs = t._get_transforms()
 
-    # this could be one way to create transformations
-    # for the prior to live in unbounded space
-    from torch.distributions import biject_to
-
-    obs = biject_to(p.support).inv
-    # see also https://pytorch.org/docs/stable/distributions.html#module-torch.distributions.constraint_registry
     assert obs is not None
+    assert "parameters" in obs.keys()
 
-    print(obs)
+    itrf = obs["parameters"]
+    roundtrf = itrf.inv
+
+    ps = p.sample((100,))
+    us = itrf(ps)
+    ps_ = roundtrf(us)
+
+    assert torch.allclose(ps, ps_)
+    assert not torch.allclose(ps, us)
+    print(ps.min(), ps.median(), ps.mean(), ps.std(), ps.max())
+    print(us.min(), us.median(), us.mean(), us.std(), us.max())

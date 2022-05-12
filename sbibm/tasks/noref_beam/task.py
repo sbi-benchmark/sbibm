@@ -4,6 +4,7 @@ from typing import Any, Callable, Dict, Optional
 import pyro
 import torch
 from pyro import distributions as pdist
+from torch.distributions import biject_to
 
 from sbibm import get_logger
 from sbibm.tasks.simulator import Simulator
@@ -186,36 +187,27 @@ class NorefBeam(Task):
 
         return prior
 
-    # def _get_transforms(
-    #     self,
-    #     *args,
-    #     **kwargs: Any,
-    # ) -> Dict[str, Any]:
-    #     """
-    #     This method (as used in the base class) tries to automatically
-    #     construct transformations into unbounded parameter space by inspecting
-    #     the pyro model of this task. Since the output of the task is not equal
-    #     to a sample from a `pyro.sample`-call but rather a reduced version of it
-    #     (due to the `torch.sum` statements in `simulator`) this automatic
-    #     construction cannot work. We therefor override the base class
-    #     behavior by always running the identity_transform.
-    #     """
-    #     value = {
-    #         "parameters": torch.distributions.transforms.IndependentTransform(
-    #             torch.distributions.transforms.identity_transform, 1
-    #         )
-    #     }
-    #     # would be good to see the code below, so that the prior is transformed
-    #     # to unbounded space as mentioned in the docstring above
-    #     # value = {
-    #     #     "parameters": _InverseTransform(
-    #     #         IndependentTransform(
-    #     #             ComposeTransform(SigmoidTransform(), AffineTransform()), 1
-    #     #         )
-    #     #     )
-    #     # }
+    def _get_transforms(
+        self,
+        *args,
+        **kwargs: Any,
+    ) -> Dict[str, Any]:
+        """
+        This method (as used in the base class) tries to automatically
+        construct transformations into unbounded parameter space by inspecting
+        the pyro model of this task. Since the output of the task is not equal
+        to a sample from a `pyro.sample`-call but rather a reduced version of it
+        (due to the `torch.sum` statements in `simulator`) this automatic
+        construction cannot work. We therefor override the base class
+        behavior by always running the identity_transform.
 
-    #     return value
+        The contents of this function were discussed in
+        https://github.com/sbi-benchmark/sbibm/pull/34#issuecomment-1006486939
+        """
+
+        prior_dist = self.get_prior_dist()
+        value = {"parameters": biject_to(prior_dist.support).inv}
+        return value
 
     def get_simulator(self, max_calls: Optional[int] = None) -> Simulator:
         """Get function returning samples from simulator given parameters
@@ -260,10 +252,10 @@ class NorefBeam(Task):
             #       `S` needs to be PSD compliant
             #       for the future: consider rotating img for more variability
             S = torch.empty((batch_size, num_dim, num_dim))
-            S[..., 0, 0] = s1 ** 2
+            S[..., 0, 0] = s1**2
             S[..., 0, 1] = s1 * s2
             S[..., 1, 0] = 0.0  # s1 * s2
-            S[..., 1, 1] = s2 ** 2
+            S[..., 1, 1] = s2**2
 
             # Add eps to diagonal to ensure PSD
             eps = 0.000001
