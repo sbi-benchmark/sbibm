@@ -31,9 +31,16 @@ class SynthLikNet(nn.Module):
     """
 
     def __init__(self, simulator, num_simulations_per_step=100, diag_eps=0.0):
+        super(SynthLikNet, self).__init__()
         self.simulator = simulator
         self.num_simulations_per_step = num_simulations_per_step
         self.diag_eps = diag_eps
+
+        # dummy parameter to make LikelihoodBasedPosterior happy
+        # (deduces device from SynthLikNet.parameters())
+        self.estimated_mn = torch.nn.parameter.UninitializedParameter(
+            requires_grad=False
+        )
 
     def forward(self, *args, **kwargs):
         raise NotImplementedError
@@ -62,6 +69,7 @@ class SynthLikNet(nn.Module):
                 covariance_matrix=S,
                 validate_args=False,  # to discard expensive check for psd'ness
             )
+
             log_probs.append(dist.log_prob(observation[i, :].reshape(1, -1)))
 
         return torch.cat(log_probs)
