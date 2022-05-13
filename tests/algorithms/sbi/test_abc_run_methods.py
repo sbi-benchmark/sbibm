@@ -1,11 +1,15 @@
+import pickle
+import tempfile
+from pathlib import Path
+
 import pytest
 import torch
 
 import sbibm
-from sbibm.algorithms.sbi.mcabc import run as run_mcabc
-from sbibm.algorithms.sbi.smcabc import run as run_smcabc
 from sbibm.algorithms.sbi.mcabc import build_posterior as build_posterior_mcabc
+from sbibm.algorithms.sbi.mcabc import run as run_mcabc
 from sbibm.algorithms.sbi.smcabc import build_posterior as build_posterior_smcabc
+from sbibm.algorithms.sbi.smcabc import run as run_smcabc
 from sbibm.metrics.c2st import c2st
 
 
@@ -65,3 +69,43 @@ def test_run_posterior_interface(
 
     # we are not interested in testing for correctness
     assert samples.shape == torch.Size([num_samples, task.dim_parameters])
+
+
+@pytest.mark.parametrize("task_name", ("gaussian_linear",))
+@pytest.mark.parametrize("run_method", (run_mcabc,))
+def test_check_stored_posterior(
+    task_name,
+    run_method,
+    num_simulations=100,
+    num_samples=50,
+):
+    task = sbibm.get_task(task_name)
+
+    th, tfile_ = tempfile.mkstemp("pkl")
+
+    tfile = Path(tfile_)
+    nobs = 3
+
+    samples, _, _ = run_method(
+        task=task,
+        num_simulations=num_simulations,
+        num_observation=nobs,
+        num_samples=num_samples,
+        posterior_path=tfile_,
+    )
+
+    # we are not interested in testing for correctness
+    assert samples.shape == torch.Size([num_samples, task.dim_parameters])
+    assert tfile.exists()
+    assert tfile.stat().st_size > 0
+
+    # reload and pickle the KDEWrapper
+    with tfile.open("rb") as rfile:
+        kdewrapped = pickle.load(rfile)
+        obs = kdewrapped.sample(samples.shape[0])
+        assert obs.shape == samples.shape
+
+        assert not torch.allclose(samples.mean(axis=0), obs.mean(axis=0))
+
+    # clean up after ourselves
+    tfile.unlink()

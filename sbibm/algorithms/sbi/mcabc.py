@@ -1,9 +1,10 @@
+import pickle
 from typing import Optional, Tuple, Union
 
 import torch
-from torch import Tensor
 from sbi.inference import MCABC
 from sbi.utils import KDEWrapper
+from torch import Tensor
 
 import sbibm
 from sbibm.tasks.task import Task
@@ -136,23 +137,37 @@ def run(
     sass_fraction: float = 0.5,
     sass_feature_expansion_degree: int = 3,
     lra: bool = False,
+    posterior_path: Optional[str] = "",
 ) -> Tuple[torch.Tensor, int, Optional[torch.Tensor]]:
     f"""
     {__DOCSTRING__}
+            posterior_path: filesystem location where to store the posterior under
+                            (if None, posterior is not saved)
 
     Returns:
         Samples from posterior, number of simulator calls, log probability of true params if computable
     """
     assert not (num_observation is None and observation is None)
     assert not (num_observation is not None and observation is not None)
-
     assert not (num_top_samples is None and quantile is None and eps is None)
-    inkwargs = locals()
+
+    inkwargs = {k: v for k, v in locals().items() if "posterior_path" not in k}
 
     log = sbibm.get_logger(__name__)
     log.info(f"Running REJ-ABC")
+    simulator = task.get_simulator(max_calls=num_simulations)
 
     output, summary = build_posterior(**inkwargs)
+    kde = kde_bandwidth is not None
+
+    if posterior_path:
+        if not kde:
+            log.info(
+                f"unable to save posterior as non was created, kde = {kde, kde_bandwidth}"
+            )
+        elif posterior_path is not None:
+            with open(posterior_path, "wb") as ofile:
+                pickle.dump(output, ofile)
 
     if kde:
         kde_posterior = output
