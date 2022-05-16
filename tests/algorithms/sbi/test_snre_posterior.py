@@ -46,7 +46,7 @@ def test_nre_posterior(
     acc = c2st(predicted, expected)
 
     assert acc > 0.5
-    assert acc < 1.0
+    assert acc <= 1.0
     assert acc > 0.6
 
 
@@ -79,7 +79,7 @@ def test_stored_nre_posterior(
     acc = c2st(predicted, expected)
 
     assert acc > 0.5
-    assert acc < 1.0
+    assert acc <= 1.0
     assert acc > 0.6
 
     assert tfile.exists()

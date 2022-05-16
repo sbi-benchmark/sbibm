@@ -91,7 +91,7 @@ def test_npe_posterior(
     acc = c2st(predicted, expected)
 
     assert acc > 0.5
-    assert acc < 1.0
+    assert acc <= 1.0
     assert acc > 0.6
 
 
@@ -124,7 +124,7 @@ def test_stored_nle_posterior(
     acc = c2st(predicted, expected)
 
     assert acc > 0.5
-    assert acc < 1.0
+    assert acc <= 1.0
     assert acc > 0.6
 
     assert tfile.exists()
