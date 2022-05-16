@@ -1,5 +1,6 @@
 import logging
 import math
+import pickle
 from typing import Any, Dict, Optional, Tuple
 
 import torch
@@ -40,6 +41,7 @@ def run(
     z_score_theta: bool = True,
     variant: str = "B",
     max_num_epochs: Optional[int] = None,
+    posterior_path: Optional[str] = "",
 ) -> Tuple[torch.Tensor, int, Optional[torch.Tensor]]:
     """Runs (S)NRE from `sbi`
 
@@ -62,6 +64,8 @@ def run(
         z_score_theta: Whether to z-score theta
         variant: Can be used to switch between SNRE-A (AALR) and -B (SRE)
         max_num_epochs: Maximum number of epochs
+        posterior_path: filesystem location where to store the posterior under
+                        (if None, posterior is not saved)
 
     Returns:
         Samples from posterior, number of simulator calls, log probability of true params if computable
@@ -117,7 +121,9 @@ def run(
     posteriors = []
     proposal = prior
     mcmc_parameters["warmup_steps"] = 25
-    mcmc_parameters["enable_transform"] = False  # NOTE: Disable `sbi` auto-transforms, since `sbibm` does its own
+    mcmc_parameters[
+        "enable_transform"
+    ] = False  # NOTE: Disable `sbi` auto-transforms, since `sbibm` does its own
 
     for r in range(num_rounds):
         theta, x = inference.simulate_for_sbi(
@@ -149,6 +155,11 @@ def run(
         posteriors.append(posterior)
 
     posterior = wrap_posterior(posteriors[-1], transforms)
+
+    if posterior_path:
+        log.info(f"storing posterior at {posterior_path}")
+        with open(posterior_path, "wb") as ofile:
+            pickle.dump(posterior, ofile)
 
     assert simulator.num_simulations == num_simulations
 

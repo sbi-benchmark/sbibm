@@ -1,4 +1,3 @@
-# import torch
 import pickle
 import tempfile
 from pathlib import Path
@@ -92,7 +91,7 @@ def test_stored_nle_posterior(
         obs = rposterior.sample((num_samples,))
         assert obs.shape == expected.shape
         acc = c2st(obs, expected)
-        assert acc > 0.6
+        assert acc > 0.8
         print(f"reloaded posterior samples versus expected samples, c2st score = {acc}")
 
     # clean up after ourselves
