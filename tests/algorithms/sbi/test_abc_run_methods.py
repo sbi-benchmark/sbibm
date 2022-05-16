@@ -72,7 +72,7 @@ def test_run_posterior_interface(
 
 
 @pytest.mark.parametrize("task_name", ("gaussian_linear",))
-@pytest.mark.parametrize("run_method", (run_mcabc,))
+@pytest.mark.parametrize("run_method", (run_mcabc, run_smcabc))
 def test_check_stored_posterior(
     task_name,
     run_method,
@@ -81,7 +81,7 @@ def test_check_stored_posterior(
 ):
     task = sbibm.get_task(task_name)
 
-    th, tfile_ = tempfile.mkstemp("pkl")
+    th, tfile_ = tempfile.mkstemp(".pkl")
 
     tfile = Path(tfile_)
     nobs = 3

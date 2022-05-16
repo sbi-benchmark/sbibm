@@ -1,9 +1,10 @@
 import pytest
-import torch
 
 import sbibm
 from sbibm.algorithms.sbi.snle import run as run_posterior
 from sbibm.metrics.c2st import c2st
+
+# import torch
 
 
 # a fast test

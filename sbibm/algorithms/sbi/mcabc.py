@@ -166,6 +166,7 @@ def run(
                 f"unable to save posterior as non was created, kde = {kde, kde_bandwidth}"
             )
         elif posterior_path is not None:
+            log.info(f"storing posterior at {posterior_path}")
             with open(posterior_path, "wb") as ofile:
                 pickle.dump(output, ofile)
 

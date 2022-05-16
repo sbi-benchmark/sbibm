@@ -1,11 +1,11 @@
+import pickle
 from typing import Optional, Tuple, Union
 
 import pandas as pd
 import torch
-from torch import Tensor
 from sbi.inference import SMCABC
 from sbi.utils import KDEWrapper
-
+from torch import Tensor
 
 import sbibm
 from sbibm.tasks.task import Task
@@ -188,9 +188,12 @@ def run(
     lra_sample_weights: bool = True,
     kde_bandwidth: Optional[str] = "cv",
     kde_sample_weights: bool = False,
+    posterior_path: Optional[str] = "",
 ) -> Tuple[torch.Tensor, int, Optional[torch.Tensor]]:
     f"""
     {__DOCSTRING__}
+        posterior_path: filesystem location where to store the posterior under
+                        (if None, posterior is not saved)
 
     Returns:
         Samples from posterior, number of simulator calls, log probability of true params if computable
@@ -198,13 +201,24 @@ def run(
     assert not (num_observation is None and observation is None)
     assert not (num_observation is not None and observation is not None)
 
-    inkwargs = locals()
+    inkwargs = {k: v for k, v in locals().items() if "posterior_path" not in k}
 
     log = sbibm.get_logger(__name__)
     smc_papers = dict(A="Toni 2010", B="Sisson et al. 2007", C="Beaumont et al. 2009")
     log.info(f"Building SMC-ABC Posterior as in {smc_papers[algorithm_variant]}.")
 
+    simulator = task.get_simulator(max_calls=num_simulations)
+    kde = kde_bandwidth is not None
     output, summary = build_posterior(**inkwargs)
+    if posterior_path:
+        if not kde:
+            log.info(
+                f"unable to save posterior as non was created, kde = {kde, kde_bandwidth}"
+            )
+        elif posterior_path is not None:
+            log.info(f"storing posterior at {posterior_path}")
+            with open(posterior_path, "wb") as ofile:
+                pickle.dump(output, ofile)
 
     # Return samples from kde or raw samples.
     if kde:
