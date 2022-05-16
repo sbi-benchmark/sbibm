@@ -1,11 +1,13 @@
 import logging
 import math
+import pickle
 from typing import Optional, Tuple
 
 import torch
 from sbi import inference as inference
 from sbi.utils.get_nn_models import posterior_nn
 
+import sbibm
 from sbibm.algorithms.sbi.utils import (
     wrap_posterior,
     wrap_prior_dist,
@@ -149,20 +151,30 @@ def run(
     z_score_x: bool = True,
     z_score_theta: bool = True,
     max_num_epochs: Optional[int] = None,
+    posterior_path: Optional[str] = "",
 ) -> Tuple[torch.Tensor, int, Optional[torch.Tensor]]:
     f"""
     {__DOCSTRING__}
+        posterior_path: filesystem location where to store the posterior under
+                        (if None, posterior is not saved)
 
     Returns:
         Samples from posterior, number of simulator calls, log probability of true params if computable
     """
     assert not (num_observation is None and observation is None)
     assert not (num_observation is not None and observation is not None)
+    inkwargs = {k: v for k, v in locals().items() if "posterior_path" not in k}
 
-    inkwargs = locals()
-    posterior = build_posterior(**inkwargs)
+    simulator = task.get_simulator(max_calls=num_simulations)
+    log = sbibm.get_logger(__name__)
+
+    posterior, _ = build_posterior(**inkwargs)
 
     samples = posterior.sample((num_samples,)).detach()
+    if posterior_path:
+        log.info(f"storing posterior at {posterior_path}")
+        with open(posterior_path, "wb") as ofile:
+            pickle.dump(posterior, ofile)
 
     if num_observation is not None:
         true_parameters = task.get_true_parameters(num_observation=num_observation)
