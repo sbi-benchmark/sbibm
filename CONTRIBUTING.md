@@ -2,6 +2,50 @@
 
 We invite contributions of new algorithms, tasks, and metrics. Please do not hestitate to get in touch [via email](mailto:mail@jan-matthis.de,jakob.macke@uni-tuebingen.de) or by opening an issue on the repository. 
 
+## Setup
+
+To create a reproducible environment, we advice our contributors to follow these steps in order to ensure comparable results when contributing a feature or bugfix. Assuming you have already created a branch from `main` and are currently working from the root of the repo, do:
+
+```bash
+python -m venv my-branch-venv
+```
+
+load this virtual environment, e.g. on \*nix or mac do:
+
+```bash
+source my-branch-venv/bin/activate
+```
+
+Upgrade pip:
+
+```bash
+python -m pip install --upgrade pip 
+```
+
+Install dependencies including extras for development:
+
+```bash
+python -m pip install -e .[dev] 
+```
+
+Run the tests (this currently takes quite a while):
+
+```bash
+python -m pytest -x . 
+```
+
+To complete, run house keeping apps and try to make all errors disappear:
+
+```bash
+black .
+```
+
+```bash
+isort .
+```
+
+Now commit and push your changes to github and open a PR. Thank you!
+
 
 ## Tasks
 
