@@ -1,11 +1,13 @@
 import logging
 import math
+import pickle
 from typing import Optional, Tuple
 
 import torch
 from sbi import inference as inference
 from sbi.utils.get_nn_models import posterior_nn
 
+import sbibm
 from sbibm.algorithms.sbi.utils import (
     wrap_posterior,
     wrap_prior_dist,
@@ -13,25 +15,7 @@ from sbibm.algorithms.sbi.utils import (
 )
 from sbibm.tasks.task import Task
 
-
-def run(
-    task: Task,
-    num_samples: int,
-    num_simulations: int,
-    num_observation: Optional[int] = None,
-    observation: Optional[torch.Tensor] = None,
-    num_rounds: int = 10,
-    neural_net: str = "nsf",
-    hidden_features: int = 50,
-    simulation_batch_size: int = 1000,
-    training_batch_size: int = 10000,
-    num_atoms: int = 10,
-    automatic_transforms_enabled: bool = False,
-    z_score_x: bool = True,
-    z_score_theta: bool = True,
-    max_num_epochs: Optional[int] = None,
-  ) -> Tuple[torch.Tensor, int, Optional[torch.Tensor]]:
-    """Runs (S)NPE from `sbi`
+__DOCSTRING__ = """Runs (S)NPE from `sbi`
 
     Args:
         task: Task instance
@@ -49,9 +33,32 @@ def run(
         z_score_x: Whether to z-score x
         z_score_theta: Whether to z-score theta
         max_num_epochs: Maximum number of epochs
+    """
+
+
+def build_posterior(
+    task: Task,
+    num_samples: int,
+    num_simulations: int,
+    num_observation: Optional[int] = None,
+    observation: Optional[torch.Tensor] = None,
+    num_rounds: int = 10,
+    neural_net: str = "nsf",
+    hidden_features: int = 50,
+    simulation_batch_size: int = 1000,
+    training_batch_size: int = 10000,
+    num_atoms: int = 10,
+    automatic_transforms_enabled: bool = False,
+    z_score_x: bool = True,
+    z_score_theta: bool = True,
+    max_num_epochs: Optional[int] = None,
+) -> Tuple[torch.Tensor, None]:
+    f"""
+    build_posterior method creating the inferred posterior object
+    {__DOCSTRING__}
 
     Returns:
-        Samples from posterior, number of simulator calls, log probability of true params if computable
+        Trained posterior
     """
     assert not (num_observation is None and observation is None)
     assert not (num_observation is not None and observation is not None)
@@ -125,7 +132,49 @@ def run(
 
     assert simulator.num_simulations == num_simulations
 
+    return posterior, None
+
+
+def run(
+    task: Task,
+    num_samples: int,
+    num_simulations: int,
+    num_observation: Optional[int] = None,
+    observation: Optional[torch.Tensor] = None,
+    num_rounds: int = 10,
+    neural_net: str = "nsf",
+    hidden_features: int = 50,
+    simulation_batch_size: int = 1000,
+    training_batch_size: int = 10000,
+    num_atoms: int = 10,
+    automatic_transforms_enabled: bool = False,
+    z_score_x: bool = True,
+    z_score_theta: bool = True,
+    max_num_epochs: Optional[int] = None,
+    posterior_path: Optional[str] = "",
+) -> Tuple[torch.Tensor, int, Optional[torch.Tensor]]:
+    f"""
+    {__DOCSTRING__}
+        posterior_path: filesystem location where to store the posterior under
+                        (if None, posterior is not saved)
+
+    Returns:
+        Samples from posterior, number of simulator calls, log probability of true params if computable
+    """
+    assert not (num_observation is None and observation is None)
+    assert not (num_observation is not None and observation is not None)
+    inkwargs = {k: v for k, v in locals().items() if "posterior_path" not in k}
+
+    simulator = task.get_simulator(max_calls=num_simulations)
+    log = sbibm.get_logger(__name__)
+
+    posterior, _ = build_posterior(**inkwargs)
+
     samples = posterior.sample((num_samples,)).detach()
+    if posterior_path:
+        log.info(f"storing posterior at {posterior_path}")
+        with open(posterior_path, "wb") as ofile:
+            pickle.dump(posterior, ofile)
 
     if num_observation is not None:
         true_parameters = task.get_true_parameters(num_observation=num_observation)

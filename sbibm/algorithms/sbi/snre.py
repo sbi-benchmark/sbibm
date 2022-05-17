@@ -1,11 +1,13 @@
 import logging
 import math
+import pickle
 from typing import Any, Dict, Optional, Tuple
 
 import torch
 from sbi import inference as inference
 from sbi.utils.get_nn_models import classifier_nn
 
+import sbibm
 from sbibm.algorithms.sbi.utils import (
     wrap_posterior,
     wrap_prior_dist,
@@ -13,8 +15,32 @@ from sbibm.algorithms.sbi.utils import (
 )
 from sbibm.tasks.task import Task
 
+__DOCSTRING__ = """
+    Runs (S)NRE from `sbi`
 
-def run(
+    Args:
+        task: Task instance
+        num_samples: Number of samples to generate from posterior
+        num_observation: Observation number to load, alternative to `observation`
+        observation: Observation, alternative to `num_observation`
+        num_simulations: Simulation budget
+        num_rounds: Number of rounds
+        neural_net: Neural network to use, one of linear / mlp / resnet
+        hidden_features: Number of hidden features in network
+        simulation_batch_size: Batch size for simulator
+        training_batch_size: Batch size for training network
+        num_atoms: Number of atoms, -1 means same as `training_batch_size`
+        automatic_transforms_enabled: Whether to enable automatic transforms
+        mcmc_method: MCMC method
+        mcmc_parameters: MCMC parameters
+        z_score_x: Whether to z-score x
+        z_score_theta: Whether to z-score theta
+        variant: Can be used to switch between SNRE-A (AALR) and -B (SRE)
+        max_num_epochs: Maximum number of epochs
+"""
+
+
+def build_posterior(
     task: Task,
     num_samples: int,
     num_simulations: int,
@@ -40,28 +66,12 @@ def run(
     z_score_theta: bool = True,
     variant: str = "B",
     max_num_epochs: Optional[int] = None,
+    posterior_path: Optional[str] = "",
 ) -> Tuple[torch.Tensor, int, Optional[torch.Tensor]]:
-    """Runs (S)NRE from `sbi`
-
-    Args:
-        task: Task instance
-        num_samples: Number of samples to generate from posterior
-        num_observation: Observation number to load, alternative to `observation`
-        observation: Observation, alternative to `num_observation`
-        num_simulations: Simulation budget
-        num_rounds: Number of rounds
-        neural_net: Neural network to use, one of linear / mlp / resnet
-        hidden_features: Number of hidden features in network
-        simulation_batch_size: Batch size for simulator
-        training_batch_size: Batch size for training network
-        num_atoms: Number of atoms, -1 means same as `training_batch_size`
-        automatic_transforms_enabled: Whether to enable automatic transforms
-        mcmc_method: MCMC method
-        mcmc_parameters: MCMC parameters
-        z_score_x: Whether to z-score x
-        z_score_theta: Whether to z-score theta
-        variant: Can be used to switch between SNRE-A (AALR) and -B (SRE)
-        max_num_epochs: Maximum number of epochs
+    f"""
+    {__DOCSTRING__}
+        posterior_path: filesystem location where to store the posterior under
+                        (if None, posterior is not saved)
 
     Returns:
         Samples from posterior, number of simulator calls, log probability of true params if computable
@@ -117,7 +127,9 @@ def run(
     posteriors = []
     proposal = prior
     mcmc_parameters["warmup_steps"] = 25
-    mcmc_parameters["enable_transform"] = False  # NOTE: Disable `sbi` auto-transforms, since `sbibm` does its own
+    mcmc_parameters[
+        "enable_transform"
+    ] = False  # NOTE: Disable `sbi` auto-transforms, since `sbibm` does its own
 
     for r in range(num_rounds):
         theta, x = inference.simulate_for_sbi(
@@ -151,6 +163,59 @@ def run(
     posterior = wrap_posterior(posteriors[-1], transforms)
 
     assert simulator.num_simulations == num_simulations
+
+    return posterior, None
+
+
+def run(
+    task: Task,
+    num_samples: int,
+    num_simulations: int,
+    num_observation: Optional[int] = None,
+    observation: Optional[torch.Tensor] = None,
+    num_rounds: int = 10,
+    neural_net: str = "resnet",
+    hidden_features: int = 50,
+    simulation_batch_size: int = 1000,
+    training_batch_size: int = 10000,
+    num_atoms: int = 10,
+    automatic_transforms_enabled: bool = True,
+    mcmc_method: str = "slice_np_vectorized",
+    mcmc_parameters: Dict[str, Any] = {
+        "num_chains": 100,
+        "thin": 10,
+        "warmup_steps": 100,
+        "init_strategy": "sir",
+        "sir_batch_size": 1000,
+        "sir_num_batches": 100,
+    },
+    z_score_x: bool = True,
+    z_score_theta: bool = True,
+    variant: str = "B",
+    max_num_epochs: Optional[int] = None,
+    posterior_path: Optional[str] = "",
+) -> Tuple[torch.Tensor, int, Optional[torch.Tensor]]:
+    f"""
+    {__DOCSTRING__}
+        posterior_path: filesystem location where to store the posterior under
+                        (if None, posterior is not saved)
+
+    Returns:
+        Samples from posterior, number of simulator calls, log probability of true params if computable
+    """
+    assert not (num_observation is None and observation is None)
+    assert not (num_observation is not None and observation is not None)
+    inkwargs = {k: v for k, v in locals().items() if "posterior_path" not in k}
+
+    simulator = task.get_simulator(max_calls=num_simulations)
+    log = sbibm.get_logger(__name__)
+
+    posterior, _ = build_posterior(**inkwargs)
+
+    if posterior_path:
+        log.info(f"storing posterior at {posterior_path}")
+        with open(posterior_path, "wb") as ofile:
+            pickle.dump(posterior, ofile)
 
     samples = posterior.sample((num_samples,)).detach()
 

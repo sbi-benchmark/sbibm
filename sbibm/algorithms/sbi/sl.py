@@ -1,5 +1,5 @@
 import logging
-import math
+import pickle
 from typing import Any, Dict, Optional
 
 import torch
@@ -95,6 +95,7 @@ def run(
     mcmc_method: str = "slice_np",
     mcmc_parameters: Dict[str, Any] = {},
     diag_eps: float = 0.0,
+    posterior_path: Optional[str] = "",
 ) -> (torch.Tensor, int, Optional[torch.Tensor]):
     """Runs (S)NLE from `sbi`
 
@@ -109,6 +110,8 @@ def run(
         mcmc_method: MCMC method
         mcmc_parameters: MCMC parameters
         diag_eps: Epsilon applied to diagonal
+        posterior_path: filesystem location where to store the posterior under
+                        (if None, posterior is not saved)
 
     Returns:
         Samples from posterior, number of simulator calls, log probability of true params if computable
@@ -147,6 +150,11 @@ def run(
     posterior.set_default_x(observation)
 
     posterior = wrap_posterior(posterior, transforms)
+
+    if posterior_path:
+        log.info(f"storing posterior at {posterior_path}")
+        with open(posterior_path, "wb") as ofile:
+            pickle.dump(posterior, ofile)
 
     # assert simulator.num_simulations == num_simulations
 

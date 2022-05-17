@@ -1,10 +1,53 @@
+import pickle
+import tempfile
+from pathlib import Path
+
 import pytest
 import torch
 
 import sbibm
+from sbibm.algorithms.sbi.mcabc import build_posterior as build_posterior_mcabc
 from sbibm.algorithms.sbi.mcabc import run as run_mcabc
+from sbibm.algorithms.sbi.smcabc import build_posterior as build_posterior_smcabc
 from sbibm.algorithms.sbi.smcabc import run as run_smcabc
 from sbibm.metrics.c2st import c2st
+
+
+@pytest.mark.parametrize("task_name", ("gaussian_linear", "two_moons"))
+@pytest.mark.parametrize(
+    "build_method", (build_posterior_mcabc, build_posterior_smcabc)
+)
+def test_build_posterior_interface(
+    task_name,
+    build_method,
+    num_simulations=100,
+    num_samples=5,
+):
+    task = sbibm.get_task(task_name)
+    nobs = 3
+    post, summary = build_method(
+        task=task,
+        num_simulations=num_simulations,
+        num_observation=nobs,
+        num_samples=num_samples,
+    )
+
+    assert len(summary) != 0
+    assert len(list(summary.keys())) > 0
+
+    assert hasattr(post, "sample")
+    assert hasattr(post, "log_prob")
+
+    tp_exp = task.get_true_parameters(num_observation=nobs)
+    tp_obs = task.get_true_parameters(num_observation=nobs + 1)
+
+    assert not torch.allclose(tp_exp, tp_obs)
+
+    logprob_exp = post.log_prob(tp_exp)
+    logprob_obs = post.log_prob(tp_obs)
+
+    assert logprob_exp.shape == logprob_obs.shape
+    assert not torch.allclose(logprob_exp, logprob_obs)
 
 
 @pytest.mark.parametrize("task_name", ("gaussian_linear", "two_moons"))
@@ -26,3 +69,43 @@ def test_run_posterior_interface(
 
     # we are not interested in testing for correctness
     assert samples.shape == torch.Size([num_samples, task.dim_parameters])
+
+
+@pytest.mark.parametrize("task_name", ("gaussian_linear",))
+@pytest.mark.parametrize("run_method", (run_mcabc, run_smcabc))
+def test_check_stored_posterior(
+    task_name,
+    run_method,
+    num_simulations=100,
+    num_samples=50,
+):
+    task = sbibm.get_task(task_name)
+
+    th, tfile_ = tempfile.mkstemp(".pkl")
+
+    tfile = Path(tfile_)
+    nobs = 3
+
+    samples, _, _ = run_method(
+        task=task,
+        num_simulations=num_simulations,
+        num_observation=nobs,
+        num_samples=num_samples,
+        posterior_path=tfile_,
+    )
+
+    # we are not interested in testing for correctness
+    assert samples.shape == torch.Size([num_samples, task.dim_parameters])
+    assert tfile.exists()
+    assert tfile.stat().st_size > 0
+
+    # reload and pickle the KDEWrapper
+    with tfile.open("rb") as rfile:
+        kdewrapped = pickle.load(rfile)
+        obs = kdewrapped.sample(samples.shape[0])
+        assert obs.shape == samples.shape
+
+        assert not torch.allclose(samples.mean(axis=0), obs.mean(axis=0))
+
+    # clean up after ourselves
+    tfile.unlink()
