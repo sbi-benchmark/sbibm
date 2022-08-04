@@ -3,18 +3,7 @@ import pytest
 import torch
 from pyro import distributions as pdist
 from pyro import util as putil
-from torch.distributions.transforms import (
-    AffineTransform,
-    ComposeTransform,
-    IndependentTransform,
-    SigmoidTransform,
-)
 
-import sbibm
-from sbibm.algorithms import rej_abc
-from sbibm.algorithms.sbi.snpe import run
-from sbibm.metrics import c2st
-from sbibm.metrics.ppc import median_distance
 from sbibm.tasks.noref_beam.task import (
     NorefBeam,
     base_coordinate_field,
@@ -26,7 +15,7 @@ putil.set_rng_seed(47)
 
 
 ################################################
-## API tests that related the internal task code
+# API tests that related the internal task code
 
 
 def test_task_constructs():
@@ -112,14 +101,14 @@ def test_multivariate_normal_constructs_asbatch_onrange(batched_mvn):
 
     m_ = data_dist.loc
 
-    ## single batch sample
+    # single batch sample
     sample = data_dist.sample()
     assert sample.shape == (batch_size, 2)
     lp = data_dist.log_prob(sample)
     assert len(lp.shape) > 0
     assert lp.shape == data_dist.batch_shape
 
-    ## multiple batches sample
+    # multiple batches sample
     nensemble = 1024
     # http://pyro.ai/examples/tensor_shapes.html#Examples
     samples = data_dist.sample((nensemble,))
@@ -149,6 +138,7 @@ def test_multivariate_normal_logprob_onfield(batched_mvn):
         # this fails, because of
         # ValueError: Value is not broadcastable with batch_shape+event_shape: torch.Size([8, 100, 100, 2]) vs torch.Size([8, 2]).
         elp = torch.exp(data_dist.log_prob(bfield))
+        assert "broadcastable" in str(ve)
 
     bfield = bcast_coordinate_field(field, batch_size)
     assert bfield.shape == (dim_size, dim_size, batch_size, 2)
@@ -385,6 +375,63 @@ def test_torch_average():
     assert m1 < 11.0
 
 
+def test_torch_average_std():
+
+    m_ = 5 * torch.arange(1, 3).float()
+    S = torch.eye(2).float()
+
+    data_dist = pdist.MultivariateNormal(m_, S)
+
+    samples = data_dist.sample((2048,))
+    bins0, edges0 = np.histogram(samples[:, 0].numpy(), bins=15)
+
+    weights = torch.from_numpy(bins0)
+    lims = torch.from_numpy(edges0[:-1])
+    mn = torch_average(lims, weights=weights)
+
+    assert mn > 4.0
+    assert mn < 6.0
+
+    std = torch_average(
+        (lims - mn) ** 2,
+        weights=weights,
+        axis=-1,
+    )
+
+    assert std > 0
+    assert std > 0.5
+    assert std < 1.5
+    assert std > 0.95
+    assert std < 1.05
+
+    m_ = 5 * torch.arange(3, 5).float()
+    S = 3.0 * torch.eye(2).float()  # Note: sigma^2!
+
+    data_dist = pdist.MultivariateNormal(m_, S)
+    samples = data_dist.sample((2048,))
+    bins0, edges0 = np.histogram(samples[:, 0].numpy(), bins=15)
+
+    weights = torch.from_numpy(bins0)
+    lims = torch.from_numpy(edges0[:-1])
+    mn = torch_average(lims, weights=weights)
+
+    assert mn > 14.0
+    assert mn < 16.0
+
+    std = torch_average(
+        (lims - mn) ** 2,
+        weights=weights,
+        axis=-1,
+    )  # for the sample variance, this would have to be renormalized by N/(N-1)
+
+    # these tests only hold, as we provide sigma**2 in S
+    assert std > 0
+    assert std > 2.5
+    assert std < 3.5
+    assert std > 2.95
+    assert std < 3.1
+
+
 def test_bcast_coordinate_field():
 
     m_ = torch.arange(12).reshape(4, 3).float()
@@ -432,6 +479,8 @@ def test_simulation_output():
 
     lims = torch.arange(t.min_axis, t.max_axis, t.step_width).float()
     nsteps = t.nsteps
+    basescale = t.max_axis - t.min_axis  # maximum value for params
+    index_scale = nsteps / basescale
     assert nsteps == 200
     assert lims.shape == (nsteps,)
 
@@ -439,13 +488,28 @@ def test_simulation_output():
         left_ = x_t[s, :nsteps]
         right_ = x_t[s, nsteps:]
 
+        assert left_.shape[-1] == nsteps
+        assert right_.shape[-1] == nsteps
+
         left_argx = torch.argmax(left_)
         assert left_argx < 2.5 * params[s, 0]
         assert left_argx > 1.5 * params[s, 0]
 
+        assert left_argx < index_scale * (params[s, 0] + 2 * params[s, 2])
+        assert left_argx > index_scale * (params[s, 0] - 2 * params[s, 2])
+
+        assert left_argx < index_scale * (params[s, 0] + 0.5 * params[s, 2])
+        assert left_argx > index_scale * (params[s, 0] - 0.5 * params[s, 2])
+
         right_argx = torch.argmax(right_)
         assert right_argx < 2.5 * params[s, 1]
         assert right_argx > 1.5 * params[s, 1]
+
+        assert right_argx < index_scale * (params[s, 1] + 2 * params[s, 3])
+        assert right_argx > index_scale * (params[s, 1] - 2 * params[s, 3])
+
+        assert right_argx < index_scale * (params[s, 1] + 0.5 * params[s, 3])
+        assert right_argx > index_scale * (params[s, 1] - 0.5 * params[s, 3])
 
         left_m = torch_average(lims, weights=left_)
         assert left_m < 1.1 * params[s, 0]
