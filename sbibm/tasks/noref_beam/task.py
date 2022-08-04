@@ -9,7 +9,6 @@ from torch.distributions import biject_to
 from sbibm import get_logger
 from sbibm.tasks.simulator import Simulator
 from sbibm.tasks.task import Task
-from sbibm.utils.io import get_tensor_from_csv, save_tensor_to_csv
 
 
 def torch_average(a, weights=None, axis=0):
@@ -27,7 +26,7 @@ def torch_average(a, weights=None, axis=0):
     if isinstance(weights, type(None)):
         return a.mean(axis=axis)
     else:
-        assert weights.sum() > 0, f"received all 0 weights tensor"
+        assert weights.sum() > 0, "received all 0 weights tensor"
         value = torch.sum(a * weights, axis=axis) / torch.sum(weights, axis=axis)
         return value
 
@@ -172,6 +171,7 @@ class NorefBeam(Task):
         )
 
         self.prior_params = {
+            # mean x, mean y, std x, std y
             "low": torch.tensor([20, 20, 1, 1]).float(),
             "high": torch.tensor([80, 80, 15, 15]).float(),
         }
