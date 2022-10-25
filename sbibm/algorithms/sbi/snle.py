@@ -28,6 +28,7 @@ def run(
     neural_net: str = "maf",
     hidden_features: int = 50,
     simulation_batch_size: int = 1000,
+    # NOTE: why is the training batch size so high?
     training_batch_size: int = 10000,
     automatic_transforms_enabled: bool = True,
     mcmc_method: str = "slice_np_vectorized",
@@ -36,8 +37,10 @@ def run(
         "thin": 10,
         "warmup_steps": 100,
         "init_strategy": "sir",
-        "sir_batch_size": 100,
-        "sir_num_batches": 1000,
+        # NOTE: sir kwargs changed: num_candidate_samples = num_batches * batch_size
+        "init_strategy_parameters": {
+            "num_candidate_samples": 10000,
+        },
     },
     z_score_x: bool = True,
     z_score_theta: bool = True,
@@ -133,7 +136,7 @@ def run(
             theta, x, from_round=r
         ).train(
             training_batch_size=training_batch_size,
-            retrain_from_scratch_each_round=False,
+            retrain_from_scratch=False,
             discard_prior_samples=False,
             show_train_summary=True,
             validation_fraction=validation_fraction,
@@ -141,8 +144,10 @@ def run(
         )
         if r > 1:
             mcmc_parameters["init_strategy"] = "latest_sample"
+
         posterior = inference_method.build_posterior(
-            density_estimator,
+            density_estimator=density_estimator,
+            sample_with="mcmc",
             mcmc_method=mcmc_method,
             mcmc_parameters=mcmc_parameters,
         )
