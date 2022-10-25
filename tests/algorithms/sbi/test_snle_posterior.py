@@ -15,7 +15,10 @@ from sbibm.metrics.c2st import c2st
             "gaussian_linear",
             "gaussian_linear_uniform",
         ]
-        for num_observation in [1, 3]
+        for num_observation in [
+            1,
+            3,
+        ]
     ],
 )
 def test_nle_posterior(
