@@ -41,6 +41,7 @@ def run(
     z_score_x: bool = True,
     z_score_theta: bool = True,
     variant: str = "B",
+    max_num_epochs: Optional[int] = 2**31 - 1,
 ) -> Tuple[torch.Tensor, int, Optional[torch.Tensor]]:
     """Runs (S)NRE from `sbi`
 

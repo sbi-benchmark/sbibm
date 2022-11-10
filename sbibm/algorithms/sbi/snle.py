@@ -44,12 +44,7 @@ def run(
     },
     z_score_x: bool = True,
     z_score_theta: bool = True,
-    validation_fraction: float = 0.1,
-    stop_after_epochs: int = 20,
-    num_transforms: int = 1,
-    num_bins: int = 10,
-    l_lower_bound: float = 1e-7,
-    use_pretrained: bool = False,
+    max_num_epochs: Optional[int] = 2**31 - 1,
 ) -> Tuple[torch.Tensor, int, Optional[torch.Tensor]]:
     """Runs (S)NLE from `sbi`
 
@@ -139,8 +134,6 @@ def run(
             retrain_from_scratch=False,
             discard_prior_samples=False,
             show_train_summary=True,
-            validation_fraction=validation_fraction,
-            stop_after_epochs=stop_after_epochs,
         )
         if r > 1:
             mcmc_parameters["init_strategy"] = "latest_sample"
@@ -166,7 +159,6 @@ def run(
         observation_sbi,
         mcmc_method,
         transforms,
-        l_lower_bound,
     )
 
     # Run MCMC in transformed space.
