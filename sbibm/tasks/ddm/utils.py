@@ -8,7 +8,7 @@ import torch
 import logging
 from torch import Tensor, nn
 from sbi.utils.torchutils import atleast_2d, ensure_theta_batched
-from sbi.samplers.mcmc import SliceSamplerVectorized, sir
+from sbi.samplers.mcmc import SliceSamplerVectorized, sir_init
 from sbi.utils import tensor2numpy
 from torch.distributions import Bernoulli, Distribution, TransformedDistribution
 from torch import Tensor, optim
@@ -569,7 +569,7 @@ def run_mcmc(
     # Obtain initial parameters for each chain using sequential importantce reweighting.
     if init_strategy == "sir":
         initial_params = torch.cat(
-            [sir(prior, potential_fn, **mcmc_parameters) for _ in range(num_chains)]
+            [sir_init(prior, potential_fn, **mcmc_parameters) for _ in range(num_chains)]
         )
     else:
         initial_params = prior.sample((num_chains,))
