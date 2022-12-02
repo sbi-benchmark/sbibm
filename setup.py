@@ -29,7 +29,7 @@ REQUIRED = [
     "pandas>=1.0.0",
     "pyabc>=0.10.8",
     "pyabcranger>=0.0.48",
-    "sbi",
+    "sbi>=0.20.0,<0.22.0",
     "pyro-ppl",
     "scikit-learn",
     "torch>=1.5.1",

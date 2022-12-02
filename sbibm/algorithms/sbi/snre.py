@@ -1,6 +1,6 @@
 import logging
 import math
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional
 
 import torch
 from sbi import inference as inference
@@ -31,7 +31,7 @@ def run(
     mcmc_parameters: Dict[str, Any] = {
         "num_chains": 100,
         "thin": 10,
-        "warmup_steps": 100,
+        "warmup_steps": 25,
         "init_strategy": "sir",
         # NOTE: sir kwargs changed: num_candidate_samples = num_batches * batch_size
         "init_strategy_parameters": {
@@ -42,7 +42,7 @@ def run(
     z_score_theta: bool = True,
     variant: str = "B",
     max_num_epochs: Optional[int] = 2**31 - 1,
-) -> Tuple[torch.Tensor, int, Optional[torch.Tensor]]:
+) -> tuple[torch.Tensor, int, Optional[torch.Tensor]]:
     """Runs (S)NRE from `sbi`
 
     Args:
@@ -117,7 +117,6 @@ def run(
 
     posteriors = []
     proposal = prior
-    # mcmc_parameters["warmup_steps"] = 25
 
     for r in range(num_rounds):
         theta, x = inference.simulate_for_sbi(
@@ -134,6 +133,7 @@ def run(
             retrain_from_scratch=False,
             discard_prior_samples=False,
             show_train_summary=True,
+            max_num_epochs=max_num_epochs,
             **inference_method_kwargs,
         )
         if r > 1:
