@@ -1,6 +1,6 @@
 import logging
 import math
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional
 
 import torch
 from sbi import inference as inference
@@ -24,14 +24,13 @@ def run(
     neural_net: str = "maf",
     hidden_features: int = 50,
     simulation_batch_size: int = 1000,
-    # NOTE: why is the training batch size so high?
     training_batch_size: int = 10000,
     automatic_transforms_enabled: bool = True,
     mcmc_method: str = "slice_np_vectorized",
     mcmc_parameters: Dict[str, Any] = {
         "num_chains": 100,
         "thin": 10,
-        "warmup_steps": 100,
+        "warmup_steps": 25,
         "init_strategy": "sir",
         # NOTE: sir kwargs changed: num_candidate_samples = num_batches * batch_size
         "init_strategy_parameters": {
@@ -40,8 +39,8 @@ def run(
     },
     z_score_x: bool = True,
     z_score_theta: bool = True,
-    max_num_epochs: Optional[int] = 2**31 -1,
-) -> Tuple[torch.Tensor, int, Optional[torch.Tensor]]:
+    max_num_epochs: Optional[int] = 2**31 - 1,
+) -> tuple[torch.Tensor, int, Optional[torch.Tensor]]:
     """Runs (S)NLE from `sbi`
 
     Args:
@@ -109,8 +108,6 @@ def run(
 
     posteriors = []
     proposal = prior
-    # NOTE: why was this hard coded here?
-    # mcmc_parameters["warmup_steps"] = 25
 
     for r in range(num_rounds):
         theta, x = inference.simulate_for_sbi(

@@ -1,12 +1,12 @@
 import pytest
 
 import sbibm
-from sbibm.algorithms.sbi import mcabc, smcabc, snle, snpe, snre
+from sbibm.algorithms.sbi import mcabc, smcabc, snle, snpe, snre, sl
 
 
 # a fast test
 @pytest.mark.parametrize(
-    "run_method", (mcabc, smcabc, snle, snpe, snre)
+    "run_method", (mcabc, smcabc, snle, snpe, snre, sl)
 )
 @pytest.mark.parametrize("task_name", ("gaussian_linear",))
 @pytest.mark.parametrize("num_observation", (1, 3))
