@@ -262,7 +262,6 @@ class DDM(Task):
         automatic_transforms_enabled: bool = True,
         l_lower_bound: float = 1e-7,
     ) -> Callable:
-
         transforms = self._get_transforms(
             num_observation=num_observation,
             observation=observation,
@@ -272,7 +271,6 @@ class DDM(Task):
             observation = self.get_observation(num_observation)
 
         def log_prob_fn(parameters: torch.Tensor) -> torch.Tensor:
-
             # We need to calculate likelihoods in constrained space.
             parameters_constrained = transforms.inv(parameters)
 
