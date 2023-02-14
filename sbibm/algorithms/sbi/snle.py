@@ -5,9 +5,6 @@ from typing import Any, Dict, Optional
 import torch
 from sbi import inference as inference
 from sbi.utils.get_nn_models import likelihood_nn
-from sbi.inference.posteriors.likelihood_based_posterior import (
-    PotentialFunctionProvider,
-)
 
 from sbibm.algorithms.sbi.utils import (
     wrap_posterior,
@@ -15,7 +12,6 @@ from sbibm.algorithms.sbi.utils import (
     wrap_simulator_fn,
 )
 from sbibm.tasks.task import Task
-from sbibm.tasks.ddm.utils import run_mcmc
 
 
 def run(
@@ -46,7 +42,6 @@ def run(
     max_num_epochs: Optional[int] = 2**31 - 1,
 ) -> tuple[torch.Tensor, int, Optional[torch.Tensor]]:
     """Runs (S)NLE from `sbi`
-
     Args:
         task: Task instance
         num_observation: Observation number to load, alternative to `observation`
@@ -63,7 +58,7 @@ def run(
         mcmc_parameters: MCMC parameters
         z_score_x: Whether to z-score x
         z_score_theta: Whether to z-score theta
-
+        max_num_epochs: Maximum number of epochs
     Returns:
         Samples from posterior, number of simulator calls, log probability of true params if computable
     """
@@ -95,10 +90,9 @@ def run(
 
     transforms = task._get_transforms(automatic_transforms_enabled)["parameters"]
     if automatic_transforms_enabled:
-        prior_transformed = wrap_prior_dist(prior, transforms)
-        simulator_transformed = wrap_simulator_fn(simulator, transforms)
+        prior = wrap_prior_dist(prior, transforms)
+        simulator = wrap_simulator_fn(simulator, transforms)
 
-    # Load pretrained network.
     density_estimator_fun = likelihood_nn(
         model=neural_net.lower(),
         hidden_features=hidden_features,
@@ -112,9 +106,6 @@ def run(
 
     posteriors = []
     proposal = prior
-    num_trials = observation.shape[1]
-    # sbi needs the trials in first dimension.
-    observation_sbi = observation.reshape(num_trials, 1)
 
     for r in range(num_rounds):
         theta, x = inference.simulate_for_sbi(
@@ -145,27 +136,13 @@ def run(
         # Copy hyperparameters, e.g., mcmc_init_samples for "latest_sample" strategy.
         if r > 0:
             posterior.copy_hyperparameters_from(posteriors[-1])
-        proposal = posterior.set_default_x(observation_sbi)
+        proposal = posterior.set_default_x(observation)
         posteriors.append(posterior)
 
-    potential_fn_snl = PotentialFunctionProvider()
-    # Call to initialize.
-    # Use transformed prior for MCMC.
-    potential_fn_snl(
-        prior_transformed,
-        density_estimator,
-        observation_sbi,
-        mcmc_method,
-        transforms,
-    )
+    posterior = wrap_posterior(posteriors[-1], transforms)
 
-    # Run MCMC in transformed space.
-    samples = run_mcmc(
-        prior=prior_transformed,
-        potential_fn=potential_fn_snl.posterior_potential,
-        mcmc_parameters=mcmc_parameters,
-        num_samples=num_samples,
-    )
+    assert simulator.num_simulations == num_simulations
 
-    # Return untransformed samples.
-    return transforms.inv(samples), simulator.num_simulations, None
+    samples = posterior.sample((num_samples,)).detach()
+
+    return samples, simulator.num_simulations, None

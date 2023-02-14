@@ -32,7 +32,6 @@ def run(
     max_num_epochs: Optional[int] = 2**31 - 1,
 ) -> tuple[torch.Tensor, int, Optional[torch.Tensor]]:
     """Runs (S)NPE from `sbi`
-
     Args:
         task: Task instance
         num_samples: Number of samples to generate from posterior
@@ -48,7 +47,7 @@ def run(
         automatic_transforms_enabled: Whether to enable automatic transforms
         z_score_x: Whether to z-score x
         z_score_theta: Whether to z-score theta
-
+        max_num_epochs: Maximum number of epochs
     Returns:
         Samples from posterior, number of simulator calls, log probability of true params if computable
     """

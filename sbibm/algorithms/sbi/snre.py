@@ -44,7 +44,6 @@ def run(
     max_num_epochs: Optional[int] = 2**31 - 1,
 ) -> tuple[torch.Tensor, int, Optional[torch.Tensor]]:
     """Runs (S)NRE from `sbi`
-
     Args:
         task: Task instance
         num_samples: Number of samples to generate from posterior
@@ -63,7 +62,7 @@ def run(
         z_score_x: Whether to z-score x
         z_score_theta: Whether to z-score theta
         variant: Can be used to switch between SNRE-A (AALR) and -B (SRE)
-
+        max_num_epochs: Maximum number of epochs
     Returns:
         Samples from posterior, number of simulator calls, log probability of true params if computable
     """
