@@ -84,17 +84,19 @@ def run(
         distance=distance,
         show_progress_bars=True,
     )
-    posterior, distances = inference_method(
+    samples, summary = inference_method(
         x_o=observation,
         num_simulations=num_simulations,
         eps=eps,
         quantile=quantile,
-        return_distances=True,
         lra=lra,
         sass=sass,
         sass_expansion_degree=sass_feature_expansion_degree,
         sass_fraction=sass_fraction,
+        return_summary=True,
     )
+
+    distances = summary["distances"]
 
     assert simulator.num_simulations == num_simulations
 
@@ -102,8 +104,6 @@ def run(
         save_tensor_to_csv("distances.csv", distances)
 
     if kde_bandwidth is not None:
-        samples = posterior._samples
-
         log.info(
             f"""KDE on {samples.shape[0]} samples with bandwidth option {kde_bandwidth}.
             Beware that KDE can give unreliable results when used with too few samples
@@ -112,12 +112,10 @@ def run(
         kde = get_kde(samples, bandwidth=kde_bandwidth)
 
         samples = kde.sample(num_samples)
-    else:
-        samples = posterior.sample((num_samples,)).detach()
 
-    if num_observation is not None:
+    if num_observation is not None and kde_bandwidth is not None:
         true_parameters = task.get_true_parameters(num_observation=num_observation)
-        log_prob_true_parameters = posterior.log_prob(true_parameters)
+        log_prob_true_parameters = kde.log_prob(true_parameters)
         return samples, simulator.num_simulations, log_prob_true_parameters
     else:
         return samples, simulator.num_simulations, None

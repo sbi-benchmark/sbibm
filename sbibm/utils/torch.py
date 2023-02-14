@@ -103,7 +103,7 @@ def get_log_abs_det_jacobian(
         vals = vals.sum(-1)
 
     assert (
-        vals.numel == batch_size
+        vals.numel() == batch_size
     ), "Mismatch in batch size, took sum over whole batch?"
 
     return vals
