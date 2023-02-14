@@ -106,7 +106,6 @@ def test_inference_with_npe():
 
     theta = prior.sample((num_simulations,))
 
-    theta = prior.sample((num_simulations,))
     # copy theta for iid trials
     theta_per_trial = theta.tile(num_trials).reshape(num_simulations * num_trials, -1)
     x = map_x_to_two_D(simulator(theta_per_trial))

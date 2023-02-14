@@ -430,7 +430,6 @@ class LANPotentialFunctionProvider:
     """
 
     def __init__(self, transforms, lan_net, l_lower_bound: float = 1e-7) -> None:
-
         self.transforms = transforms
         self.lan_net = lan_net
         self.l_lower_bound = l_lower_bound
@@ -569,7 +568,10 @@ def run_mcmc(
     # Obtain initial parameters for each chain using sequential importantce reweighting.
     if init_strategy == "sir":
         initial_params = torch.cat(
-            [sir_init(prior, potential_fn, **mcmc_parameters) for _ in range(num_chains)]
+            [
+                sir_init(prior, potential_fn, **mcmc_parameters)
+                for _ in range(num_chains)
+            ]
         )
     else:
         initial_params = prior.sample((num_chains,))
@@ -762,7 +764,6 @@ def train_choice_net(
 
     log = logging.getLogger(__name__)
     while num_epochs_trained < max_num_epochs and not converged:
-
         net.train()
         for batch in train_loader:
             optimizer.zero_grad()
@@ -839,7 +840,6 @@ class MixedModelSyntheticDDM(nn.Module):
         assert theta.shape[0] == 1, "for samples, no batching in theta is possible yet."
 
         with torch.set_grad_enabled(track_gradients):
-
             # Sample choices given parameters, from BernoulliMN.
             choices = self.choice_net.sample(theta, num_samples).reshape(num_samples, 1)
             # Pass num_samples=1 because the choices in the context contains num_samples elements already.
@@ -971,3 +971,13 @@ class MixedModelSyntheticDDM(nn.Module):
             return potential - ladj
 
         return pf
+
+
+def map_x_to_two_D(x: Tensor) -> Tensor:
+    """Return DDM data encoded as (rts, choices)."""
+    x = x.squeeze()
+    x_2d = torch.zeros(x.shape[0], 2)
+    x_2d[:, 0] = x.abs()
+    x_2d[x >= 0, 1] = 1
+
+    return x_2d

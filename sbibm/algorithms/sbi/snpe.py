@@ -27,11 +27,11 @@ def run(
     training_batch_size: int = 10000,
     num_atoms: int = 10,
     automatic_transforms_enabled: bool = False,
-    z_score_x: bool = True,
-    z_score_theta: bool = True,
+    z_score_x: str = "independent",
+    z_score_theta: str = "independent",
     max_num_epochs: Optional[int] = 2**31 - 1,
 ) -> Tuple[torch.Tensor, int, Optional[torch.Tensor]]:
-    """Runs (S)NPE from `sbi`
+    """Runs (S)NPE for iid data from `sbi`
     Args:
         task: Task instance
         num_samples: Number of samples to generate from posterior
@@ -83,11 +83,43 @@ def run(
         prior = wrap_prior_dist(prior, transforms)
         simulator = wrap_simulator_fn(simulator, transforms)
 
+    # DDM specific.
+    from torch import nn
+    from sbibm.tasks.ddm.utils import map_x_to_two_D
+    from sbi.neural_nets.embedding_nets import (
+        FCEmbedding,
+        PermutationInvariantEmbedding,
+    )
+
+    observation = map_x_to_two_D(observation)
+    num_trials = observation.shape[0]
+
+    # embedding net needed?
+    if num_trials > 1:
+        single_trial_net = FCEmbedding(
+            input_dim=2,
+            output_dim=4,
+            num_hiddens=10,
+            num_layers=2,
+        )
+
+        embedding_net = PermutationInvariantEmbedding(
+            trial_net=single_trial_net,
+            trial_net_output_dim=4,
+            combining_operation="mean",
+            num_layers=2,
+            num_hiddens=20,
+            output_dim=10,
+        )
+    else:
+        embedding_net = nn.Identity()
+
     density_estimator_fun = posterior_nn(
         model=neural_net.lower(),
         hidden_features=hidden_features,
         z_score_x=z_score_x,
         z_score_theta=z_score_theta,
+        embedding_net=embedding_net,
     )
 
     inference_method = inference.SNPE_C(prior, density_estimator=density_estimator_fun)
@@ -95,12 +127,15 @@ def run(
     proposal = prior
 
     for _ in range(num_rounds):
-        theta, x = inference.simulate_for_sbi(
-            simulator,
-            proposal,
-            num_simulations=num_simulations_per_round,
-            simulation_batch_size=simulation_batch_size,
+        theta = proposal.sample((num_simulations_per_round // num_trials,))
+        # copy theta for iid trials
+        theta_per_trial = theta.tile(num_trials).reshape(
+            theta.shape[0] * num_trials, -1
         )
+        x = map_x_to_two_D(simulator(theta_per_trial))
+
+        # rearrange to have trials as separate dim
+        x = x.reshape(num_simulations, num_trials, 2)
 
         density_estimator = inference_method.append_simulations(
             theta, x, proposal=proposal
