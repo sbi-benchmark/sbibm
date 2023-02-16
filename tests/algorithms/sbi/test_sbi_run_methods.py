@@ -6,7 +6,15 @@ from sbibm.algorithms.sbi import mcabc, smcabc, snle, snpe, snre, sl
 
 # a fast test
 @pytest.mark.parametrize(
-    "run_method", (mcabc, smcabc, snle, snpe, snre, sl)
+    "run_method",
+    (
+        mcabc,
+        smcabc,
+        snle,
+        snpe,
+        snre,
+        sl,
+    ),
 )
 @pytest.mark.parametrize("task_name", ("gaussian_linear",))
 @pytest.mark.parametrize("num_observation", (1, 3))
@@ -15,7 +23,7 @@ def test_sbi_api(
 ):
     task = sbibm.get_task(task_name)
 
-    if run_method in (mcabc, smcabc):  # abc algorithms
+    if run_method in (mcabc, smcabc, sl):  # abc algorithms
         kwargs = dict()
     else:  # neural algorithms
         kwargs = dict(

@@ -1,6 +1,6 @@
 import logging
 import math
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Tuple
 
 import torch
 from sbi import inference as inference
@@ -40,7 +40,7 @@ def run(
     z_score_x: bool = True,
     z_score_theta: bool = True,
     max_num_epochs: Optional[int] = 2**31 - 1,
-) -> tuple[torch.Tensor, int, Optional[torch.Tensor]]:
+) -> Tuple[torch.Tensor, int, Optional[torch.Tensor]]:
     """Runs (S)NLE from `sbi`
 
     Args:

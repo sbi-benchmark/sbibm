@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Tuple
 
 import torch
 import torch.nn as nn
@@ -95,7 +95,7 @@ def run(
     mcmc_method: str = "slice_np",
     mcmc_parameters: Dict[str, Any] = {},
     diag_eps: float = 0.0,
-) -> tuple[torch.Tensor, int, Optional[torch.Tensor]]:
+) -> Tuple[torch.Tensor, int, Optional[torch.Tensor]]:
     """Runs (S)NLE from `sbi`
 
     Args:
