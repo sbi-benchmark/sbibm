@@ -30,14 +30,16 @@ def run(
     mcmc_parameters: Dict[str, Any] = {
         "num_chains": 100,
         "thin": 10,
-        "warmup_steps": 100,
+        "warmup_steps": 25,
         "init_strategy": "sir",
-        "sir_batch_size": 1000,
-        "sir_num_batches": 100,
+        # NOTE: sir kwargs changed: num_candidate_samples = num_batches * batch_size
+        "init_strategy_parameters": {
+            "num_candidate_samples": 10000,
+        },
     },
     z_score_x: bool = True,
     z_score_theta: bool = True,
-    max_num_epochs: Optional[int] = None,
+    max_num_epochs: Optional[int] = 2**31 - 1,
 ) -> Tuple[torch.Tensor, int, Optional[torch.Tensor]]:
     """Runs (S)NLE from `sbi`
 
@@ -106,8 +108,6 @@ def run(
 
     posteriors = []
     proposal = prior
-    mcmc_parameters["warmup_steps"] = 25
-    mcmc_parameters["enable_transform"] = False  # NOTE: Disable `sbi` auto-transforms, since `sbibm` does its own
 
     for r in range(num_rounds):
         theta, x = inference.simulate_for_sbi(
@@ -121,15 +121,19 @@ def run(
             theta, x, from_round=r
         ).train(
             training_batch_size=training_batch_size,
-            retrain_from_scratch_each_round=False,
+            retrain_from_scratch=False,
             discard_prior_samples=False,
             show_train_summary=True,
             max_num_epochs=max_num_epochs,
         )
         if r > 1:
             mcmc_parameters["init_strategy"] = "latest_sample"
+
         posterior = inference_method.build_posterior(
-            density_estimator, mcmc_method=mcmc_method, mcmc_parameters=mcmc_parameters
+            density_estimator=density_estimator,
+            sample_with="mcmc",
+            mcmc_method=mcmc_method,
+            mcmc_parameters=mcmc_parameters,
         )
         # Copy hyperparameters, e.g., mcmc_init_samples for "latest_sample" strategy.
         if r > 0:

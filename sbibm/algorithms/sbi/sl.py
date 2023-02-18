@@ -1,11 +1,11 @@
 import logging
-import math
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Tuple
 
 import torch
 import torch.nn as nn
 from sbi import inference as inference
-from sbi.inference.posteriors.likelihood_based_posterior import LikelihoodBasedPosterior
+from sbi.inference.posteriors.mcmc_posterior import MCMCPosterior
+from sbi.inference.potentials import likelihood_estimator_based_potential
 from torch import Tensor
 
 from sbibm.algorithms.sbi.utils import (
@@ -95,7 +95,7 @@ def run(
     mcmc_method: str = "slice_np",
     mcmc_parameters: Dict[str, Any] = {},
     diag_eps: float = 0.0,
-) -> (torch.Tensor, int, Optional[torch.Tensor]):
+) -> Tuple[torch.Tensor, int, Optional[torch.Tensor]]:
     """Runs (S)NLE from `sbi`
 
     Args:
@@ -127,8 +127,9 @@ def run(
     simulator = task.get_simulator()
 
     transforms = task._get_transforms(automatic_transforms_enabled)["parameters"]
-    prior = wrap_prior_dist(prior, transforms)
-    simulator = wrap_simulator_fn(simulator, transforms)
+    if automatic_transforms_enabled:
+        prior = wrap_prior_dist(prior, transforms)
+        simulator = wrap_simulator_fn(simulator, transforms)
 
     likelihood_estimator = SynthLikNet(
         simulator=simulator,
@@ -136,12 +137,19 @@ def run(
         diag_eps=diag_eps,
     )
 
-    posterior = LikelihoodBasedPosterior(
-        method_family="snle",
-        neural_net=likelihood_estimator,
+    potential_fn, theta_transform = likelihood_estimator_based_potential(
+        likelihood_estimator=likelihood_estimator,
         prior=prior,
+        x_o=None,
+        enable_transform=not automatic_transforms_enabled,
+    )
+    posterior = MCMCPosterior(
+        potential_fn=potential_fn,
+        proposal=prior,
+        theta_transform=theta_transform,
+        method=mcmc_method,
         x_shape=observation.shape,
-        mcmc_parameters=mcmc_parameters,
+        **mcmc_parameters,
     )
 
     posterior.set_default_x(observation)
