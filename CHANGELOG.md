@@ -1,7 +1,10 @@
-# v1.0.8 (next release)
+# v1.0.8
 
--  Added tests for `get_labels_parameters` and `get_labels_data` (thanks to @psteinb, #39)
--  Two Moons Likelihood for `log=False` fixed (thanks to @michaeldeistler, #41)
+- Compatibility with `sbi` v0.20.0 and v.0.21.0 (#50)
+- Added tests for `get_labels_parameters` and `get_labels_data` (thanks to @psteinb, #39)
+- Instructions for virtual environment (thanks to @psteinb, #47)
+- Two Moons Likelihood for `log=False` fixed (thanks to @michaeldeistler, #41)
+- Swap `axis` for `dim` in c2st function (thanks to @michaeldeistler, #43)
 
 
 # v1.0.7
