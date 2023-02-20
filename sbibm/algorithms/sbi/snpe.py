@@ -4,13 +4,17 @@ from typing import Optional, Tuple
 
 import torch
 from sbi import inference as inference
+from sbi.neural_nets.embedding_nets import FCEmbedding, PermutationInvariantEmbedding
 from sbi.utils.get_nn_models import posterior_nn
+from torch import nn
 
 from sbibm.algorithms.sbi.utils import (
     wrap_posterior,
     wrap_prior_dist,
     wrap_simulator_fn,
 )
+from sbibm.tasks.ddm.task import DDM
+from sbibm.tasks.ddm.utils import map_x_to_two_D
 from sbibm.tasks.task import Task
 
 
@@ -30,6 +34,18 @@ def run(
     z_score_x: str = "independent",
     z_score_theta: str = "independent",
     max_num_epochs: Optional[int] = 2**31 - 1,
+    trial_net_kwargs: Optional[dict] = dict(
+        input_dim=2,
+        output_dim=4,
+        num_hiddens=10,
+        num_layers=2,
+    ),
+    perm_net_kwargs: Optional[dict] = dict(
+        combining_operation="mean",
+        num_layers=2,
+        num_hiddens=40,
+        output_dim=20,
+    ),
 ) -> Tuple[torch.Tensor, int, Optional[torch.Tensor]]:
     """Runs (S)NPE for iid data from `sbi`
     Args:
@@ -84,32 +100,16 @@ def run(
         simulator = wrap_simulator_fn(simulator, transforms)
 
     # DDM specific.
-    from torch import nn
-    from sbibm.tasks.ddm.utils import map_x_to_two_D
-    from sbi.neural_nets.embedding_nets import (
-        FCEmbedding,
-        PermutationInvariantEmbedding,
-    )
-
-    observation = map_x_to_two_D(observation)
+    if isinstance(task, DDM):
+        observation = map_x_to_two_D(observation)
     num_trials = observation.shape[0]
 
     # embedding net needed?
     if num_trials > 1:
-        single_trial_net = FCEmbedding(
-            input_dim=2,
-            output_dim=4,
-            num_hiddens=10,
-            num_layers=2,
-        )
-
         embedding_net = PermutationInvariantEmbedding(
-            trial_net=single_trial_net,
-            trial_net_output_dim=4,
-            combining_operation="mean",
-            num_layers=2,
-            num_hiddens=20,
-            output_dim=10,
+            trial_net=FCEmbedding(**trial_net_kwargs),
+            trial_net_output_dim=trial_net_kwargs["output_dim"],
+            **perm_net_kwargs,
         )
     else:
         embedding_net = nn.Identity()
@@ -128,14 +128,20 @@ def run(
 
     for _ in range(num_rounds):
         theta = proposal.sample((num_simulations_per_round // num_trials,))
-        # copy theta for iid trials
-        theta_per_trial = theta.tile(num_trials).reshape(
-            theta.shape[0] * num_trials, -1
-        )
-        x = map_x_to_two_D(simulator(theta_per_trial))
 
-        # rearrange to have trials as separate dim
-        x = x.reshape(num_simulations, num_trials, 2)
+        if num_trials > 1:
+            # copy theta for iid trials
+            theta_per_trial = theta.tile(num_trials).reshape(
+                theta.shape[0] * num_trials, -1
+            )
+            x = simulator(theta_per_trial)
+            if isinstance(task, DDM):
+                x = map_x_to_two_D(x)
+
+            # rearrange to have trials as separate dim
+            x = x.reshape(num_simulations_per_round // num_trials, num_trials, 2)
+        else:
+            x = simulator(theta)
 
         density_estimator = inference_method.append_simulations(
             theta, x, proposal=proposal
