@@ -23,6 +23,8 @@ os.environ["JULIA_PROJECT"] = JULIA_PROJECT
 
 
 def find_sysimage():
+    """Find sysimage for DiffModels.jl"""
+
     if "JULIA_SYSIMAGE_DIFFMODELS" in os.environ:
         environ_path = Path(os.environ["JULIA_SYSIMAGE_DIFFMODELS"])
         if environ_path.exists():
@@ -38,6 +40,14 @@ def find_sysimage():
             return str(default_path)
         else:
             return None
+
+# initialize Julia
+jl = Julia(
+    compiled_modules=False,
+    sysimage=find_sysimage(),
+    runtime="julia",
+)
+from julia import Main
 
 
 class DDMJulia:
@@ -61,17 +71,12 @@ class DDMJulia:
         self.num_trials = num_trials
         self.seed = seed
 
-        self.jl = Julia(
-            compiled_modules=False,
-            sysimage=find_sysimage(),
-            runtime="julia",
-        )
-        self.jl.eval("using DiffModels")
-        self.jl.eval("using Random")
+        Main.eval("using DiffModels")
+        Main.eval("using Random")
 
         # forward model and likelihood for two-param case, symmetric bounds.
         if dim_parameters == 2:
-            self.simulate = self.jl.eval(
+            self.simulate = Main.eval(
                 f"""
                     function simulate(vs, as; dt={self.dt}, num_trials={self.num_trials}, seed={self.seed})
                         num_parameters = size(vs)[1]
@@ -97,7 +102,7 @@ class DDMJulia:
                     end
                 """
             )
-            self.log_likelihood = self.jl.eval(
+            self.log_likelihood = Main.eval(
                 f"""
                     function log_likelihood(vs, as, rts, cs; dt={self.dt}, l_lower_bound=1e-29)
                         batch_size = size(vs)[1]
@@ -122,10 +127,10 @@ class DDMJulia:
                     end
                 """
             )
-            # forward model and likelihood for four-param case via asymmetric bounds
-            # as in LAN paper, "simpleDDM".
+        # forward model and likelihood for four-param case via asymmetric bounds
+        # as in LAN paper, "simpleDDM".
         else:
-            self.simulate_simpleDDM = self.jl.eval(
+            self.simulate_simpleDDM = Main.eval(
                 f"""
                     function simulate_simpleDDM(v, bl, bu; dt={self.dt}, num_trials={self.num_trials}, seed={self.seed})
                         num_parameters = size(v)[1]
@@ -153,7 +158,7 @@ class DDMJulia:
                     end
                 """
             )
-            self.log_likelihood_simpleDDM = self.jl.eval(
+            self.log_likelihood_simpleDDM = Main.eval(
                 f"""
                     function log_likelihood_simpleDDM(v, bl, bu, rts, cs; ndt=0, dt={self.dt}, l_lower_bound=1e-29)
                         # eps is the numerical lower bound for the likelihood used in HDDM.
