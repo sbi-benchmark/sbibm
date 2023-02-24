@@ -41,6 +41,7 @@ def find_sysimage():
         else:
             return None
 
+
 # initialize Julia
 jl = Julia(
     compiled_modules=False,
@@ -980,9 +981,9 @@ class MixedModelSyntheticDDM(nn.Module):
 
 def map_x_to_two_D(x: Tensor) -> Tensor:
     """Return DDM data encoded as (rts, choices)."""
-    x = x.squeeze()
-    x_2d = torch.zeros(x.shape[0], 2)
+    x = x.reshape(-1)
+    x_2d = torch.ones(x.shape[0], 2)
     x_2d[:, 0] = x.abs()
-    x_2d[x >= 0, 1] = 1
+    x_2d[x < 0, 1] = -1.0
 
     return x_2d
