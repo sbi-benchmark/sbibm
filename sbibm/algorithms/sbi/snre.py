@@ -11,6 +11,8 @@ from sbibm.algorithms.sbi.utils import (
     wrap_prior_dist,
     wrap_simulator_fn,
 )
+from sbibm.tasks.ddm.task import DDM
+from sbibm.tasks.ddm.utils import map_x_to_two_D
 from sbibm.tasks.task import Task
 
 
@@ -90,6 +92,10 @@ def run(
     if observation is None:
         observation = task.get_observation(num_observation)
 
+    # DDM specific.
+    if isinstance(task, DDM):
+        observation = map_x_to_two_D(observation)
+
     simulator = task.get_simulator(max_calls=num_simulations)
 
     transforms = task._get_transforms(automatic_transforms_enabled)["parameters"]
@@ -124,6 +130,9 @@ def run(
             num_simulations=num_simulations_per_round,
             simulation_batch_size=simulation_batch_size,
         )
+        # Map to (rts, choices) for DDM.
+        if isinstance(task, DDM):
+            x = map_x_to_two_D(x)
 
         density_estimator = inference_method.append_simulations(
             theta, x, from_round=r

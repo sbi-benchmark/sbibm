@@ -36,15 +36,15 @@ def run(
     max_num_epochs: Optional[int] = 2**31 - 1,
     trial_net_kwargs: Optional[dict] = dict(
         input_dim=2,
-        output_dim=4,
-        num_hiddens=10,
+        output_dim=12,
+        num_hiddens=20,
         num_layers=2,
     ),
     perm_net_kwargs: Optional[dict] = dict(
         combining_operation="mean",
         num_layers=2,
-        num_hiddens=40,
-        output_dim=20,
+        num_hiddens=20,
+        output_dim=12,
     ),
 ) -> Tuple[torch.Tensor, int, Optional[torch.Tensor]]:
     """Runs (S)NPE for iid data from `sbi`
@@ -91,7 +91,7 @@ def run(
     if observation is None:
         observation = task.get_observation(num_observation)
 
-    simulator = task.get_simulator(max_calls=num_simulations)
+    simulator = task.get_simulator()
 
     transforms = task._get_transforms(automatic_transforms_enabled)["parameters"]
 
@@ -127,21 +127,24 @@ def run(
     proposal = prior
 
     for _ in range(num_rounds):
-        theta = proposal.sample((num_simulations_per_round // num_trials,))
+        theta = proposal.sample((num_simulations_per_round,))
 
         if num_trials > 1:
             # copy theta for iid trials
             theta_per_trial = theta.tile(num_trials).reshape(
                 theta.shape[0] * num_trials, -1
             )
+
             x = simulator(theta_per_trial)
             if isinstance(task, DDM):
                 x = map_x_to_two_D(x)
 
             # rearrange to have trials as separate dim
-            x = x.reshape(num_simulations_per_round // num_trials, num_trials, 2)
+            x = x.reshape(num_simulations_per_round, num_trials, -1)
         else:
             x = simulator(theta)
+            if isinstance(task, DDM):
+                x = map_x_to_two_D(x)
 
         density_estimator = inference_method.append_simulations(
             theta, x, proposal=proposal
@@ -160,7 +163,7 @@ def run(
 
     posterior = wrap_posterior(posteriors[-1], transforms)
 
-    assert simulator.num_simulations == num_simulations
+    # assert simulator.num_simulations == num_simulations
 
     samples = posterior.sample((num_samples,)).detach()
 
