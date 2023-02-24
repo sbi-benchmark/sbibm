@@ -32,7 +32,7 @@ REQUIRED = [
     "sbi>=0.20.0,<0.22.0",
     "pyro-ppl",
     "scikit-learn",
-    "torch>=1.5.1",
+    "torch>=1.8.0",
     "tqdm",
     "tensorflow",
     "keras",
