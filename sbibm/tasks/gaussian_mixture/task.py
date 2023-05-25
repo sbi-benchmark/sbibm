@@ -69,15 +69,17 @@ class GaussianMixture(Task):
         """
 
         def simulator(parameters):
+            parameters = torch.atleast_2d(parameters)
             idx = pyro.sample(
                 "mixture_idx",
-                pdist.Categorical(probs=self.simulator_params["mixture_weights"]),
+                pdist.Categorical(probs=torch.tile(self.simulator_params["mixture_weights"][None],
+                                  (parameters.shape[0], 1)))
             )
             return pyro.sample(
                 "data",
                 pdist.Normal(
-                    loc=self.simulator_params["mixture_locs_factor"][idx] * parameters,
-                    scale=self.simulator_params["mixture_scales"][idx],
+                    loc=self.simulator_params["mixture_locs_factor"][idx][:, None] * parameters,
+                    scale=self.simulator_params["mixture_scales"][idx][:, None],
                 ),
             )
 
