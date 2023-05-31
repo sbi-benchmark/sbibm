@@ -135,9 +135,6 @@ def run(
             mcmc_method=mcmc_method,
             mcmc_parameters=mcmc_parameters,
         )
-        # Copy hyperparameters, e.g., mcmc_init_samples for "latest_sample" strategy.
-        if r > 0:
-            posterior.copy_hyperparameters_from(posteriors[-1])
         proposal = posterior.set_default_x(observation)
         posteriors.append(posterior)
 
