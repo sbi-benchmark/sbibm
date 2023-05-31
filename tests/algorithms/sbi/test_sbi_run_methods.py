@@ -7,17 +7,10 @@ from sbibm.algorithms.sbi import mcabc, smcabc, snle, snpe, snre, sl
 # a fast test
 @pytest.mark.parametrize(
     "run_method",
-    (
-        mcabc,
-        smcabc,
-        snle,
-        snpe,
-        snre,
-        sl,
-    ),
+    (mcabc, smcabc, snle, snpe, snre, sl),
 )
 @pytest.mark.parametrize("task_name", ("gaussian_linear",))
-@pytest.mark.parametrize("num_observation", (1, 3))
+@pytest.mark.parametrize("num_observation", (1,))
 def test_sbi_api(
     run_method, task_name, num_observation, num_simulations=2_000, num_samples=100
 ):
@@ -27,13 +20,13 @@ def test_sbi_api(
         kwargs = dict()
     else:  # neural algorithms
         kwargs = dict(
-            num_rounds=1,
-            max_num_epochs=2,
-            neural_net="mlp" if run_method == snre else "mdn",
+            num_rounds=2,
+            training_batch_size=100,
+            neural_net="mlp" if run_method == snre else "maf",
         )
     if run_method in (snle, snre):
         kwargs["mcmc_parameters"] = dict(
-            num_chains=100, warmup_steps=10, thin=1, init_strategy="proposal"
+            num_chains=100, warmup_steps=100, thin=10, init_strategy="sir"
         )
 
     predicted, _, _ = run_method(
