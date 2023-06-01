@@ -15,12 +15,13 @@ def test_sbi_api(
     run_method, task_name, num_observation, num_simulations=2_000, num_samples=100
 ):
     task = sbibm.get_task(task_name)
+    num_rounds = 4
 
     if run_method in (mcabc, smcabc, sl):  # abc algorithms
         kwargs = dict()
     else:  # neural algorithms
         kwargs = dict(
-            num_rounds=2,
+            num_rounds=num_rounds,
             training_batch_size=100,
             neural_net="mlp" if run_method == snre else "maf",
         )

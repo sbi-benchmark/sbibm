@@ -126,8 +126,6 @@ def run(
             show_train_summary=True,
             max_num_epochs=max_num_epochs,
         )
-        if r > 1:
-            mcmc_parameters["init_strategy"] = "latest_sample"
 
         posterior = inference_method.build_posterior(
             density_estimator=density_estimator,
@@ -135,6 +133,12 @@ def run(
             mcmc_method=mcmc_method,
             mcmc_parameters=mcmc_parameters,
         )
+        # Change init_strategy to latest_sample after second round.
+        if r > 1:
+            posterior.init_strategy = "latest_sample"
+            # copy init params from round 2 posterior.
+            posterior._mcmc_init_params = proposal._mcmc_init_params
+
         proposal = posterior.set_default_x(observation)
         posteriors.append(posterior)
 
