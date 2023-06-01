@@ -37,8 +37,8 @@ def run(
             "num_candidate_samples": 10000,
         },
     },
-    z_score_x: bool = True,
-    z_score_theta: bool = True,
+    z_score_x: str = "independent",
+    z_score_theta: str = "independent",
     max_num_epochs: Optional[int] = 2**31 - 1,
 ) -> Tuple[torch.Tensor, int, Optional[torch.Tensor]]:
     """Runs (S)NLE from `sbi`
