@@ -27,8 +27,8 @@ def run(
     training_batch_size: int = 10000,
     num_atoms: int = 10,
     automatic_transforms_enabled: bool = False,
-    z_score_x: bool = True,
-    z_score_theta: bool = True,
+    z_score_x: str = "independent",
+    z_score_theta: str = "independent",
     max_num_epochs: Optional[int] = 2**31 - 1,
 ) -> Tuple[torch.Tensor, int, Optional[torch.Tensor]]:
     """Runs (S)NPE from `sbi`
