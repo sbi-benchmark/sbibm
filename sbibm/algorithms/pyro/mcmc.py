@@ -4,8 +4,8 @@ from typing import Any, Dict, Optional
 
 import torch
 from pyro.infer.mcmc import HMC, NUTS
-from sbi.mcmc.mcmc import MCMC
-from sbi.mcmc.slice import Slice
+from sbi.samplers.mcmc.mcmc import MCMC
+from sbi.samplers.mcmc.slice import Slice
 
 import sbibm
 from sbibm.algorithms.pyro.utils.tensorboard import (
