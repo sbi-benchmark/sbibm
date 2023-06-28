@@ -1,6 +1,6 @@
 import pytest  # noqa
 import torch
-from sbi.utils.plot import pairplot
+from sbi.analysis import pairplot
 
 import sbibm
 from sbibm.algorithms.pytorch.baseline_rejection import run
@@ -34,7 +34,6 @@ def test_rejection(
 
 
 def test_rejection_with_proposal(
-    plt,
     task_name="gaussian_linear_uniform",
     num_observation=1,
     num_samples=10000,
