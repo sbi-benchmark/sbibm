@@ -69,16 +69,20 @@ class GaussianMixture(Task):
         """
 
         def simulator(parameters):
+            # Sample mixture index for each parameter in batch
             idx = pyro.sample(
                 "mixture_idx",
-                pdist.Categorical(probs=self.simulator_params["mixture_weights"]),
-            )
+                pdist.Categorical(
+                    probs=self.simulator_params["mixture_weights"]
+                ).expand_by([parameters.shape[0]]),
+            ).unsqueeze(1)
+
+            # Select loc and scales according to mixture index
+            loc = self.simulator_params["mixture_locs_factor"][idx] * parameters
+            scale = self.simulator_params["mixture_scales"][idx]
+
             return pyro.sample(
-                "data",
-                pdist.Normal(
-                    loc=self.simulator_params["mixture_locs_factor"][idx] * parameters,
-                    scale=self.simulator_params["mixture_scales"][idx],
-                ),
+                "data", pdist.Normal(loc=loc, scale=scale).to_event(1)
             )
 
         return Simulator(task=self, simulator=simulator, max_calls=max_calls)
