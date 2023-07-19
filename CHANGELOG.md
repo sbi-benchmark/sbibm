@@ -1,4 +1,4 @@
-## v1.1.0 
+# v1.1.0 
 
 - Fixed Gaussian Mixture task for `simulation_batch_size` > 1 (thanks to @h3jia, #54, #63). Since experiments in the paper were run with a simulation batch size of 1000, this has an effect on the results. We will issue an update of the results.
 - Additional changes for compatibility with `sbi` v0.21.0 (thanks to @bkmi, #60, @janfb #55, #57, #59)
