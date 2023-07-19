@@ -153,6 +153,11 @@ fig = fig_posterior(task_name="two_moons", observation=1, samples=[algorithm_sam
 We host results and the code for reproducing the experiments of the manuscript in a seperate repository at [github.com/sbi-benchmark/results](https://github.com/sbi-benchmark/results/tree/main/benchmarking_sbi): This includes the pipeline to reproduce the manuscripts' experiments as well as dataframes for new comparisons.
 
 
+## Corrections
+
+- [`sbibm v1.1.0` contains a bug fix for the Gaussian Mixture task](https://github.com/sbi-benchmark/sbibm/releases/tag/v1.1.0). We will issue an update of the results.
+
+
 ## Citation
 
 The manuscript is [available through PMLR](http://proceedings.mlr.press/v130/lueckmann21a.html):
