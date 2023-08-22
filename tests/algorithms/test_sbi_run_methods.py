@@ -9,13 +9,17 @@ from sbibm.algorithms.sbi import mcabc, smcabc, snle, snpe, snre, sl
     "run_method",
     (mcabc, smcabc, snle, snpe, snre, sl),
 )
-@pytest.mark.parametrize("task_name", ("gaussian_linear",))
+@pytest.mark.parametrize("task_name", ("gaussian_mixture",))
 @pytest.mark.parametrize("num_observation", (1,))
 def test_sbi_api(
-    run_method, task_name, num_observation, num_simulations=2_000, num_samples=100
+    run_method,
+    task_name,
+    num_observation,
+    num_simulations=2_000,
+    num_samples=100,
 ):
     task = sbibm.get_task(task_name)
-    num_rounds = 4
+    num_rounds = 2
 
     if run_method in (mcabc, smcabc, sl):  # abc algorithms
         kwargs = dict()
@@ -27,7 +31,7 @@ def test_sbi_api(
         )
     if run_method in (snle, snre):
         kwargs["mcmc_parameters"] = dict(
-            num_chains=100, warmup_steps=100, thin=10, init_strategy="sir"
+            num_chains=100, warmup_steps=100, thin=10, init_strategy="resample"
         )
 
     predicted, _, _ = run_method(
