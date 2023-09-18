@@ -2,6 +2,7 @@ from abc import abstractmethod
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Union
 
+import logging
 import numpy as np
 import pandas as pd
 import pyro
@@ -362,7 +363,12 @@ class Task:
         Returns:
             Samples from reference posterior
         """
-        raise NotImplementedError
+        log = logging.getLogger(__name__)
+        log.warning(
+            f"_sample_reference_posterior not implemented, some metrics and benchmarks will fail"
+        )
+        pass
+        #raise NotImplementedError
 
     def _save_observation_seed(self, num_observation: int, observation_seed: int):
         """Save observation seed for a given observation number"""
