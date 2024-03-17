@@ -155,7 +155,7 @@ We host results and the code for reproducing the experiments of the manuscript i
 
 ## Corrections
 
-- [`sbibm v1.1.0` contains a bug fix for the Gaussian Mixture task](https://github.com/sbi-benchmark/sbibm/releases/tag/v1.1.0). We will issue an update of the results.
+- [`sbibm v1.1.0` contains a bug fix for the Gaussian Mixture task](https://github.com/sbi-benchmark/sbibm/releases/tag/v1.1.0). [Results from rerunning the task](https://github.com/sbi-benchmark/results/tree/main/gaussian_mixture_rerun).
 
 
 ## Citation
