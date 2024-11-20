@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Callable, Dict, List, Optional
+from typing import Callable, Optional
 
 import numpy as np
 import pyro
@@ -78,8 +78,12 @@ class BernoulliGLM(Task):
         """
         device = get_default_device()
 
-        stimulus_I = torch.load(self.path / "files" / "stimulus_I.pt").to(device)
-        design_matrix = torch.load(self.path / "files" / "design_matrix.pt").to(device)
+        stimulus_I = torch.load(
+            self.path / "files" / "stimulus_I.pt", weights_only=True
+        ).to(device)
+        design_matrix = torch.load(
+            self.path / "files" / "design_matrix.pt", weights_only=True
+        ).to(device)
 
         def simulator(
             parameters: torch.Tensor, return_both: bool = False
