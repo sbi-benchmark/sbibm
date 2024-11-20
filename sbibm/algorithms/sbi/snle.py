@@ -4,7 +4,7 @@ from typing import Any, Dict, Optional, Tuple
 
 import torch
 from sbi import inference as inference
-from sbi.utils.get_nn_models import likelihood_nn
+from sbi.neural_nets import likelihood_nn
 
 from sbibm.algorithms.sbi.utils import (
     wrap_posterior,
@@ -71,10 +71,10 @@ def run(
     log = logging.getLogger(__name__)
 
     if num_rounds == 1:
-        log.info(f"Running NLE")
+        log.info("Running NLE")
         num_simulations_per_round = num_simulations
     else:
-        log.info(f"Running SNLE")
+        log.info("Running SNLE")
         num_simulations_per_round = math.floor(num_simulations / num_rounds)
 
     if simulation_batch_size > num_simulations_per_round:
@@ -91,9 +91,7 @@ def run(
 
     simulator = task.get_simulator(max_calls=num_simulations)
 
-    transforms = task._get_transforms(automatic_transforms_enabled)[
-        "parameters"
-    ]
+    transforms = task._get_transforms(automatic_transforms_enabled)["parameters"]
     if automatic_transforms_enabled:
         prior = wrap_prior_dist(prior, transforms)
         simulator = wrap_simulator_fn(simulator, transforms)

@@ -4,7 +4,7 @@ from typing import Optional, Tuple
 
 import torch
 from sbi import inference as inference
-from sbi.utils.get_nn_models import posterior_nn
+from sbi.neural_nets import posterior_nn
 
 from sbibm.algorithms.sbi.utils import (
     wrap_posterior,
@@ -59,10 +59,10 @@ def run(
     log = logging.getLogger(__name__)
 
     if num_rounds == 1:
-        log.info(f"Running NPE")
+        log.info("Running NPE")
         num_simulations_per_round = num_simulations
     else:
-        log.info(f"Running SNPE")
+        log.info("Running SNPE")
         num_simulations_per_round = math.floor(num_simulations / num_rounds)
 
     if simulation_batch_size > num_simulations_per_round:

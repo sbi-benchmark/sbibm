@@ -7,7 +7,7 @@ from pyro import distributions as pdist
 
 from sbibm.tasks.simulator import Simulator
 from sbibm.tasks.task import Task
-from sbibm.utils.io import get_tensor_from_csv, save_tensor_to_csv
+from sbibm.utils.io import get_tensor_from_csv
 
 
 class SLCP(Task):
@@ -83,7 +83,9 @@ class SLCP(Task):
 
             m = torch.stack(
                 (parameters[:, [0]].squeeze(), parameters[:, [1]].squeeze())
-            ).T
+            )
+            if num_samples > 1:
+                m = m.mT  # Transpose if multiple samples
             if m.dim() == 1:
                 m.unsqueeze_(0)
 
@@ -92,10 +94,10 @@ class SLCP(Task):
             rho = torch.nn.Tanh()(parameters[:, [4]]).squeeze()
 
             S = torch.empty((num_samples, 2, 2))
-            S[:, 0, 0] = s1 ** 2
+            S[:, 0, 0] = s1**2
             S[:, 0, 1] = rho * s1 * s2
             S[:, 1, 0] = rho * s1 * s2
-            S[:, 1, 1] = s2 ** 2
+            S[:, 1, 1] = s2**2
 
             # Add eps to diagonal to ensure PSD
             eps = 0.000001
@@ -296,7 +298,6 @@ class SLCP(Task):
 
 
 if __name__ == "__main__":
-
     task = SLCP()
     # task._generate_noise_dist_parameters()
     task._setup()
