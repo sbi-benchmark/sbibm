@@ -4,9 +4,9 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sbibm"
-version = "1.1.1"
 description = "Simulation-based inference benchmark"
 readme = "README.md"
+dynamic = ["version"]
 authors = [
     { name = "Jan-Matthis Lueckmann", email = "mail@jan-matthis.de" },
     { name = "Jan Boelts", email = "jan.boelts@mailbox.org" }
@@ -68,6 +68,9 @@ tracker = "https://github.com/sbi-benchmark/sbibm/issues"
 [tool.setuptools.packages.find]
 include = ["sbibm*"]
 exclude = ["tests", "tests.*"]
+
+[tool.setuptools.dynamic]
+version = {attr = "sbibm.__version__.__version__"}
 
 [tool.flake8]
 exclude = ["docs", "build", "dist", ".ipynb_checkpoints", ".git", "third_party"]
