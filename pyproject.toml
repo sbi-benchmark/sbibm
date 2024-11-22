@@ -1,0 +1,85 @@
+[build-system]
+requires = ["setuptools>=65", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sbibm"
+description = "Simulation-based inference benchmark"
+readme = "README.md"
+dynamic = ["version"]
+authors = [
+    { name = "Jan-Matthis Lueckmann", email = "mail@jan-matthis.de" },
+    { name = "Jan Boelts", email = "jan.boelts@mailbox.org" }
+]
+requires-python = ">=3.7"
+license = { text = "MIT" }
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Education",
+    "Intended Audience :: Science/Research",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS :: MacOS X",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+dependencies = [
+    "autograd",
+    "elfi>=0.7.6",
+    "deneb",
+    "diffeqtorch",
+    "future",
+    "joblib",
+    "numpy>=1.26.4",
+    "matplotlib",
+    "pandas>=1.0.0",
+    "pyabc>=0.10.8",
+    "pyabcranger>=0.0.48",
+    "sbi>=0.20.0,<0.22.0",
+    "pyro-ppl",
+    "scikit-learn",
+    "torch>=1.8.0",
+    "tqdm",
+]
+
+[project.optional-dependencies]
+dev = [
+    "autoflake",
+    "black",
+    "flake8",
+    "isort>5.0.0",
+    "ipdb",
+    "pytest",
+    "pytest-plt",
+    "typeguard",
+]
+
+[project.urls]
+documentation = "https://sbi-benchmark.github.io/"
+source = "https://github.com/sbi-benchmark/sbibm"
+tracker = "https://github.com/sbi-benchmark/sbibm/issues"
+
+[tool.setuptools.packages.find]
+include = ["sbibm*"]
+exclude = ["tests", "tests.*"]
+
+[tool.setuptools.dynamic]
+version = {attr = "sbibm.__version__.__version__"}
+
+[tool.flake8]
+exclude = ["docs", "build", "dist", ".ipynb_checkpoints", ".git", "third_party"]
+max-line-length = 119
+extend-ignore = ["W503", "E203"]
+
+[tool.isort]
+profile = "black"
+
+[tool.pytest.ini_options]
+addopts = "--ignore=src/"
+plt_filename_drop = ["^--"]
