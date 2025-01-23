@@ -56,6 +56,7 @@ dev = [
     "ipdb",
     "pytest",
     "pytest-plt",
+    "pytest-xdist",
     "typeguard",
 ]
 
