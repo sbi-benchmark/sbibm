@@ -1,7 +1,10 @@
 name: Tests
 
-on: [pull_request, workflow_dispatch]
-
+on:
+  pull_request:
+  push:
+    branches: [main, dev]
+  workflow_dispatch:
 defaults:
   run:
     shell: bash
