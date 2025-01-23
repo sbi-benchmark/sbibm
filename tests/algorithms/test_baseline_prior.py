@@ -1,9 +1,7 @@
 import pytest
-import torch
 
 import sbibm
 from sbibm.algorithms.pytorch.baseline_prior import run as run_prior
-from sbibm.metrics.c2st import c2st
 
 
 @pytest.mark.parametrize(

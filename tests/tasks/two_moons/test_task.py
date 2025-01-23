@@ -1,6 +1,4 @@
 import pyro
-import pytest
-import torch
 
 from sbibm.tasks.two_moons.task import TwoMoons
 

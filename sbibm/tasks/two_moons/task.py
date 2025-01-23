@@ -1,6 +1,6 @@
 import math
 from pathlib import Path
-from typing import Any, Callable, Dict, Optional, Union
+from typing import Any, Callable, Dict, Optional
 
 import numpy as np
 import pyro
@@ -148,7 +148,7 @@ class TwoMoons(Task):
         u = p[:, 0] - self.simulator_params["base_offset"]
         v = p[:, 1]
 
-        r = torch.sqrt(u ** 2 + v ** 2)
+        r = torch.sqrt(u**2 + v**2)
         L = -0.5 * (
             (r - self.simulator_params["r_loc"]) / self.simulator_params["r_scale"]
         ) ** 2 - 0.5 * torch.log(
@@ -165,7 +165,11 @@ class TwoMoons(Task):
         *args,
         **kwargs: Any,
     ) -> Dict[str, Any]:
-        return {"parameters": torch.distributions.transforms.IndependentTransform(torch.distributions.transforms.identity_transform, 1) }
+        return {
+            "parameters": torch.distributions.transforms.IndependentTransform(
+                torch.distributions.transforms.identity_transform, 1
+            )
+        }
 
     def _get_log_prob_fn(
         self,

@@ -1,6 +1,7 @@
 """
 Module containing data structures for representing datasets.
 """
+
 from __future__ import division, print_function
 
 from builtins import object, range
@@ -406,7 +407,6 @@ class DSGaussBernRBM(DataSource):
         """
         Sample by blocked Gibbs sampling
         """
-        B = self.B
         b = self.b
         c = self.c
         dh = len(c)
@@ -418,7 +418,7 @@ class DSGaussBernRBM(DataSource):
             H = np.random.randint(1, 2, (n, dh)) * 2 - 1.0
 
             # burn-in
-            for t in range(self.burnin):
+            for _t in range(self.burnin):
                 X, H = self._blocked_gibbs_next(X, H)
             # sampling
             X, H = self._blocked_gibbs_next(X, H)
@@ -454,7 +454,7 @@ class DSISIPoissonLinear(DataSource):
         if np.abs(b) <= 1e-8:
             F_l = -np.log(1 - u)
         else:
-            F_l = np.sqrt(-2.0 / b * np.log(1 - u) + old_div(1.0, (b ** 2))) - old_div(
+            F_l = np.sqrt(-2.0 / b * np.log(1 - u) + old_div(1.0, (b**2))) - old_div(
                 1.0, b
             )
         return F_l
@@ -500,34 +500,29 @@ class DSISIPoissonSine(DataSource):
     # bisection search to find t value with accuracy delta
     def search_time(self, x):
         b = self.b
-        w = self.w
         delta = self.delta
         t_old = 0.0
         t_new = b
-        val_old = self.func(t_old)
+        self.func(t_old)
         val_new = self.func(t_new)
         while np.abs(val_new - x) > delta:
             if val_new < x and t_old < t_new:
                 t_old = t_new
                 t_new = t_new * 2.0
-                val_old = val_new
                 val_new = self.func(t_new)
             elif val_new < x and t_old > t_new:
                 temp = old_div((t_old + t_new), 2.0)
                 t_old = t_new
                 t_new = temp
-                val_old = val_new
                 val_new = self.func(t_new)
             elif val_new > x and t_old > t_new:
                 t_old = t_new
                 t_new = old_div(t_new, 2.0)
-                val_old = val_new
                 val_new = self.func(t_new)
             elif val_new > x and t_old < t_new:
                 temp = old_div((t_old + t_new), 2.0)
                 t_old = t_new
                 t_new = temp
-                val_old = val_new
                 val_new = self.func(t_new)
         t = t_new
         return t
@@ -624,7 +619,7 @@ class DSISILogPoissonLinear(DataSource):
         if np.abs(b) <= 1e-8:
             F_l = -np.log(1 - u)
         else:
-            F_l = np.sqrt(-2.0 / b * np.log(1 - u) + old_div(1.0, (b ** 2))) - old_div(
+            F_l = np.sqrt(-2.0 / b * np.log(1 - u) + old_div(1.0, (b**2))) - old_div(
                 1.0, b
             )
         return F_l
@@ -662,7 +657,7 @@ class DSISIPoisson2D(DataSource):
             raise ValueError("Not intensity function found")
 
     def quadratic_intensity(self, X):
-        intensity = self.lamb_bar * np.sum(X ** 2, 1)
+        intensity = self.lamb_bar * np.sum(X**2, 1)
         return intensity
 
     def sine_intensity(self, X):
@@ -701,7 +696,7 @@ class DSISISigmoidPoisson2D(DataSource):
     """
 
     def __init__(self, intensity="quadratic", w=1.0, a=1.0):
-        """
+        r"""
         lambda_(X,Y) = a*X^2 + Y^2
         X = 1/(1+exp(s))
         Y = 1/(1+exp(t))
@@ -719,7 +714,7 @@ class DSISISigmoidPoisson2D(DataSource):
             raise ValueError("Not intensity function found")
 
     def quadratic_intensity(self, X):
-        intensity = self.lamb_bar * np.average(X ** 2, axis=1, weights=[self.a, 1])
+        intensity = self.lamb_bar * np.average(X**2, axis=1, weights=[self.a, 1])
         return intensity
 
     def cross_sine_intensity(self, X):
@@ -843,7 +838,7 @@ class DSResample(DataSource):
 
 
 class DSGaussCosFreqs(DataSource):
-    """
+    r"""
     A DataSource to sample from the density
     p(x) \propto exp(-||x||^2/2sigma^2)*(1+ prod_{i=1}^d cos(w_i*x_i))
 
@@ -877,7 +872,7 @@ class DSGaussCosFreqs(DataSource):
             while from_ind < n:
                 # The proposal q is N(0, sigma2*I)
                 X = np.random.randn(block_size, d) * np.sqrt(sigma2)
-                q_un = np.exp(old_div(-np.sum(X ** 2, 1), (2.0 * sigma2)))
+                q_un = np.exp(old_div(-np.sum(X**2, 1), (2.0 * sigma2)))
                 # unnormalized density p
                 p_un = q_un * (1 + np.prod(np.cos(X * freqs), 1))
                 c = 2.0

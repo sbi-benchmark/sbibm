@@ -66,7 +66,7 @@ tracker = "https://github.com/sbi-benchmark/sbibm/issues"
 
 [tool.setuptools.packages.find]
 include = ["sbibm*"]
-exclude = ["tests", "tests.*"]
+exclude = ["tests", "tests.*", "sbibm/third_party"]
 
 [tool.setuptools.dynamic]
 version = {attr = "sbibm.__version__.__version__"}
@@ -78,16 +78,19 @@ line-length = 88
 
 [tool.ruff.lint]
 # pycodestyle, Pyflakes, pyupgrade, flake8-bugbear, flake8-simplify, isort
-select = ["E", "F", "W", "B", "SIM", "I"]
+select = ["E", "F", "W", "B", "I"]
 ignore = [
     "E731",  # allow naming lambda functions.
     "B008",  # allow function calls in default args.
+    "E722",  # allow bare except.
+    "E721",  # allow == for type comparison.
 ]
 
 [tool.ruff.lint.extend-per-file-ignores]
 "__init__.py" = ["E402", "F401", "F403"]  # allow unused imports and undefined names
 "test_*.py" = ["F403", "F405"]
 "tutorials/*.ipynb" = ["E501"]  # allow long lines in notebooks
+"sbibm/third_party/*" = ["E402", "E501", "F811", "E741", "B904"]
 
 [tool.ruff.lint.isort]
 case-sensitive = true

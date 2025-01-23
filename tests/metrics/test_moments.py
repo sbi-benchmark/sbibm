@@ -4,7 +4,6 @@ from sbibm.metrics import posterior_mean_error, posterior_variance_ratio
 
 
 def test_posterior_moments_metrics():
-
     num_dim = 3
     num_samples = 10000
     dist = torch.distributions.MultivariateNormal(

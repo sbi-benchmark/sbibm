@@ -1,4 +1,5 @@
 """A module containing convenient methods for general machine learning"""
+
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 from builtins import int, range, zip
@@ -103,8 +104,8 @@ def dist_matrix(X, Y):
     """
     Construct a pairwise Euclidean distance matrix of size X.shape[0] x Y.shape[0]
     """
-    sx = np.sum(X ** 2, 1)
-    sy = np.sum(Y ** 2, 1)
+    sx = np.sum(X**2, 1)
+    sy = np.sum(Y**2, 1)
     D2 = sx[:, np.newaxis] - 2.0 * X.dot(Y.T) + sy[np.newaxis, :]
     # to prevent numerical errors from taking sqrt of negative numbers
     D2[D2 < 0] = 0
@@ -117,8 +118,8 @@ def dist2_matrix(X, Y):
     Construct a pairwise Euclidean distance **squared** matrix of size
     X.shape[0] x Y.shape[0]
     """
-    sx = np.sum(X ** 2, 1)
-    sy = np.sum(Y ** 2, 1)
+    sx = np.sum(X**2, 1)
+    sy = np.sum(Y**2, 1)
     D2 = sx[:, np.newaxis] - 2.0 * np.dot(X, Y.T) + sy[np.newaxis, :]
     return D2
 
@@ -231,7 +232,7 @@ def fit_gaussian_draw(X, J, seed=28, reg=1e-7, eig_pow=1.0):
         evals = np.maximum(0, np.real(evals))
         assert np.all(np.isfinite(evals))
         evecs = np.real(evecs)
-        shrunk_cov = evecs.dot(np.diag(evals ** eig_pow)).dot(evecs.T) + reg * np.eye(d)
+        shrunk_cov = evecs.dot(np.diag(evals**eig_pow)).dot(evecs.T) + reg * np.eye(d)
         V = np.random.multivariate_normal(mean_x, shrunk_cov, J)
     return V
 

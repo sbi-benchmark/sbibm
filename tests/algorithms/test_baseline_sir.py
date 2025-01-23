@@ -41,12 +41,10 @@ def test_sir_with_proposal(
     )
 
     num_samples_plotting = 1000
-    pairplot(
-        [
-            samples.numpy()[:num_samples_plotting, :],
-            reference_samples.numpy()[:num_samples_plotting, :],
-        ]
-    )
+    pairplot([
+        samples.numpy()[:num_samples_plotting, :],
+        reference_samples.numpy()[:num_samples_plotting, :],
+    ])
 
     acc = c2st(samples, reference_samples[:num_samples, :])
 

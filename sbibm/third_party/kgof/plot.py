@@ -177,7 +177,7 @@ def plot_prob_reject(
     func_names = [f.__name__ for f in results["method_job_funcs"]]
     plotted_methods = []
     for i in range(n_methods):
-        te_proportion = 1.0 - results["tr_proportion"]
+        1.0 - results["tr_proportion"]
         fmt = line_styles[func_names[i]]
         # plt.errorbar(ns*te_proportion, mean_rejs[:, i], std_pvals[:, i])
         method_label = method_labels[func_names[i]]
@@ -185,7 +185,7 @@ def plot_prob_reject(
         plt.plot(xvalues, mean_rejs[:, i], fmt, label=method_label)
     """
     else:
-        # h0 is true 
+        # h0 is true
         z = stats.norm.isf( (1-confidence)/2.0)
         for i in range(n_methods):
             phat = mean_rejs[:, i]
@@ -237,7 +237,7 @@ def plot_runtime(ex, fname, func_xvalues, xlabel, func_title=None):
 
     func_names = [f.__name__ for f in results["method_job_funcs"]]
     for i in range(n_methods):
-        te_proportion = 1.0 - results["tr_proportion"]
+        1.0 - results["tr_proportion"]
         fmt = line_styles[func_names[i]]
         # plt.errorbar(ns*te_proportion, mean_rejs[:, i], std_pvals[:, i])
         method_label = method_labels[func_names[i]]

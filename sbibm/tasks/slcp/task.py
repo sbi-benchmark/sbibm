@@ -81,9 +81,10 @@ class SLCP(Task):
         def simulator(parameters):
             num_samples = parameters.shape[0]
 
-            m = torch.stack(
-                (parameters[:, [0]].squeeze(), parameters[:, [1]].squeeze())
-            )
+            m = torch.stack((
+                parameters[:, [0]].squeeze(),
+                parameters[:, [1]].squeeze(),
+            ))
             if num_samples > 1:
                 m = m.mT  # Transpose if multiple samples
             if m.dim() == 1:
@@ -106,12 +107,10 @@ class SLCP(Task):
 
             data_dist = pdist.MultivariateNormal(
                 m.unsqueeze(1).float(), S.unsqueeze(1).float()
-            ).expand(
-                (
-                    num_samples,
-                    self.num_data,
-                )
-            )
+            ).expand((
+                num_samples,
+                self.num_data,
+            ))
 
             if not self.distractors:
                 return pyro.sample("data", data_dist)

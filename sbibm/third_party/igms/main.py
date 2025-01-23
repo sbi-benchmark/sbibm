@@ -207,6 +207,7 @@ Code by Dougal J. Sutherland:
    See the License for the specific language governing permissions and
    limitations under the License.
 """
+
 from functools import wraps
 
 import numpy as np
@@ -338,12 +339,10 @@ class LazyKernel(torch.nn.Module):
         but if you make a _precompute that returns [A_squared, A_cubed] then it's
             self._compute(A, A_squared, A_cubed, B, B_squared, B_cubed).
         """
-        return torch.stack(
-            [
-                torch.stack([torch.as_tensor(self._compute_one(a, b)) for b in B])
-                for a in A
-            ]
-        )
+        return torch.stack([
+            torch.stack([torch.as_tensor(self._compute_one(a, b)) for b in B])
+            for a in A
+        ])
 
     def _compute_one(self, a, b):
         raise NotImplementedError(
@@ -485,9 +484,9 @@ class LazyKernel(torch.nn.Module):
         cls = self.__class__
         result = cls.__new__(cls)
         to_copy = {"_cache", "_buffers", "_parameters", "_modules"}
-        result.__dict__.update(
-            {k: v.copy() if k in to_copy else v for k, v in self.__dict__.items()}
-        )
+        result.__dict__.update({
+            k: v.copy() if k in to_copy else v for k, v in self.__dict__.items()
+        })
         return result
 
     def _apply(self, fn):  # used in to(), cuda(), etc
@@ -643,7 +642,7 @@ class ConstDiagMatrix(SquareMatrix):
         return self.n * self.diag_value
 
     def sq_trace(self):
-        return self.n * (self.diag_value ** 2)
+        return self.n * (self.diag_value**2)
 
 
 class SymmetricConstDiagMatrix(ConstDiagMatrix, SymmetricMatrix):
@@ -726,7 +725,7 @@ class ExpQuadKernel(LazyKernel):
 
     def _compute(self, A, A_sqnorms, B, B_sqnorms):
         D2 = A_sqnorms[:, None] + B_sqnorms[None, :] - 2 * (A @ B.t())
-        return torch.exp(D2 / (-2 * self.sigma ** 2))
+        return torch.exp(D2 / (-2 * self.sigma**2))
 
 
 def mean_difference(X, Y, squared=False):

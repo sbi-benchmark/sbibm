@@ -33,6 +33,7 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
+
 import numpy as np
 import torch
 from scipy.sparse.csgraph import minimum_spanning_tree as mst
@@ -58,8 +59,8 @@ def pdist(sample_1, sample_2, norm=2, eps=1e-5):
     n_1, n_2 = sample_1.size(0), sample_2.size(0)
     norm = float(norm)
     if norm == 2.0:
-        norms_1 = torch.sum(sample_1 ** 2, dim=1, keepdim=True)
-        norms_2 = torch.sum(sample_2 ** 2, dim=1, keepdim=True)
+        norms_1 = torch.sum(sample_1**2, dim=1, keepdim=True)
+        norms_2 = torch.sum(sample_2**2, dim=1, keepdim=True)
         norms = norms_1.expand(n_1, n_2) + norms_2.transpose(0, 1).expand(n_1, n_2)
         distances_squared = norms - 2 * sample_1.mm(sample_2.t())
         return torch.sqrt(eps + torch.abs(distances_squared))
@@ -556,10 +557,7 @@ class SmoothFRStatistic(object):
         margs = None
         for alpha in alphas:
             margs_a = self.marginals_fn(self.marginals_fn.triu(-alpha * diffs))
-            if margs is None:
-                margs = margs_a
-            else:
-                margs = margs + margs_a
+            margs = margs_a if margs is None else margs + margs_a
 
         margs = margs / len(alphas)
         idx_within = Variable(self.idx_within, requires_grad=False)
@@ -573,8 +571,8 @@ class SmoothFRStatistic(object):
             chi_2 = 4 * (n_1 - 1) * (n_2 - 1) / ((n - 2) * (n - 3))
             var = (
                 chi_1 * (1 - chi_2) * nbs_sum
-                + chi_1 * chi_2 * (margs ** 2).sum()
-                + chi_1 * (chi_2 - 4 * chi_1) * m ** 2
+                + chi_1 * chi_2 * (margs**2).sum()
+                + chi_1 * (chi_2 - 4 * chi_1) * m**2
             )
             mean = 2 * m * n_1 * n_2 / (n * (n - 1))
             std = torch.sqrt(1e-5 + var)
@@ -676,10 +674,7 @@ class SmoothKNNStatistic(object):
                 margs_a = softmax(-alpha * diffs, dim=1)
             else:
                 margs_a = inference_cardinality(-alpha * diffs.cpu(), count_potential)
-            if margs_ is None:
-                margs_ = margs_a
-            else:
-                margs_ = margs_ + margs_a
+            margs_ = margs_a if margs_ is None else margs_ + margs_a
 
         margs_ /= len(alphas)
         # The variable margs_ is a matrix of size n x n-1, which we want to
@@ -706,9 +701,9 @@ class SmoothKNNStatistic(object):
             chi_2 = 4 * (n_1 - 1) * (n_2 - 1) / ((n - 2) * (n - 3))
             var = (
                 chi_1 * (1 - chi_2) * nbs_sum
-                + chi_1 * chi_2 * (margs ** 2).sum()
+                + chi_1 * chi_2 * (margs**2).sum()
                 + chi_1 * chi_2 * flip_sum
-                + chi_1 * (chi_2 - 4 * chi_1) * m ** 2
+                + chi_1 * (chi_2 - 4 * chi_1) * m**2
             )
             std = torch.sqrt(1e-5 + var)
         else:
@@ -772,11 +767,8 @@ class MMDStatistic:
 
         kernels = None
         for alpha in alphas:
-            kernels_a = torch.exp(-alpha * distances ** 2)
-            if kernels is None:
-                kernels = kernels_a
-            else:
-                kernels = kernels + kernels_a
+            kernels_a = torch.exp(-alpha * distances**2)
+            kernels = kernels_a if kernels is None else kernels + kernels_a
 
         k_1 = kernels[: self.n_1, : self.n_1]
         k_2 = kernels[self.n_1 :, self.n_2 :]

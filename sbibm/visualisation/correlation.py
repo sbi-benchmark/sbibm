@@ -7,16 +7,22 @@ import pandas as pd
 
 def fig_correlation(
     df: pd.DataFrame,
-    metrics: List[str] = ["C2ST", "MMD", "KSD", "MEDDIST"],
+    metrics: List[str] = None,
     config: Optional[str] = None,
     title: Optional[str] = None,
     title_dx: int = 0,
     width: Optional[int] = None,
     height: Optional[int] = None,
-    keywords: Dict[str, Any] = {},
-    style: Dict[str, Any] = {},
+    keywords: Dict[str, Any] = None,
+    style: Dict[str, Any] = None,
 ):
     """Plots correlation matrices"""
+    if style is None:
+        style = {}
+    if keywords is None:
+        keywords = {}
+    if metrics is None:
+        metrics = ["C2ST", "MMD", "KSD", "MEDDIST"]
     keywords["sparse"] = True
     keywords["limits"] = [0.0, 1.0]
     keywords["font_size"] = 14

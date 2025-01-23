@@ -41,7 +41,7 @@ def fig_posterior(
     width: Optional[int] = None,
     height: Optional[int] = None,
     default_color: str = "#0035FD",
-    colors_dict: Dict[str, Any] = {},
+    colors_dict: Dict[str, Any] = None,
     interactive: bool = False,
     limits: Optional[Union[List[float], str]] = None,
     num_bins: int = 40,
@@ -79,6 +79,8 @@ def fig_posterior(
         Chart
     """
     # Samples to plot
+    if colors_dict is None:
+        colors_dict = {}
     task = sbibm.get_task(task_name)
     samples = []
     labels_samples = []
@@ -89,10 +91,7 @@ def fig_posterior(
         sample_name = "Prior"
         samples.append(samples_prior.numpy())
         labels_samples.append(sample_name)
-        if sample_name in colors_dict:
-            colors[sample_name] = colors_dict[sample_name]
-        else:
-            colors[sample_name] = "#646464"
+        colors[sample_name] = colors_dict.get(sample_name, "#646464")
 
     if reference:
         sample_name = "Ref. Posterior"
@@ -106,10 +105,7 @@ def fig_posterior(
         )
         samples.append(samples_reference)
         labels_samples.append(sample_name)
-        if sample_name in colors_dict:
-            colors[sample_name] = colors_dict[sample_name]
-        else:
-            colors[sample_name] = "#0a0a0a"
+        colors[sample_name] = colors_dict.get(sample_name, "#0a0a0a")
 
     if true_parameter:
         sample_name = "True parameter"
@@ -119,10 +115,7 @@ def fig_posterior(
             .numpy()
         )
         labels_samples.append(sample_name)
-        if sample_name in colors_dict:
-            colors[sample_name] = colors_dict[sample_name]
-        else:
-            colors[sample_name] = "#f92700"
+        colors[sample_name] = colors_dict.get(sample_name, "#f92700")
 
     if samples_tensor is not None or samples_path is not None:
         if samples_tensor is not None:
@@ -131,10 +124,8 @@ def fig_posterior(
             samples_ = get_ndarray_from_csv(samples_path)
         samples_algorithm = sample(samples_, num_samples, replace=False, seed=seed)
         samples.append(samples_algorithm)
-        if samples_name is None:
-            sample_name = "Algorithm"
-        else:
-            sample_name = samples_name
+        sample_name = "Algorithm" if samples_name is None else samples_name
+
         labels_samples.append(sample_name)
         if samples_color is not None:
             colors[sample_name] = samples_color
@@ -151,7 +142,7 @@ def fig_posterior(
         assert s.shape[0] == num_samples
 
     numbers_unicode = ["₀", "₁", "₂", "₃", "₄", "₅", "₆", "₇", "₈", "₉", "₁₀"]
-    labels_dim = [f"θ{numbers_unicode[i+1]}" for i in range(task.dim_parameters)]
+    labels_dim = [f"θ{numbers_unicode[i + 1]}" for i in range(task.dim_parameters)]
 
     df = den.np2df(
         samples=[sample for sample in samples],
@@ -177,7 +168,7 @@ def fig_posterior(
                     samples_prior.max(dim=0)[0].tolist(),
                 )
             ]
-    elif type(limits) == str:
+    elif type(limits) is str:
         assert limits in labels_samples
         samples_limits = torch.from_numpy(samples[labels_samples.index(limits)])
         limits = [

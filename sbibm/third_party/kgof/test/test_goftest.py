@@ -6,14 +6,11 @@ __author__ = "wittawat"
 
 import unittest
 
-import matplotlib.pyplot as plt
 import numpy as np
 import numpy.testing as testing
-import scipy.stats as stats
 
 import sbibm.third_party.kgof.data as data
 import sbibm.third_party.kgof.density as density
-import sbibm.third_party.kgof.glo as glo
 import sbibm.third_party.kgof.goftest as gof
 import sbibm.third_party.kgof.kernel as kernel
 import sbibm.third_party.kgof.util as util
@@ -138,7 +135,7 @@ class TestFSSD(unittest.TestCase):
             draw_mean = mean + 2
             draw_variance = variance + 1
             X = util.randn(n, d, seed=seed) * np.sqrt(draw_variance) + draw_mean
-            dat = data.Data(X)
+            data.Data(X)
 
             # Test
             for J in [1, 3]:

@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 import altair as alt
 import deneb as den
@@ -13,10 +13,10 @@ def fig_metric(
     width: Optional[int] = None,
     height: Optional[int] = None,
     labels: bool = True,
-    keywords: Dict[str, Any] = {},
-    style: Dict[str, Any] = {},
+    keywords: Dict[str, Any] = None,
+    style: Dict[str, Any] = None,
     default_color: str = "#000000",
-    colors_dict: Dict[str, Any] = {},
+    colors_dict: Dict[str, Any] = None,
     config: Optional[str] = None,
 ):
     """Plots metrics
@@ -47,13 +47,16 @@ def fig_metric(
         `df.loc[df["algorithm"] == "REJ-ABC", "algorithm"] = " REJ-ABC"`.
         See also: https://github.com/vega/vega-lite/issues/5366/
     """
+    if colors_dict is None:
+        colors_dict = {}
+    if style is None:
+        style = {}
+    if keywords is None:
+        keywords = {}
     colors = {}
     for algorithm in df.algorithm.unique():
         algorithm_stripped = algorithm.strip()
-        if algorithm_stripped not in colors_dict:
-            colors[algorithm] = default_color
-        else:
-            colors[algorithm] = colors_dict[algorithm_stripped]
+        colors[algorithm] = colors_dict.get(algorithm_stripped, default_color)
 
     keywords["column_labels"] = labels
     keywords["color"] = den.colorscale(colors, shorthand="algorithm:N")
@@ -136,7 +139,11 @@ def fig_metric(
     chart = chart.configure_point(size=50).configure_line(size=1.5)
 
     if title is not None:
-        chart = chart.properties(title={"text": [title],}).configure_title(
+        chart = chart.properties(
+            title={
+                "text": [title],
+            }
+        ).configure_title(
             offset=10,
             orient="top",
             anchor="middle",

@@ -1,6 +1,6 @@
 """
 This file defines global configuration of the project.
-Casual usage of the package should not need to change this. 
+Casual usage of the package should not need to change this.
 """
 
 import os

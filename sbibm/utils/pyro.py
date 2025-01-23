@@ -18,13 +18,12 @@ from pyro.poutine.subsample_messenger import _Subsample
 from pyro.util import check_site_shape, ignore_jit_warnings
 from torch.autograd import grad
 from torch.distributions import biject_to
-from torch.distributions.transforms import IndependentTransform
 
 
 def get_log_prob_fn(
     model,
     model_args=(),
-    model_kwargs={},
+    model_kwargs=None,
     implementation="pyro",
     automatic_transform_enabled=False,
     transforms=None,
@@ -69,6 +68,8 @@ def get_log_prob_fn(
     Returns:
         `log_prob_fn` and `transforms`
     """
+    if model_kwargs is None:
+        model_kwargs = {}
     if transforms is None:
         transforms = {}
 
@@ -98,7 +99,9 @@ def get_log_prob_fn(
         if automatic_transform_enabled:
             transforms[name] = biject_to(fn.support).inv
         else:
-            transforms[name] = dist.transforms.IndependentTransform(dist.transforms.identity_transform, 1)
+            transforms[name] = dist.transforms.IndependentTransform(
+                dist.transforms.identity_transform, 1
+            )
 
     if implementation == "pyro":
         trace_prob_evaluator = TraceEinsumEvaluator(
@@ -115,7 +118,7 @@ def get_log_prob_fn(
         assert automatic_transform_enabled is False
 
         if jit_compile:
-            warnings.warn("Will not JIT compile, unsupported for now.")
+            warnings.warn("Will not JIT compile, unsupported for now.", stacklevel=2)
 
         def lp_fn(input_dict):
             excluded_nodes = set(["_INPUT", "_RETURN"])
@@ -149,7 +152,7 @@ def get_log_prob_fn(
 def get_log_prob_grad_fn(
     model,
     model_args=(),
-    model_kwargs={},
+    model_kwargs=None,
     implementation="pyro",
     automatic_transform_enabled=False,
     transforms=None,
@@ -173,6 +176,8 @@ def get_log_prob_grad_fn(
     Returns:
         `log_prob_grad_fn` and `transforms`
     """
+    if model_kwargs is None:
+        model_kwargs = {}
     lp_fn, transforms = get_log_prob_fn(
         model,
         model_args,

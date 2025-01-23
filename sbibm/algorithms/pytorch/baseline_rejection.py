@@ -47,8 +47,9 @@ def run(
     log.info("Rejection sampling")
 
     if "num_simulations" in kwargs:
-        log.warn(
-            "`num_simulations` was passed as a keyword but will be ignored, since this is a baseline method."
+        log.warning(
+            "`num_simulations` was passed as a keyword but will be ignored, "
+            "since this is a baseline method."
         )
 
     prior = task.get_prior()
@@ -114,13 +115,13 @@ def run(
             samples.append(proposal[accept_idxs].detach())
             pbar.update(len(accept_idxs))
             pbar.set_postfix_str(
-                s=f"Acceptance rate: {num_accepted/num_sims:.9f}", refresh=True
+                s=f"Acceptance rate: {num_accepted / num_sims:.9f}", refresh=True
             )
 
     pbar.close()
 
-    log.info(f"Acceptance rate: {num_accepted/num_sims:.9f}")
-    log.info(f"Finished after {time.time()-tic:.3f} seconds")
+    log.info(f"Acceptance rate: {num_accepted / num_sims:.9f}")
+    log.info(f"Finished after {time.time() - tic:.3f} seconds")
 
     samples = torch.cat(samples)[:num_samples, :]
     assert samples.shape[0] == num_samples

@@ -1,13 +1,11 @@
-"""Simulation to examine the P(reject) as the parameters for each problem are 
+"""Simulation to examine the P(reject) as the parameters for each problem are
 varied. What varies will depend on the problem."""
 
 __author__ = "wittawat"
 
 import logging
-import math
 import os
 import sys
-import time
 
 # import numpy as np
 import autograd.numpy as np
@@ -15,16 +13,13 @@ import autograd.numpy as np
 # need independent_jobs package
 # https://github.com/karlnapf/independent-jobs
 # The independent_jobs and kgof have to be in the global search path (.bashrc)
-import independent_jobs as inj
 from independent_jobs.aggregators.SingleResultAggregator import SingleResultAggregator
 from independent_jobs.engines.BatchClusterParameters import BatchClusterParameters
-from independent_jobs.engines.SerialComputationEngine import SerialComputationEngine
 from independent_jobs.engines.SlurmComputationEngine import SlurmComputationEngine
 from independent_jobs.jobs.IndependentJob import IndependentJob
 from independent_jobs.results.SingleResult import SingleResult
 from independent_jobs.tools.Log import logger
 
-import sbibm.third_party.kgof as kgof
 import sbibm.third_party.kgof.data as data
 import sbibm.third_party.kgof.density as density
 import sbibm.third_party.kgof.glo as glo
@@ -38,7 +33,7 @@ import sbibm.third_party.kgof.util as util
 All the job functions return a dictionary with the following keys:
     - goftest: test object. (may or may not return)
     - test_result: the result from calling perform_test(te).
-    - time_secs: run time in seconds 
+    - time_secs: run time in seconds
 """
 
 
@@ -62,7 +57,7 @@ def job_fssdJ1q_med(p, data_source, tr, te, r, J=1, null_sim=None):
     with util.ContextTimer() as t:
         # median heuristic
         med = util.meddistance(X, subsample=1000)
-        k = kernel.KGauss(med ** 2)
+        k = kernel.KGauss(med**2)
         V = util.fit_gaussian_draw(X, J, seed=r + 3)
 
         fssd_med = gof.FSSD(p, k, V, null_sim=null_sim, alpha=alpha)
@@ -91,7 +86,7 @@ def job_fssdJ1q_opt(p, data_source, tr, te, r, J=1, null_sim=None):
         gwidth_factors = 2.0 ** np.linspace(-3, 3, n_gwidth_cand)
         med2 = util.meddistance(Xtr, 1000) ** 2
 
-        k = kernel.KGauss(med2 * 2)
+        kernel.KGauss(med2 * 2)
         # fit a Gaussian to the data and draw to initialize V0
         V0 = util.fit_gaussian_draw(Xtr, J, seed=r + 1, reg=1e-6)
         list_gwidth = np.hstack(((med2) * gwidth_factors))
@@ -324,7 +319,7 @@ def job_me_opt(p, data_source, tr, te, r, J=5):
     Gaussian kernel. Optimize test locations and Gaussian width.
     """
     data = tr + te
-    X = data.data()
+    data.data()
     with util.ContextTimer() as t:
         # median heuristic
         # pds = p.get_datasource()
@@ -362,7 +357,7 @@ def job_kstein_med(p, data_source, tr, te, r):
     with util.ContextTimer() as t:
         # median heuristic
         med = util.meddistance(X, subsample=1000)
-        k = kernel.KGauss(med ** 2)
+        k = kernel.KGauss(med**2)
 
         kstein = gof.KernelSteinTest(p, k, alpha=alpha, n_simulate=1000, seed=r)
         kstein_result = kstein.perform_test(data)
@@ -382,7 +377,7 @@ def job_kstein_imq(p, data_source, tr, te, r):
     """
     # full data
     data = tr + te
-    X = data.data()
+    data.data()
     with util.ContextTimer() as t:
         k = kernel.KIMQ(b=-0.5, c=1.0)
 
@@ -402,7 +397,7 @@ def job_lin_kstein_med(p, data_source, tr, te, r):
     with util.ContextTimer() as t:
         # median heuristic
         med = util.meddistance(X, subsample=1000)
-        k = kernel.KGauss(med ** 2)
+        k = kernel.KGauss(med**2)
 
         lin_kstein = gof.LinearKernelSteinTest(p, k, alpha=alpha, seed=r)
         lin_kstein_result = lin_kstein.perform_test(data)
@@ -431,7 +426,7 @@ def job_mmd_med(p, data_source, tr, te, r):
         medy = util.meddistance(Y, subsample=1000)
         medxy = util.meddistance(XY, subsample=1000)
         med_avg = (medx + medy + medxy) / 3.0
-        k = kernel.KGauss(med_avg ** 2)
+        k = kernel.KGauss(med_avg**2)
 
         mmd_test = mgof.QuadMMDGof(p, k, n_permute=400, alpha=alpha, seed=r)
         mmd_result = mmd_test.perform_test(data)
@@ -461,7 +456,7 @@ def job_mmd_opt(p, data_source, tr, te, r):
         # heuristic
         # list_gwidth = np.hstack( (np.linspace(20, 40, 10), (med**2)
         #    *(2.0**np.linspace(-2, 2, 20) ) ) )
-        list_gwidth = (med ** 2) * (2.0 ** np.linspace(-3, 3, 30))
+        list_gwidth = (med**2) * (2.0 ** np.linspace(-3, 3, 30))
         list_gwidth.sort()
         candidate_kernels = [kernel.KGauss(gw2) for gw2 in list_gwidth]
 
@@ -496,7 +491,6 @@ class Ex2Job(IndependentJob):
     # we need to define the abstract compute method. It has to return an instance
     # of JobResult base class
     def compute(self):
-
         p = self.p
         data_source = self.data_source
         r = self.rep
@@ -547,22 +541,11 @@ from sbibm.third_party.kgof.ex.ex2_prob_params import (
     job_fssdJ1q_imq_optv,
     job_fssdJ1q_med,
     job_fssdJ1q_opt,
-    job_fssdJ5p_opt,
-    job_fssdJ5q_imq_opt,
-    job_fssdJ5q_imq_optbv,
-    job_fssdJ5q_imq_optv,
-    job_fssdJ5q_imqb1_optv,
-    job_fssdJ5q_imqb2_optv,
-    job_fssdJ5q_imqb3_optv,
     job_fssdJ5q_med,
     job_fssdJ5q_opt,
-    job_fssdJ10p_opt,
-    job_fssdJ10q_opt,
-    job_kstein_imq,
     job_kstein_med,
     job_lin_kstein_med,
     job_me_opt,
-    job_mmd_med,
     job_mmd_opt,
 )
 
@@ -624,10 +607,7 @@ def gaussbern_rbm_probs(stds_perturb_B, dx=50, dh=10, n=sample_size):
             c = np.random.randn(dh)
             p = density.GaussBernRBM(B, b, c)
 
-            if std <= 1e-8:
-                B_perturb = B
-            else:
-                B_perturb = B + np.random.randn(dx, dh) * std
+            B_perturb = B if std <= 1e-08 else B + np.random.randn(dx, dh) * std
             gb_rbm = data.DSGaussBernRBM(B_perturb, b, c, burnin=2000)
 
             probs.append((std, p, gb_rbm))

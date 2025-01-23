@@ -1,6 +1,7 @@
 """
 Module containing many types of goodness-of-fit test methods.
 """
+
 from __future__ import division
 
 from builtins import object, range, str, zip
@@ -15,11 +16,9 @@ from abc import ABCMeta, abstractmethod
 
 import autograd
 import autograd.numpy as np
-import matplotlib.pyplot as plt
 import scipy
 import scipy.stats as stats
 
-import sbibm.third_party.kgof.data as data
 import sbibm.third_party.kgof.kernel as kernel
 import sbibm.third_party.kgof.util as util
 
@@ -114,7 +113,6 @@ class FSSDH0SimCovObs(H0Simulator):
         """
         assert isinstance(gof, FSSD)
         n_simulate = self.n_simulate
-        seed = self.seed
         if fea_tensor is None:
             _, fea_tensor = gof.compute_stat(dat, return_feature_tensor=True)
 
@@ -161,7 +159,6 @@ class FSSDH0SimCovDraw(H0Simulator):
 
         This method does not use dat.
         """
-        dat = None
         # assert isinstance(gof, FSSD)
         # p = an UnnormalizedDensity
         p = gof.p
@@ -171,7 +168,7 @@ class FSSDH0SimCovDraw(H0Simulator):
         Xdraw = ds.sample(n=self.n_draw, seed=self.seed)
         _, fea_tensor = gof.compute_stat(Xdraw, return_feature_tensor=True)
 
-        X = Xdraw.data()
+        Xdraw.data()
         J = fea_tensor.shape[2]
         n = self.n_draw
         # n x d*J
@@ -235,8 +232,8 @@ class FSSD(GofTest):
             null_sim = self.null_sim
             n_simulate = null_sim.n_simulate
             X = dat.data()
-            n = X.shape[0]
-            J = self.V.shape[0]
+            X.shape[0]
+            self.V.shape[0]
 
             nfssd, fea_tensor = self.compute_stat(dat, return_feature_tensor=True)
             sim_results = null_sim.simulate(self, dat, fea_tensor)
@@ -384,7 +381,7 @@ class FSSD(GofTest):
         Tau = np.reshape(Xi, [n, d * J])
         if use_unbiased:
             t1 = np.sum(np.mean(Tau, 0) ** 2) * (old_div(n, float(n - 1)))
-            t2 = old_div(np.sum(np.mean(Tau ** 2, 0)), float(n - 1))
+            t2 = old_div(np.sum(np.mean(Tau**2, 0)), float(n - 1))
             # stat is the mean
             stat = t1 - t2
         else:
@@ -396,7 +393,7 @@ class FSSD(GofTest):
         # compute the variance
         # mu: d*J vector
         mu = np.mean(Tau, 0)
-        variance = 4 * np.mean(np.dot(Tau, mu) ** 2) - 4 * np.sum(mu ** 2) ** 2
+        variance = 4 * np.mean(np.dot(Tau, mu) ** 2) - 4 * np.sum(mu**2) ** 2
         return stat, variance
 
     @staticmethod
@@ -461,8 +458,7 @@ class FSSD(GofTest):
 
         return: (best kernel index, array of test power criteria)
         """
-        V = test_locs
-        X = dat.data()
+        dat.data()
         n_cand = len(list_kernel)
         objs = np.zeros(n_cand)
         for i in range(n_cand):
@@ -518,7 +514,7 @@ class GaussFSSD(FSSD):
         gwidth_factors = 2.0 ** np.linspace(-3, 3, n_gwidth_cand)
         med2 = util.meddistance(X, 1000) ** 2
 
-        k = kernel.KGauss(med2 * 2)
+        kernel.KGauss(med2 * 2)
         # fit a Gaussian to the data and draw to initialize V0
         V0 = util.fit_gaussian_draw(X, J, seed=829, reg=1e-6)
         list_gwidth = np.hstack(((med2) * gwidth_factors))
@@ -605,7 +601,7 @@ class GaussFSSD(FSSD):
         # to automatically enforce the positivity.
         def obj(sqrt_gwidth, V):
             return -GaussFSSD.power_criterion(
-                p, dat, sqrt_gwidth ** 2, V, reg=reg, use_2terms=use_2terms
+                p, dat, sqrt_gwidth**2, V, reg=reg, use_2terms=use_2terms
             )
 
         flatten = lambda gwidth, V: np.hstack((gwidth, V.reshape(-1)))
@@ -670,7 +666,7 @@ class GaussFSSD(FSSD):
         opt_result["time_secs"] = timer.secs
         x_opt = opt_result["x"]
         sq_gw_opt, V_opt = unflatten(x_opt)
-        gw_opt = sq_gw_opt ** 2
+        gw_opt = sq_gw_opt**2
 
         assert util.is_real_num(gw_opt), "gw_opt is not real. Was %s" % str(gw_opt)
 
@@ -696,7 +692,8 @@ def bootstrapper_multinomial(n):
     import warnings
 
     warnings.warn(
-        "Somehow bootstrapper_multinomial() does not give the right null distribution."
+        "Somehow bootstrapper_multinomial() does not give the right null distribution.",
+        stacklevel=2,
     )
     M = np.random.multinomial(n, old_div(np.ones(n), float(n)), size=1)
     return M.reshape(-1) - old_div(1.0, n)
@@ -910,7 +907,7 @@ class IMQFSSD(FSSD):
         n, d = X.shape
 
         def obj(sqrt_neg_b, c, V):
-            b = -(sqrt_neg_b ** 2)
+            b = -(sqrt_neg_b**2)
             return -IMQFSSD.power_criterion(p, dat, b, c, V, reg=reg)
 
         flatten = lambda sqrt_neg_b, c, V: np.hstack((sqrt_neg_b, c, V.reshape(-1)))
@@ -944,7 +941,7 @@ class IMQFSSD(FSSD):
         # (J*d+2) x 2. Make sure to bound the reparamterized values (not the original)
         """
         For b, b2 := sqrt(-b)
-            lb <= b <= ub < 0 means 
+            lb <= b <= ub < 0 means
 
             sqrt(-ub) <= b2 <= sqrt(-lb)
             Note the positions of ub, lb.
@@ -976,7 +973,7 @@ class IMQFSSD(FSSD):
         opt_result["time_secs"] = timer.secs
         x_opt = opt_result["x"]
         sqrt_neg_b, c, V_opt = unflatten(x_opt)
-        b = -(sqrt_neg_b ** 2)
+        b = -(sqrt_neg_b**2)
         assert util.is_real_num(b), "b is not real. Was {}".format(b)
         assert b < 0
         assert util.is_real_num(c), "c is not real. Was {}".format(c)
@@ -1147,7 +1144,7 @@ class LinearKernelSteinTest(GofTest):
             # H: length-n vector
             _, H = self.compute_stat(dat, return_pointwise_stats=True)
             test_stat = np.sqrt(old_div(n, 2)) * np.mean(H)
-            stat_var = np.mean(H ** 2)
+            stat_var = np.mean(H**2)
             pvalue = stats.norm.sf(test_stat, loc=0, scale=np.sqrt(stat_var))
 
         results = {
@@ -1243,7 +1240,7 @@ class SteinWitness(object):
         # Process chunk by chunk.
         block_rows = util.constrain(50000 // (d * J), 10, 5000)
         avg_rows = []
-        for (f, t) in util.ChunkIterable(start=0, end=n, chunk_size=block_rows):
+        for f, t in util.ChunkIterable(start=0, end=n, chunk_size=block_rows):
             assert f < t
             Xblock = X[f:t, :]
             b = Xblock.shape[0]

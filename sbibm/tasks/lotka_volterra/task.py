@@ -94,7 +94,7 @@ class LotkaVolterra(Task):
     @lazy_property
     def de(self):
         return DiffEq(
-            f=f"""
+            f="""
             function f(du,u,p,t)
                 x, y = u
                 alpha, beta, gamma, delta = p
@@ -151,14 +151,10 @@ class LotkaVolterra(Task):
 
             idx_contains_nan = torch.where(
                 torch.isnan(us.reshape(num_samples, -1)).any(axis=1)
-            )[
-                0
-            ]  # noqa
+            )[0]  # noqa
             idx_contains_no_nan = torch.where(
                 ~torch.isnan(us.reshape(num_samples, -1)).any(axis=1)
-            )[
-                0
-            ]  # noqa
+            )[0]  # noqa
 
             if self.summary is None:
                 return us

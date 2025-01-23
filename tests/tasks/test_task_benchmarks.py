@@ -2,7 +2,6 @@ import re
 
 import pyro
 import pytest
-import torch
 
 from sbibm import get_available_tasks, get_task
 from sbibm.algorithms.sbi.snpe import run
@@ -20,7 +19,6 @@ pyro.util.set_rng_seed(47)
     [tn for tn in get_available_tasks() if not re.search("lotka|sir", tn)],
 )
 def test_benchmark_metrics_selfobserved(task_name):
-
     task = get_task(task_name)
 
     nobs = 1  # maybe randomly dice this?
@@ -39,7 +37,7 @@ def test_benchmark_metrics_selfobserved(task_name):
 
     assert outputs.shape
     assert outputs.shape[0] > 0
-    assert logprob_truep == None
+    assert logprob_truep is None
 
     predictive_samples = sim(outputs)
     value = median_distance(predictive_samples, x_o)

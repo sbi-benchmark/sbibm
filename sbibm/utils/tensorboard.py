@@ -20,7 +20,7 @@ def tb_plot_posterior(
 def tb_make_writer(
     logger: logging.Logger = None,
     basepath: str = "tensorboard",
-) -> (SummaryWriter, Callable):
+) -> tuple[SummaryWriter, Callable]:
     """Builds tensorboard summary writers"""
     log_dir = Path(f"{basepath}/summary")
     if log_dir.exists() and log_dir.is_dir():

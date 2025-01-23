@@ -34,24 +34,20 @@ def run(
     """Runs (S)NPE from `sbi`
 
     Args:
-        task: Task instance
-        num_samples: Number of samples to generate from posterior
-        num_simulations: Simulation budget
-        num_observation: Observation number to load, alternative to `observation`
-        observation: Observation, alternative to `num_observation`
-        num_rounds: Number of rounds
-        neural_net: Neural network to use, one of maf / mdn / made / nsf
-        hidden_features: Number of hidden features in network
-        simulation_batch_size: Batch size for simulator
-        training_batch_size: Batch size for training network
-        num_atoms: Number of atoms, -1 means same as `training_batch_size`
-        automatic_transforms_enabled: Whether to enable automatic transforms
-        z_score_x: Whether to z-score x
-        z_score_theta: Whether to z-score theta
-        max_num_epochs: Maximum number of epochs
+        task: Task instance num_samples: Number of samples to generate from posterior
+        num_simulations: Simulation budget num_observation: Observation number to load,
+        alternative to `observation` observation: Observation, alternative to
+        `num_observation` num_rounds: Number of rounds neural_net: Neural network to
+        use, one of maf / mdn / made / nsf hidden_features: Number of hidden features in
+        network simulation_batch_size: Batch size for simulator training_batch_size:
+        Batch size for training network num_atoms: Number of atoms, -1 means same as
+        `training_batch_size` automatic_transforms_enabled: Whether to enable automatic
+        transforms z_score_x: Whether to z-score x z_score_theta: Whether to z-score
+        theta max_num_epochs: Maximum number of epochs
 
     Returns:
-        Samples from posterior, number of simulator calls, log probability of true params if computable
+        Samples from posterior, number of simulator calls, log probability of true
+        params if computable
     """
     assert not (num_observation is None and observation is None)
     assert not (num_observation is not None and observation is not None)

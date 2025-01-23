@@ -79,9 +79,9 @@ def run(
 
     # Construct grid
     grid = torch.stack(
-        torch.meshgrid(
-            [torch.linspace(low[d], high[d], resolution) for d in range(dim_parameters)]
-        )
+        torch.meshgrid([
+            torch.linspace(low[d], high[d], resolution) for d in range(dim_parameters)
+        ])
     )  # dim_parameters x resolution x ... x resolution
     grid_flat = grid.view(
         dim_parameters, -1
@@ -123,6 +123,6 @@ def run(
     log.info(f"Unique samples: {num_unique_samples}")
 
     toc = time.time()
-    log.info(f"Finished after {toc-tic:.3f} seconds")
+    log.info(f"Finished after {toc - tic:.3f} seconds")
 
     return samples

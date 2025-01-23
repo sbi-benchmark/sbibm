@@ -3,6 +3,7 @@ import pytest
 import sbibm
 from sbibm.algorithms.sbi import snle, snpe, snre
 
+
 @pytest.mark.parametrize("run_method", (snle, snpe, snre))
 @pytest.mark.parametrize("num_rounds", (2,))
 @pytest.mark.parametrize("task_name", ("gaussian_mixture",))
@@ -12,8 +13,8 @@ def test_sbi_api(
     num_rounds: int,
     task_name: str,
     num_observation: int,
-    num_simulations: int=2_000,
-    num_samples: int=100,
+    num_simulations: int = 2_000,
+    num_samples: int = 100,
 ):
     task = sbibm.get_task(task_name)
 

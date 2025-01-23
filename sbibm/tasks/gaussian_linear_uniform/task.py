@@ -1,8 +1,7 @@
 import logging
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Callable, Optional
 
-import numpy as np
 import pyro
 import torch
 from pyro import distributions as pdist

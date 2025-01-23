@@ -151,14 +151,10 @@ class SIR(Task):
 
             idx_contains_nan = torch.where(
                 torch.isnan(us.reshape(num_samples, -1)).any(axis=1)
-            )[
-                0
-            ]  # noqa
+            )[0]  # noqa
             idx_contains_no_nan = torch.where(
                 ~torch.isnan(us.reshape(num_samples, -1)).any(axis=1)
-            )[
-                0
-            ]  # noqa
+            )[0]  # noqa
 
             if self.summary is None:
                 return us

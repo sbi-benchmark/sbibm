@@ -33,7 +33,7 @@ def run(
     batch_size = min(batch_size, num_simulations)
     num_batches = int(num_simulations / batch_size)
 
-    for i in tqdm(range(num_batches)):
+    for _i in tqdm(range(num_batches)):
         _ = simulator(prior(num_samples=batch_size))
 
     assert simulator.num_simulations == num_simulations

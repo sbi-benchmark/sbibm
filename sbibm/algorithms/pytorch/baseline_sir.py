@@ -67,7 +67,7 @@ def run(
 
     particles = []
     log_weights = []
-    for i in tqdm(range(num_batches)):
+    for _i in tqdm(range(num_batches)):
         batch_draws = proposal_dist.sample((batch_size,))
         log_weights.append(
             log_prob_fn(batch_draws) - proposal_dist.log_prob(batch_draws)
@@ -89,6 +89,6 @@ def run(
     log.info(f"Unique particles: {num_unique} out of {len(samples)}")
 
     toc = time.time()
-    log.info(f"Finished after {toc-tic:.3f} seconds")
+    log.info(f"Finished after {toc - tic:.3f} seconds")
 
     return samples

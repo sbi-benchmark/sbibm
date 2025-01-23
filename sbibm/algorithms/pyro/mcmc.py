@@ -88,7 +88,9 @@ def run(
 
     if "num_simulations" in kwargs:
         warnings.warn(
-            "`num_simulations` was passed as a keyword but will be ignored, see docstring for more info."
+            "`num_simulations` was passed as a keyword but will be ignored, "
+            "see docstring for more info.",
+            stacklevel=2,
         )
 
     # Prepare model and transforms
@@ -146,7 +148,7 @@ def run(
     mcmc.run()
 
     toc = time.time()
-    log.info(f"Finished MCMC after {toc-tic:.3f} seconds")
+    log.info(f"Finished MCMC after {toc - tic:.3f} seconds")
     log.info(f"Automatic transforms {mcmc.transforms}")
 
     log.info(f"Apply thinning of {thinning}")
@@ -156,7 +158,7 @@ def run(
         mcmc._samples["parameters"].shape[0] * mcmc._samples["parameters"].shape[1]
     )
     if num_samples_available < num_samples:
-        warnings.warn("Some samples will be included multiple times")
+        warnings.warn("Some samples will be included multiple times", stacklevel=2)
         samples = mcmc.get_samples(num_samples=num_samples, group_by_chain=False)[
             "parameters"
         ].squeeze()

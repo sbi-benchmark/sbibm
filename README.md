@@ -49,7 +49,7 @@ c2st_accuracy = c2st(reference_samples, posterior_samples)
 
 # Visualise both posteriors:
 from sbibm.visualisation import fig_posterior
-fig = fig_posterior(task_name="two_moons", observation=1, samples=[posterior_samples])  
+fig = fig_posterior(task_name="two_moons", observation=1, samples=[posterior_samples])
 # Note: Use fig.show() or fig.save() to show or save the figure
 
 # Get results from other algorithms for comparison:
@@ -174,7 +174,7 @@ The manuscript is [available through PMLR](http://proceedings.mlr.press/v130/lue
   series    = {Proceedings of Machine Learning Research},
   month     = {13--15 Apr},
   publisher = {PMLR}
-}  
+}
 ```
 
 

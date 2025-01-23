@@ -22,7 +22,7 @@ def tb_acf(writer, mcmc, site_name="parameters", num_samples=1000, maxlags=50):
             fig = plt.figure()
             plt.gca().acorr(samples[c, :].squeeze()[:, p].numpy(), maxlags=maxlags)
             writer.add_figure(
-                f"acf/chain {c+1}/parameter {p+1}",
+                f"acf/chain {c + 1}/parameter {p + 1}",
                 fig,
                 close=True,
             )
@@ -32,7 +32,7 @@ def tb_posteriors(writer, mcmc, site_name="parameters", num_samples=1000):
     samples = mcmc.get_samples(num_samples=num_samples, group_by_chain=True)[site_name]
     for c in range(samples.shape[0]):
         tb_plot_posterior(
-            writer=writer, samples=samples[c, :], tag=f"posterior/chain {c+1}"
+            writer=writer, samples=samples[c, :], tag=f"posterior/chain {c + 1}"
         )
 
 
@@ -41,7 +41,7 @@ def tb_marginals(writer, mcmc, site_name="parameters", num_samples=1000):
     for c in range(samples.shape[0]):
         for p in range(samples.shape[-1]):
             writer.add_histogram(
-                f"marginal/{site_name}/{p+1}",
+                f"marginal/{site_name}/{p + 1}",
                 samples[c, :].squeeze()[:, p],
                 c,
             )
@@ -72,7 +72,7 @@ def tb_make_hook_fn(writer, site_name="parameters"):
         for p in range(len(samples[site_name].squeeze())):
             # Trace
             writer.add_scalar(
-                f"{stage_prefix}/chain/{num_chain+1}/trace/{site_name}/{p+1}",
+                f"{stage_prefix}/chain/{num_chain + 1}/trace/{site_name}/{p + 1}",
                 samples_inv.squeeze()[p],
                 i,
             )
@@ -82,7 +82,9 @@ def tb_make_hook_fn(writer, site_name="parameters"):
                 if stage_prefix == "warmup":
                     kernel_width = kernel._width[p]
                     writer.add_scalar(
-                        f"{stage_prefix}/chain/{num_chain+1}/bracket width/{site_name}/{p+1}",
+                        f"{stage_prefix}/chain/{num_chain + 1}/bracket width/{
+                            site_name
+                        }/{p + 1}",
                         kernel_width,
                         i,
                     )

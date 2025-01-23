@@ -1,21 +1,10 @@
-from pathlib import Path
-
-import matplotlib
-import matplotlib.pyplot as plt
 import numpy as np
-import pyro
-import scipy.stats as stats
-import torch
-import torch.distributions.transforms as transforms
 
-import sbibm
-import sbibm.third_party.kgof as kgof
 import sbibm.third_party.kgof.data as data
 import sbibm.third_party.kgof.density as density
 import sbibm.third_party.kgof.goftest as gof
 import sbibm.third_party.kgof.kernel as kernel
 import sbibm.third_party.kgof.util as util
-from sbibm.third_party.kgof.density import UnnormalizedDensity
 
 
 def test_fssd():
@@ -51,7 +40,7 @@ def test_fssd():
     fssd_med = gof.FSSD(p, k, V, null_sim=null_sim, alpha=0.01)
     test_result = fssd_med.perform_test(samples)
     print(test_result)
-    assert test_result["h0_rejected"] == False
+    assert not test_result["h0_rejected"]
 
     # FSSD with samples from different density
     J = 10  # Fails with J=8, passes with J=10 (chance)
@@ -68,7 +57,7 @@ def test_fssd():
     fssd_med = gof.FSSD(p, k, V, null_sim=null_sim, alpha=0.01)
     test_result = fssd_med.perform_test(samples)
     print(test_result)
-    assert test_result["h0_rejected"] == True
+    assert test_result["h0_rejected"]
 
 
 def test_fssd_opt():
@@ -110,9 +99,8 @@ def test_fssd_opt():
     # FSSD
     fssd_opt = gof.GaussFSSD(p, gw_opt, V_opt, alpha=0.01)
     test_result = fssd_opt.perform_test(te)
-    test_result
     print(test_result)
-    assert test_result["h0_rejected"] == False
+    assert not test_result["h0_rejected"]
 
     # FSSD with samples from different density
     ds = data.DSLaplace(d=d, loc=0, scale=1.0 / np.sqrt(2))
@@ -131,4 +119,4 @@ def test_fssd_opt():
     fssd_opt = gof.GaussFSSD(p, gw_opt, V_opt, alpha=0.01)
     test_result = fssd_opt.perform_test(te)
     print(test_result)
-    assert test_result["h0_rejected"] == True
+    assert test_result["h0_rejected"]

@@ -1,7 +1,8 @@
 """
-Module containing implementations of some unnormalized probability density 
+Module containing implementations of some unnormalized probability density
 functions.
 """
+
 from __future__ import division
 
 from builtins import object, range
@@ -372,7 +373,7 @@ class GaussianMixture(UnnormalizedDensity):
         cov_half_inv = evecs.dot(np.diag(evals ** (-0.5))).dot(evecs.T)
         #     print(evals)
         half_evals = np.dot(X - mean, cov_half_inv)
-        full_evals = np.sum(half_evals ** 2, 1)
+        full_evals = np.sum(half_evals**2, 1)
         unden = np.exp(-0.5 * full_evals)
 
         Z = np.sqrt(np.linalg.det(2.0 * np.pi * cov))
@@ -423,7 +424,7 @@ class GaussBernRBM(UnnormalizedDensity):
         XBC = 0.5 * np.dot(X, B) + c
         unden = (
             np.dot(X, b)
-            - 0.5 * np.sum(X ** 2, 1)
+            - 0.5 * np.sum(X**2, 1)
             + np.sum(np.log(np.exp(XBC) + np.exp(-XBC)), 1)
         )
         assert len(unden) == X.shape[0]
@@ -478,7 +479,7 @@ class ISIPoissonLinear(UnnormalizedDensity):
 
     def log_den(self, X):
         b = self.b
-        unden = -np.sum(0.5 * b * X ** 2 + X - np.log(1.0 + b * X), 1)
+        unden = -np.sum(0.5 * b * X**2 + X - np.log(1.0 + b * X), 1)
         return unden
 
     def dim(self):
@@ -549,7 +550,7 @@ class Gamma(UnnormalizedDensity):
 
 
 class LogGamma(UnnormalizedDensity):
-    """
+    r"""
     A gamma distribution with transformed domain.
     t = exp(x),  t \in R+  x \in R
     """
@@ -618,7 +619,7 @@ class ISIPoisson2D(UnnormalizedDensity):
         warn_bounded_domain(self)
 
     def quadratic_intensity(self, X, Y):
-        int_intensity = -(X ** 2 + Y ** 2) * X * Y + 3 * np.log(X ** 2 + Y ** 2)
+        int_intensity = -(X**2 + Y**2) * X * Y + 3 * np.log(X**2 + Y**2)
         return int_intensity
 
     def log_den(self, X):
@@ -638,7 +639,7 @@ class ISISigmoidPoisson2D(UnnormalizedDensity):
     """
 
     def __init__(self, intensity="quadratic", w=1.0, a=1.0):
-        """
+        r"""
         lambda_(X,Y) = a* X^2 + Y^2
         X = 1/(1+exp(s))
         Y = 1/(1+exp(t))
@@ -661,8 +662,8 @@ class ISISigmoidPoisson2D(UnnormalizedDensity):
     def quadratic_intensity(self, s, t):
         X = self.sigmoid(s)
         Y = self.sigmoid(t)
-        int_intensity = -(self.a * X ** 2 + Y ** 2) * X * Y + 3 * (
-            np.log(self.a * X ** 2 + Y ** 2) + np.log((X * (X - 1) * Y * (Y - 1)))
+        int_intensity = -(self.a * X**2 + Y**2) * X * Y + 3 * (
+            np.log(self.a * X**2 + Y**2) + np.log((X * (X - 1) * Y * (Y - 1)))
         )
         return int_intensity
 
@@ -720,7 +721,7 @@ class Resample(UnnormalizedDensity):
 
 
 class GaussCosFreqs(UnnormalizedDensity):
-    """
+    r"""
     p(x) \propto exp(-||x||^2/2sigma^2)*(1+ prod_{i=1}^d cos(w_i*x_i))
 
     where w1,..wd are frequencies of each dimension.
@@ -741,7 +742,7 @@ class GaussCosFreqs(UnnormalizedDensity):
         sigma2 = self.sigma2
         freqs = self.freqs
         log_unden = (
-            old_div(-np.sum(X ** 2, 1), (2.0 * sigma2))
+            old_div(-np.sum(X**2, 1), (2.0 * sigma2))
             + 1
             + np.prod(np.cos(X * freqs), 1)
         )

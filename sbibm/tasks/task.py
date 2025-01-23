@@ -80,11 +80,11 @@ class Task:
 
     def get_labels_data(self) -> List[str]:
         """Get list containing parameter labels"""
-        return [f"data_{i+1}" for i in range(self.dim_data)]
+        return [f"data_{i + 1}" for i in range(self.dim_data)]
 
     def get_labels_parameters(self) -> List[str]:
         """Get list containing parameter labels"""
-        return [f"parameter_{i+1}" for i in range(self.dim_parameters)]
+        return [f"parameter_{i + 1}" for i in range(self.dim_parameters)]
 
     def get_observation(self, num_observation: int) -> torch.Tensor:
         """Get observed data for a given observation number"""
@@ -112,7 +112,7 @@ class Task:
         raise NotImplementedError
 
     def get_true_parameters(self, num_observation: int) -> torch.Tensor:
-        """Get true parameters (parameters that generated the data) for a given observation number"""
+        """Get true parameters for a given observation number"""
         path = (
             self.path
             / "files"
@@ -218,8 +218,8 @@ class Task:
 
         Args:
             num_observation: Observation number
-            observation: Instead of passing an observation number, an observation may be
-                passed directly
+            observation: Instead of passing an observation number, an observation may
+                be passed directly
             posterior: If False, will get likelihood instead of posterior
             implementation: Implementation to use, `pyro` or `experimental`
             kwargs: Passed to `sbibm.utils.pyro.get_log_prob_grad_fn`
@@ -256,9 +256,9 @@ class Task:
             else:
                 grads = []
                 for i in range(num_parameters):
-                    grad, _ = log_prob_grad_fn(
-                        {"parameters": parameters[i, :].reshape(1, -1)}
-                    )
+                    grad, _ = log_prob_grad_fn({
+                        "parameters": parameters[i, :].reshape(1, -1)
+                    })
                     grads.append(grad["parameters"].squeeze())
                 return torch.stack(grads).reshape(
                     parameters.shape[0], parameters.shape[1]
@@ -280,8 +280,8 @@ class Task:
 
         Args:
             num_observation: Observation number
-            observation: Instead of passing an observation number, an observation may be
-                passed directly
+            observation: Instead of passing an observation number, an observation may
+                be passed directly
             automatic_transforms_enabled: If True, will automatically construct
                 transforms to unconstrained space
 
@@ -321,8 +321,8 @@ class Task:
 
         Args:
             num_observation: Observation number
-            observation: Instead of passing an observation number, an observation may be
-                passed directly
+            observation: Instead of passing an observation number, an observation may
+                be passed directly
             posterior: If False, will mask prior which will result in model useful
                 for calculating log likelihoods instead of log posterior probabilities
         """
@@ -356,8 +356,8 @@ class Task:
         Args:
             num_samples: Number of samples
             num_observation: Observation number
-            observation: Instead of passing an observation number, an observation may be
-                passed directly
+            observation: Instead of passing an observation number, an observation may
+                be passed directly
 
         Returns:
             Samples from reference posterior
@@ -405,7 +405,7 @@ class Task:
     def _save_true_parameters(
         self, num_observation: int, true_parameters: torch.Tensor
     ):
-        """Save true parameters (parameters that generated the data) for a given observation number"""
+        """Save true parameters for a given observation number"""
         path = (
             self.path
             / "files"
@@ -418,7 +418,8 @@ class Task:
     def _setup(self, n_jobs: int = -1, create_reference: bool = True, **kwargs: Any):
         """Setup the task: generate observations and reference posterior samples
 
-        In most cases, you don't need to execute this method, since its results are stored to disk.
+        In most cases, you don't need to execute this method, since its results are
+        stored to disk.
 
         Re-executing will overwrite existing files.
 

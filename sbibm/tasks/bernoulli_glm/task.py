@@ -90,7 +90,8 @@ class BernoulliGLM(Task):
         ) -> torch.Tensor:
             """Simulates model for given parameters
 
-            If `return_both` is True, will additionally return spike train not reduced to summary features
+            If `return_both` is True, will additionally return spike train not reduced
+            to summary features
             """
 
             data = []
@@ -177,7 +178,7 @@ class BernoulliGLM(Task):
 
         sample = true_parameters.numpy().reshape(-1)  # Init at true parameters
         samples = []
-        for j in tqdm(range(mcmc_num_samples)):
+        for _j in tqdm(range(mcmc_num_samples)):
             psi = np.dot(X, sample)
             w = np.array([pg.pgdraw(1, b) for b in psi])
             O = np.diag(w)  # noqa: E741
@@ -195,15 +196,16 @@ class BernoulliGLM(Task):
     def _setup(self, regenerate_stimulus=False):
         """Setup the task: generate observations and reference posterior samples
 
-        In most cases, you don't need to execute this method, since its results are stored to disk.
-        Re-executing will overwrite existing files.
+        In most cases, you don't need to execute this method, since its results are
+        stored to disk. Re-executing will overwrite existing files.
 
-        Reference samples are constructed using Polya-Gamma MCMC. The sampler consists of two iterative Gibbs updates:
-        1. sample auxiliary variables: w ~ PG(N, psi)
-        2. sample parameters: beta ~ N(m, V); V = inv(X'O X + Binv), m = V*(X'k), k = y - N/2
+        Reference samples are constructed using Polya-Gamma MCMC. The sampler consists
+        of two iterative Gibbs updates: 1. sample auxiliary variables: w ~ PG(N, psi) 2.
+        sample parameters: beta ~ N(m, V); V = inv(X'O X + Binv), m = V*(X'k), k = y -
+        N/2
 
-        Note that running this method requires pypolyagamma, see https://github.com/slinderman/pypolyagamma
-        for installation instructions.
+        Note that running this method requires pypolyagamma, see
+        https://github.com/slinderman/pypolyagamma for installation instructions.
 
         There is an open issue leading to errors on pip install, see:
         https://github.com/slinderman/pypolyagamma/issues/36
@@ -235,7 +237,8 @@ class BernoulliGLM(Task):
             path.parent.mkdir(parents=True, exist_ok=True)
             torch.save(stimulus_I, path)
 
-            # Build design matrix X, such that X * h returns convolution of x with filter h
+            # Build design matrix X, such that X * h returns convolution of x with
+            # filter h
             # Including linear offset by first element
             design_matrix = torch.zeros(size=(len(stimulus_t), self.dim_parameters - 1))
             for j in range(self.dim_parameters - 1):

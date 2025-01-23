@@ -81,9 +81,7 @@ class GaussianMixture(Task):
             loc = self.simulator_params["mixture_locs_factor"][idx] * parameters
             scale = self.simulator_params["mixture_scales"][idx]
 
-            return pyro.sample(
-                "data", pdist.Normal(loc=loc, scale=scale).to_event(1)
-            )
+            return pyro.sample("data", pdist.Normal(loc=loc, scale=scale).to_event(1))
 
         return Simulator(task=self, simulator=simulator, max_calls=max_calls)
 

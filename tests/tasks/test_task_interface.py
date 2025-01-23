@@ -15,7 +15,6 @@ noref_tasks = set([tn for tn in get_available_tasks() if "noref" in tn])
 
 @pytest.mark.parametrize("task_name", [tn for tn in (all_tasks - julia_tasks)])
 def test_task_can_be_obtained(task_name):
-
     task = get_task(task_name)
 
     assert task is not None
@@ -23,7 +22,6 @@ def test_task_can_be_obtained(task_name):
 
 @pytest.mark.parametrize("task_name", [tn for tn in (all_tasks - julia_tasks)])
 def test_obtain_prior_from_task(task_name):
-
     task = get_task(task_name)
     prior = task.get_prior()
 
@@ -32,7 +30,6 @@ def test_obtain_prior_from_task(task_name):
 
 @pytest.mark.parametrize("task_name", [tn for tn in (all_tasks - julia_tasks)])
 def test_obtain_simulator_from_task(task_name):
-
     task = get_task(task_name)
 
     simulator = task.get_simulator()
@@ -42,7 +39,6 @@ def test_obtain_simulator_from_task(task_name):
 
 @pytest.mark.parametrize("task_name", [tn for tn in (all_tasks - julia_tasks)])
 def test_retrieve_observation_from_task(task_name):
-
     task = get_task(task_name)
 
     x_o = task.get_observation(num_observation=1)
@@ -54,7 +50,6 @@ def test_retrieve_observation_from_task(task_name):
 
 @pytest.mark.parametrize("task_name", [tn for tn in (all_tasks - julia_tasks)])
 def test_describe_theta(task_name):
-
     task = get_task(task_name)
 
     labels = task.get_labels_parameters()
@@ -65,7 +60,6 @@ def test_describe_theta(task_name):
 
 @pytest.mark.parametrize("task_name", [tn for tn in (all_tasks - julia_tasks)])
 def test_describe_x(task_name):
-
     task = get_task(task_name)
 
     labels = task.get_labels_data()
@@ -76,7 +70,6 @@ def test_describe_x(task_name):
 
 @pytest.mark.parametrize("task_name", [tn for tn in (all_tasks - julia_tasks)])
 def test_obtain_prior_samples_from_task(task_name):
-
     task = get_task(task_name)
     prior = task.get_prior()
     nsamples = 10
@@ -88,7 +81,6 @@ def test_obtain_prior_samples_from_task(task_name):
 
 @pytest.mark.parametrize("task_name", [tn for tn in (all_tasks - julia_tasks)])
 def test_simulate_from_thetas(task_name):
-
     task = get_task(task_name)
     prior = task.get_prior()
     sim = task.get_simulator()
@@ -104,7 +96,6 @@ def test_simulate_from_thetas(task_name):
     "task_name", [tn for tn in (all_tasks - julia_tasks - noref_tasks)]
 )
 def test_reference_posterior_exists(task_name):
-
     task = get_task(task_name)
 
     reference_samples = task.get_reference_posterior_samples(num_observation=1)
@@ -116,11 +107,10 @@ def test_reference_posterior_exists(task_name):
 
 @pytest.mark.parametrize("task_name", [tn for tn in noref_tasks])
 def test_reference_posterior_not_called(task_name):
-
     task = get_task(task_name)
 
     with pytest.raises(NotImplementedError):
-        reference_samples = task.get_reference_posterior_samples(num_observation=1)
+        task.get_reference_posterior_samples(num_observation=1)
 
     assert task is not None
 

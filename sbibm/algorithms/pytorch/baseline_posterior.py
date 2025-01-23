@@ -28,8 +28,9 @@ def run(
     log = sbibm.get_logger(__name__)
 
     if "num_simulations" in kwargs:
-        log.warn(
-            "`num_simulations` was passed as a keyword but will be ignored, since this is a baseline method."
+        log.warning(
+            "`num_simulations` was passed as a keyword but will be ignored, "
+            "since this is a baseline method."
         )
 
     if rerun:

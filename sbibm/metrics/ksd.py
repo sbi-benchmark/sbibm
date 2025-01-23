@@ -64,7 +64,6 @@ def ksd(
             return test_statistic
 
     except:
-
         return torch.tensor(float("nan"))
 
 

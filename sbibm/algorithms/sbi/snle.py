@@ -27,17 +27,7 @@ def run(
     training_batch_size: int = 10000,
     automatic_transforms_enabled: bool = True,
     mcmc_method: str = "slice_np_vectorized",
-    mcmc_parameters: Dict[str, Any] = {
-        "num_chains": 100,
-        "thin": 10,
-        "warmup_steps": 25,
-        # NOTE: resample is the init strategy used for the main paper results.
-        "init_strategy": "resample",
-        # NOTE: sir kwargs changed: num_candidate_samples = num_batches * batch_size
-        "init_strategy_parameters": {
-            "num_candidate_samples": 10000,
-        },
-    },
+    mcmc_parameters: Dict[str, Any] = None,
     z_score_x: str = "independent",
     z_score_theta: str = "independent",
     max_num_epochs: int = 2**31 - 1,
@@ -45,26 +35,29 @@ def run(
     """Runs (S)NLE from `sbi`
 
     Args:
-        task: Task instance
-        num_observation: Observation number to load, alternative to `observation`
-        observation: Observation, alternative to `num_observation`
-        num_samples: Number of samples to generate from posterior
-        num_simulations: Simulation budget
-        num_rounds: Number of rounds
-        neural_net: Neural network to use, one of maf / mdn / made / nsf
-        hidden_features: Number of hidden features in network
-        simulation_batch_size: Batch size for simulator
-        training_batch_size: Batch size for training network
-        automatic_transforms_enabled: Whether to enable automatic transforms
-        mcmc_method: MCMC method
-        mcmc_parameters: MCMC parameters
-        z_score_x: Whether to z-score x
-        z_score_theta: Whether to z-score theta
+        task: Task instance num_observation: Observation number to load, alternative to
+        `observation` observation: Observation, alternative to `num_observation`
+        num_samples: Number of samples to generate from posterior num_simulations:
+        Simulation budget num_rounds: Number of rounds neural_net: Neural network to
+        use, one of maf / mdn / made / nsf hidden_features: Number of hidden features in
+        network simulation_batch_size: Batch size for simulator training_batch_size:
+        Batch size for training network automatic_transforms_enabled: Whether to enable
+        automatic transforms mcmc_method: MCMC method mcmc_parameters: MCMC parameters
+        z_score_x: Whether to z-score x z_score_theta: Whether to z-score theta
         max_num_epochs: Maximum number of epochs
 
     Returns:
-        Samples from posterior, number of simulator calls, log probability of true params if computable
+        Samples from posterior, number of simulator calls, log probability of true
+        params if computable
     """
+    if mcmc_parameters is None:
+        mcmc_parameters = {
+            "num_chains": 100,
+            "thin": 10,
+            "warmup_steps": 25,
+            "init_strategy": "resample",
+            "init_strategy_parameters": {"num_candidate_samples": 10000},
+        }
     assert not (num_observation is None and observation is None)
     assert not (num_observation is not None and observation is not None)
 

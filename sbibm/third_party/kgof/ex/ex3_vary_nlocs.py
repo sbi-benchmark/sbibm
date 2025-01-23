@@ -1,14 +1,13 @@
 """
 Simulation to examine the P(reject) as the number of test locations
-increases.  
+increases.
 """
+
 __author__ = "wittawat"
 
 import logging
-import math
 import os
 import sys
-import time
 
 # import numpy as np
 import autograd.numpy as np
@@ -16,16 +15,13 @@ import autograd.numpy as np
 # need independent_jobs package
 # https://github.com/karlnapf/independent-jobs
 # The independent_jobs and kgof have to be in the global search path (.bashrc)
-import independent_jobs as inj
 from independent_jobs.aggregators.SingleResultAggregator import SingleResultAggregator
 from independent_jobs.engines.BatchClusterParameters import BatchClusterParameters
-from independent_jobs.engines.SerialComputationEngine import SerialComputationEngine
 from independent_jobs.engines.SlurmComputationEngine import SlurmComputationEngine
 from independent_jobs.jobs.IndependentJob import IndependentJob
 from independent_jobs.results.SingleResult import SingleResult
 from independent_jobs.tools.Log import logger
 
-import sbibm.third_party.kgof as kgof
 import sbibm.third_party.kgof.data as data
 import sbibm.third_party.kgof.density as density
 import sbibm.third_party.kgof.glo as glo
@@ -37,7 +33,7 @@ import sbibm.third_party.kgof.util as util
 All the job functions return a dictionary with the following keys:
     - goftest: test object. (may or may not return)
     - test_result: the result from calling perform_test(te).
-    - time_secs: run time in seconds 
+    - time_secs: run time in seconds
 """
 
 
@@ -61,7 +57,7 @@ def job_fssdq_med(p, data_source, tr, te, r, J, null_sim=None):
     with util.ContextTimer() as t:
         # median heuristic
         med = util.meddistance(X, subsample=1000)
-        k = kernel.KGauss(med ** 2)
+        k = kernel.KGauss(med**2)
         V = util.fit_gaussian_draw(X, J, seed=r + 1)
 
         fssd_med = gof.FSSD(p, k, V, null_sim=null_sim, alpha=alpha)
@@ -83,7 +79,7 @@ def job_fssdq_opt(p, data_source, tr, te, r, J, null_sim=None):
         gwidth_factors = 2.0 ** np.linspace(-3, 3, n_gwidth_cand)
         med2 = util.meddistance(Xtr, 1000) ** 2
 
-        k = kernel.KGauss(med2 * 2)
+        kernel.KGauss(med2 * 2)
         # fit a Gaussian to the data and draw to initialize V0
         V0 = util.fit_gaussian_draw(Xtr, J, seed=r + 1, reg=1e-6)
         list_gwidth = np.hstack(((med2) * gwidth_factors))
@@ -146,7 +142,6 @@ class Ex3Job(IndependentJob):
     # we need to define the abstract compute method. It has to return an instance
     # of JobResult base class
     def compute(self):
-
         p = self.p
         data_source = self.data_source
         r = self.rep
@@ -192,7 +187,6 @@ class Ex3Job(IndependentJob):
 # pickle is used when collecting the results from the submitted jobs.
 from sbibm.third_party.kgof.ex.ex3_vary_nlocs import (
     Ex3Job,
-    job_fssdp_opt,
     job_fssdq_med,
     job_fssdq_opt,
 )

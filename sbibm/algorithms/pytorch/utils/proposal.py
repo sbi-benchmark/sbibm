@@ -64,7 +64,7 @@ def get_proposal(
         prior_weight=prior_weight,
     )
 
-    log.info(f"Proposal distribution is set up, took {time.time()-tic:.3f}sec")
+    log.info(f"Proposal distribution is set up, took {time.time() - tic:.3f}sec")
 
     return proposal_dist
 
@@ -112,13 +112,10 @@ class DenfensiveProposal:
 
     def log_prob(self, parameters):
         return torch.logsumexp(
-            torch.stack(
-                [
-                    math.log(self.prior_weight) + self.log_prob_prior(parameters),
-                    math.log(1.0 - self.prior_weight)
-                    + self.log_prob_proposal(parameters),
-                ]
-            ),
+            torch.stack([
+                math.log(self.prior_weight) + self.log_prob_prior(parameters),
+                math.log(1.0 - self.prior_weight) + self.log_prob_proposal(parameters),
+            ]),
             dim=0,
         )
 

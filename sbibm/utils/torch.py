@@ -49,8 +49,8 @@ def choice(*args, **kwargs):
         from torch_sampling import choice
 
         return choice(*args, **kwargs).long()
-    except:
-        warnings.warn("Using numpy.random.choice.")
+    except ImportError:
+        warnings.warn("Using numpy.random.choice.", stacklevel=2)
         return choice_numpy(*args, **kwargs).long()
 
 

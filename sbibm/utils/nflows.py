@@ -74,27 +74,23 @@ def get_flow(
         neural_net = flows.Flow(transform, distribution, embedding)
 
     elif model == "maf":
-        transform = transforms.CompositeTransform(
-            [
-                transforms.CompositeTransform(
-                    [
-                        transforms.MaskedAffineAutoregressiveTransform(
-                            features=features,
-                            hidden_features=hidden_features,
-                            context_features=context_features,
-                            num_blocks=2,
-                            use_residual_blocks=False,
-                            random_mask=False,
-                            activation=torch.tanh,
-                            dropout_probability=0.0,
-                            use_batch_norm=True,
-                        ),
-                        transforms.RandomPermutation(features=features),
-                    ]
-                )
-                for _ in range(flow_num_transforms)
-            ]
-        )
+        transform = transforms.CompositeTransform([
+            transforms.CompositeTransform([
+                transforms.MaskedAffineAutoregressiveTransform(
+                    features=features,
+                    hidden_features=hidden_features,
+                    context_features=context_features,
+                    num_blocks=2,
+                    use_residual_blocks=False,
+                    random_mask=False,
+                    activation=torch.tanh,
+                    dropout_probability=0.0,
+                    use_batch_norm=True,
+                ),
+                transforms.RandomPermutation(features=features),
+            ])
+            for _ in range(flow_num_transforms)
+        ])
 
         transform = transforms.CompositeTransform([standardizing_transform, transform])
 
@@ -102,35 +98,32 @@ def get_flow(
         neural_net = flows.Flow(transform, distribution, embedding)
 
     elif model == "nsf":
-        transform = transforms.CompositeTransform(
-            [
-                transforms.CompositeTransform(
-                    [
-                        transforms.PiecewiseRationalQuadraticCouplingTransform(
-                            mask=create_alternating_binary_mask(
-                                features=features, even=(i % 2 == 0)
-                            ),
-                            transform_net_create_fn=lambda in_features, out_features: nets.ResidualNet(
-                                in_features=in_features,
-                                out_features=out_features,
-                                hidden_features=hidden_features,
-                                context_features=context_features,
-                                num_blocks=2,
-                                activation=torch.relu,
-                                dropout_probability=0.0,
-                                use_batch_norm=False,
-                            ),
-                            num_bins=10,
-                            tails="linear",
-                            tail_bound=3.0,
-                            apply_unconditional_transform=False,
-                        ),
-                        transforms.LULinear(features, identity_init=True),
-                    ]
-                )
-                for i in range(flow_num_transforms)
-            ]
-        )
+        transform = transforms.CompositeTransform([
+            transforms.CompositeTransform([
+                transforms.PiecewiseRationalQuadraticCouplingTransform(
+                    mask=create_alternating_binary_mask(
+                        features=features, even=(i % 2 == 0)
+                    ),
+                    transform_net_create_fn=lambda in_features,
+                    out_features: nets.ResidualNet(
+                        in_features=in_features,
+                        out_features=out_features,
+                        hidden_features=hidden_features,
+                        context_features=context_features,
+                        num_blocks=2,
+                        activation=torch.relu,
+                        dropout_probability=0.0,
+                        use_batch_norm=False,
+                    ),
+                    num_bins=10,
+                    tails="linear",
+                    tail_bound=3.0,
+                    apply_unconditional_transform=False,
+                ),
+                transforms.LULinear(features, identity_init=True),
+            ])
+            for i in range(flow_num_transforms)
+        ])
 
         transform = transforms.CompositeTransform([standardizing_transform, transform])
 
@@ -138,38 +131,34 @@ def get_flow(
         neural_net = flows.Flow(transform, distribution, embedding)
 
     elif model == "nsf_bounded":
-
-        transform = transforms.CompositeTransform(
-            [
-                transforms.CompositeTransform(
-                    [
-                        transforms.PiecewiseRationalQuadraticCouplingTransform(
-                            mask=create_alternating_binary_mask(
-                                features=dim_distribution, even=(i % 2 == 0)
-                            ),
-                            transform_net_create_fn=lambda in_features, out_features: nets.ResidualNet(
-                                in_features=in_features,
-                                out_features=out_features,
-                                hidden_features=hidden_features,
-                                context_features=context_features,
-                                num_blocks=2,
-                                activation=F.relu,
-                                dropout_probability=0.0,
-                                use_batch_norm=False,
-                            ),
-                            num_bins=10,
-                            tails="linear",
-                            tail_bound=np.sqrt(
-                                3
-                            ),  # uniform with sqrt(3) bounds has unit-variance
-                            apply_unconditional_transform=False,
-                        ),
-                        transforms.RandomPermutation(features=dim_distribution),
-                    ]
-                )
-                for i in range(flow_num_transforms)
-            ]
-        )
+        transform = transforms.CompositeTransform([
+            transforms.CompositeTransform([
+                transforms.PiecewiseRationalQuadraticCouplingTransform(
+                    mask=create_alternating_binary_mask(
+                        features=dim_distribution, even=(i % 2 == 0)
+                    ),
+                    transform_net_create_fn=lambda in_features,
+                    out_features: nets.ResidualNet(
+                        in_features=in_features,
+                        out_features=out_features,
+                        hidden_features=hidden_features,
+                        context_features=context_features,
+                        num_blocks=2,
+                        activation=F.relu,
+                        dropout_probability=0.0,
+                        use_batch_norm=False,
+                    ),
+                    num_bins=10,
+                    tails="linear",
+                    tail_bound=np.sqrt(
+                        3
+                    ),  # uniform with sqrt(3) bounds has unit-variance
+                    apply_unconditional_transform=False,
+                ),
+                transforms.RandomPermutation(features=dim_distribution),
+            ])
+            for i in range(flow_num_transforms)
+        ])
 
         transform = transforms.CompositeTransform([standardizing_transform, transform])
 
@@ -201,7 +190,8 @@ def train_flow(
         batch_size: size of the minibatch
         learning_rate: learning rate
         validation_fraction: fraction of datapoints to be used for validation
-        stop_after_epochs: stop training after validation loss has not decreased for this many epochs
+        stop_after_epochs: stop training after validation loss has not decreased for
+            this many epochs
         clip_grad_norm: whether to clip the norm of the gradient
         transform: Optional transformation added to output of flow
 
@@ -264,7 +254,6 @@ def train_flow(
     epochs = 0
     converged = False
     while not converged:
-
         # Train for a single epoch.
         flow.train()
         for batch in train_loader:
