@@ -11,7 +11,7 @@ authors = [
     { name = "Jan-Matthis Lueckmann", email = "mail@jan-matthis.de" },
     { name = "Jan Boelts", email = "jan.boelts@mailbox.org" }
 ]
-requires-python = ">=3.7"
+requires-python = ">=3.9"
 license = { text = "MIT" }
 classifiers = [
     "License :: OSI Approved :: MIT License",
@@ -47,10 +47,12 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    "autoflake",
-    "black",
-    "flake8",
-    "isort>5.0.0",
+    # Lint
+    "pre-commit == 4.0.1",
+    "pyyaml",
+    "pyright",
+    "ruff==0.9.0",
+    # Test
     "ipdb",
     "pytest",
     "pytest-plt",
@@ -69,14 +71,41 @@ exclude = ["tests", "tests.*"]
 [tool.setuptools.dynamic]
 version = {attr = "sbibm.__version__.__version__"}
 
-[tool.flake8]
-exclude = ["docs", "build", "dist", ".ipynb_checkpoints", ".git", "third_party"]
-max-line-length = 119
-extend-ignore = ["W503", "E203"]
+# ruff configs
+[tool.ruff]
+extend-include = ["*.ipynb"]
+line-length = 88
 
-[tool.isort]
-profile = "black"
+[tool.ruff.lint]
+# pycodestyle, Pyflakes, pyupgrade, flake8-bugbear, flake8-simplify, isort
+select = ["E", "F", "W", "B", "SIM", "I"]
+ignore = [
+    "E731",  # allow naming lambda functions.
+    "B008",  # allow function calls in default args.
+]
 
+[tool.ruff.lint.extend-per-file-ignores]
+"__init__.py" = ["E402", "F401", "F403"]  # allow unused imports and undefined names
+"test_*.py" = ["F403", "F405"]
+"tutorials/*.ipynb" = ["E501"]  # allow long lines in notebooks
+
+[tool.ruff.lint.isort]
+case-sensitive = true
+lines-between-types = 0  # like isort default.
+relative-imports-order = "furthest-to-closest"  # like isort default.
+known-first-party = ["sbibm", "tests"]
+
+[tool.ruff.format]
+exclude = ["*.ipynb"]
+preview = true
+quote-style = "preserve"
+
+# Pytest configuration
 [tool.pytest.ini_options]
-addopts = "--ignore=src/"
-plt_filename_drop = ["^--"]
+minversion = "6.0"
+addopts = "-ra -q"
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning"
+]
+testpaths = ["tests"]
