@@ -117,7 +117,7 @@ class SLCP(Task):
             else:
                 data = pyro.sample("data", data_dist).reshape((num_samples, 8))
 
-                gmm = torch.load(self.path / "files" / "gmm.torch")
+                gmm = torch.load(self.path / "files" / "gmm.torch", weights_only=False)
                 noise = gmm.sample((num_samples,)).type(data.dtype)
 
                 data_and_noise = torch.cat([data, noise], dim=1)
