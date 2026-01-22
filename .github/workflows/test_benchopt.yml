@@ -1,0 +1,21 @@
+name: Tests
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - '**'
+  pull_request:
+  schedule:
+    # Run every day at 7:42am UTC.
+    - cron:  '42 7 * * *'
+
+jobs:
+  benchopt_release:
+    uses: benchopt/template_benchmark/.github/workflows/test_benchmarks.yml@main
+    with:
+      benchopt_version: latest
+      benchmark_dir: ./benchmark
+  lint:
+    uses: benchopt/template_benchmark/.github/workflows/lint_benchmarks.yml@main
