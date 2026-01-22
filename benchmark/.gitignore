@@ -1,0 +1,20 @@
+# Cache directories
+.pytest_cache
+__pycache__
+__cache__
+*.egg-info
+.coverage
+**/outputs
+joblib/
+
+# IDE specific folders
+.vscode
+
+# Config files
+benchopt.ini
+
+.DS_Store
+coverage.xml
+
+# SBI
+sbi-logs/
